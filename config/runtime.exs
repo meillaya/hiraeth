@@ -27,6 +27,59 @@ config :hiraeth, :scrapling_sidecar,
   base_url: System.get_env("SCRAPLING_SIDECAR_URL") || "http://localhost:8000",
   token: System.get_env("SCRAPLING_SIDECAR_TOKEN")
 
+# Public covers are cached on local disk and backed by an S3-compatible object
+# store. Local mode keeps the disk cache only; s3 mode adds the durable copy.
+cover_store_config =
+  case System.get_env("HIRAETH_COVER_STORE", "local") do
+    "s3" ->
+      endpoint =
+        System.get_env("R2_ENDPOINT") ||
+          raise """
+          environment variable R2_ENDPOINT is missing.
+          For example: https://<account-id>.r2.cloudflarestorage.com
+          """
+
+      bucket =
+        System.get_env("R2_BUCKET") ||
+          raise """
+          environment variable R2_BUCKET is missing.
+          """
+
+      access_key_id =
+        System.get_env("R2_ACCESS_KEY_ID") ||
+          raise """
+          environment variable R2_ACCESS_KEY_ID is missing.
+          """
+
+      secret_access_key =
+        System.get_env("R2_SECRET_ACCESS_KEY") ||
+          raise """
+          environment variable R2_SECRET_ACCESS_KEY is missing.
+          """
+
+      [
+        adapter: Hiraeth.Covers.Store.S3,
+        endpoint: endpoint,
+        bucket: bucket,
+        access_key_id: access_key_id,
+        secret_access_key: secret_access_key,
+        region: System.get_env("R2_REGION", "auto")
+      ]
+
+    _local ->
+      [adapter: Hiraeth.Covers.Store.Local]
+  end
+
+config :hiraeth, Hiraeth.Covers.Store, cover_store_config
+
+cover_cache_max_bytes =
+  case System.get_env("HIRAETH_COVER_CACHE_MAX_BYTES") do
+    value when value in [nil, ""] -> 1_073_741_824
+    value -> String.to_integer(value)
+  end
+
+config :hiraeth, :cover_cache_max_bytes, cover_cache_max_bytes
+
 # Autonomous ingestion kill-switch: HIRAETH_SCHEDULED_INGEST=false drops ALL
 # autonomous cron entries (scheduler tick, weekly cover refresh, weekly
 # provenance audit) so autonomy is fully off; manual mix tasks are unaffected.

@@ -120,6 +120,8 @@ is hashed before and after the sandboxed command.
 
 The repository includes environment examples in `.env.example`; there is no GitHub Actions CI. The public catalog is deployed to Railway at `https://hiraeth-web-production.up.railway.app`: the Phoenix service builds from the root `Dockerfile`, the private Scrapling sidecar builds from `sidecar/Dockerfile`, and Postgres is Railway-managed.
 
+Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only.
+
 Both services must share `SCRAPLING_SIDECAR_TOKEN`. The sidecar image runs in secure mode, refuses to start without the token and its manifests, and rejects unsigned data requests. Phoenix refuses to boot in production without the token and signs every sidecar request. When a provider manifest changes, run `bash scripts/catalog/sync_sidecar_manifests.sh` before building the sidecar; a sidecar test fails if the image copies drift from `priv/catalog_sources/provider_manifests`.
 
 Validate deployment networking, secrets, backups, and alerts in the target environment before any further launch.

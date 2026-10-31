@@ -16,9 +16,9 @@ path, running the query or test that exposes it, or reproducing the behavior in
 | Check | Before | After |
 |---|---|---|
 | `mix compile --warnings-as-errors` | clean | clean |
-| `mix test.fast` | 517 passed | 538 passed |
-| `mix test.full` | not run | 538 passed |
-| `mix ci` | not run | passed, 538 tests |
+| `mix test.fast` | 517 passed | 548 passed, 124 excluded |
+| `mix test.full` | not run | 548 passed |
+| `mix ci` | not run | passed, 548 tests |
 | `mix dialyzer` | 2 errors (`call_without_opaque` on literal `MapSet`s) | 0 errors |
 | `mix credo --strict` | clean | clean |
 | `mix format --check-formatted` | clean | clean |
@@ -159,6 +159,24 @@ What remains: `expected_record_count` is still an exact equality gate, and
 validation is still all-or-nothing. Those are the failures that create the
 pre-apply candidates in the first place. They need their own decision.
 
+### Cover storage
+
+Public covers no longer depend on a Railway volume. `Hiraeth.Covers.Store` has a
+local no-op adapter and an S3 adapter built on `ReqS3`. Cache writes upload the
+original and thumbnail to Cloudflare R2, purge deletes both copies, and
+`mix hiraeth.covers.upload` backfills a bucket from an existing disk cache.
+
+`/covers/cache/*path` is a Phoenix proxy after `Plug.Static`. A local hit never
+touches R2. A miss validates the path with the cache-root and symlink guards,
+checks `Covers.proxyable_cover_asset?/1` so a takedown or hidden cover cannot be
+served from an object key, fetches the object, writes the file atomically, and
+returns it with `nosniff`. Local disk is capped by
+`HIRAETH_COVER_CACHE_MAX_BYTES` (default 1 GiB) and pruned oldest-first.
+
+This removes the single-replica and redeploy-downtime constraints of the volume,
+keeps the same-origin CSP, and leaves public URLs unchanged. The bucket is
+private, so direct and presigned delivery were rejected.
+
 ## Residual risks, not fixed
 
 These are verified defects or design limits that need a decision beyond this
@@ -175,7 +193,7 @@ change. Severity is the reviewer's assessment.
 | Medium | Oban runs in the web service | Ten job slots share a `pool_size` of 10 with page queries; a scheduler tick or cover refresh can starve the web pool. |
 | Medium | Nothing runs migrations on deploy | A schema-changing deploy serves 500s until an operator runs `mix ash.migrate`. |
 | Medium | `check_origin` is not configured | A second hostname makes every LiveView socket upgrade fail with a 403 while pages still render. |
-| Medium | Cover paths resolve against the process working directory | Starting the release outside `/app` silently degrades every cover to the fallback. |
+| Low | Cover cache paths resolve against the process working directory | Starting the release outside `/app` writes the local cache in the wrong place. The R2 proxy refills it and the URL still resolves, so the failure is a cold cache rather than a fallback. |
 | Low | `Port` and `POOL_SIZE` parse with `String.to_integer/1` on an empty string | A defined-but-empty Railway variable raises before logging is configured. |
 | Low | Documentation still claims files and lanes that do not exist | `docs/production-operations.md`, a release-build CI gate, `compose.yaml`, `live_session` boundaries, and a browser QA lane are all absent. |
 
@@ -206,6 +224,12 @@ change. Severity is the reviewer's assessment.
   secure-mode manifest precedence and unknown-provider rejection.
 - `sidecar/tests/test_manifest_sync.py`: the sidecar manifest copies match the
   governed source byte for byte.
+- `test/hiraeth_web/controllers/cover_controller_test.exs`: proxy refill,
+  takedown rejection, path traversal, missing object, and content-type checks.
+- `test/hiraeth/covers_store_test.exs`: upload on cache writes, backfill, and
+  object deletion on purge.
+- `test/hiraeth/covers/cache_pruner_test.exs`: oldest-first pruning under a byte
+  cap.
 - Public projection tests now assert typed publisher, series, contributor, and
   edition shapes, a huge page, malformed filter shapes, the title sort, and the
   author sort.

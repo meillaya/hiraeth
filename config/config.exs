@@ -87,6 +87,9 @@ config :hiraeth, Oban,
 
 config :hiraeth, :scrapling_sidecar, base_url: "http://localhost:8000", token: nil
 
+config :hiraeth, Hiraeth.Covers.Store, adapter: Hiraeth.Covers.Store.Local
+config :hiraeth, :cover_cache_max_bytes, 1_073_741_824
+
 config :hiraeth,
        :source_snapshot_retention_root,
        Path.expand("../priv/source_snapshots", __DIR__)

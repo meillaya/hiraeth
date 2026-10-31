@@ -72,17 +72,17 @@ so the app is not near the server limit; it is artificially limited by one
 pool shared across two different workloads
 ([PostgreSQL connection settings](https://www.postgresql.org/docs/current/runtime-config-connection.html)).
 
-The second failure is the cover cache. Railway volumes have one volume per
-service, cannot be attached to replicas, and force a small downtime on redeploy
-even with a healthcheck, because two deployments cannot be active and mounted to
-the same volume. Volumes are limited to 5 GB on Hobby and 50 GB on Pro, with
-3,000 read and 3,000 write IOPS, and a non-root container can hit permission
-errors on a mounted volume
-([Railway volumes](https://docs.railway.com/volumes/reference)). Hiraeth's
-Dockerfile runs as a non-root user and symlinks the cover cache to a volume, so
-both the redeploy downtime and the permission caveat apply. A cover cache on a
-volume makes zero-downtime deploys and horizontal replicas impossible on
-Railway, regardless of how fast the code is.
+The second failure was the cover cache on a Railway volume. Volumes have one
+volume per service, cannot be attached to replicas, and force a small downtime
+on redeploy even with a healthcheck
+([Railway volumes](https://docs.railway.com/volumes/reference)). The cache now
+uses Cloudflare R2 as the durable origin and keeps a bounded local working set.
+The proxy refills a local miss at the existing `/covers/cache/...` path, so the
+volume can be removed, the service can run replicas, and redeploys no longer
+need to detach a volume. R2 charges $0.015 per GB-month with free egress and a
+10 GB free tier ([R2 pricing](https://developers.cloudflare.com/r2/pricing/)).
+At roughly 7,000 covers and 1.2 to 3.0 GB with thumbnails, storage is a few
+cents per month. The first view after a cold start pays one bucket GET.
 
 The third failure is ingestion convergence. Exact `expected_record_count`
 equality, all-or-nothing validation, and an unchanged-classification that reads
@@ -186,11 +186,9 @@ name. It does not today.
 1. Split the worker process from the web service. Give Oban its own pool and
    keep web page latency independent of ingestion. This is the smallest change
    that removes the first failure mode.
-2. Move the cover cache off the single attached volume, or accept the
-   consequences in writing. Object storage with a local disk cache keeps
-   `/covers/cache` stable, allows replicas, and removes redeploy downtime. If
-   the volume stays, document the single-replica and redeploy constraints and
-   fix the working-directory-relative cache root.
+2. The cover cache has moved to R2 with a local working set. Remove the Railway
+   volume from the service and set `HIRAETH_COVER_STORE=s3` with the R2
+   variables. The local cache is capped by `HIRAETH_COVER_CACHE_MAX_BYTES`.
 3. Add a rate limit and a response cache header to `/api/v1`. The API is
    read-only and cacheable by content type; a 30-second `Cache-Control` matches
    the existing read model TTL.

@@ -46,6 +46,15 @@ defmodule HiraethWeb.Router do
     get "/contributors/:slug", CatalogController, :contributor
   end
 
+  pipeline :covers do
+  end
+
+  scope "/covers/cache" do
+    pipe_through :covers
+
+    get "/*path", HiraethWeb.CoverController, :show
+  end
+
   scope "/", HiraethWeb do
     pipe_through :ops
 

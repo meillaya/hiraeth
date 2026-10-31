@@ -11,7 +11,7 @@ Phoenix LiveView browser boundary for public discovery pages.
 | `components/` | layouts, core components, catalog UI components |
 | `public_catalog.ex` | public read facade: raw `Repo.query` SQL projected into typed PublicProjection structs, every public function with a `@spec`, `:persistent_term` TTL cache (`clear_cache/0`, `:public_catalog_cache_ttl_ms`) |
 | `api/` | OpenAPI document, `/api/v1` controller, wire schemas, serializer |
-| `controllers/` | health probe |
+| `controllers/` | health probe, `/covers/cache/...` proxy |
 
 ## WHERE TO LOOK
 | Task | Location |
@@ -31,6 +31,7 @@ Phoenix LiveView browser boundary for public discovery pages.
 - Use LiveView streams for large or changing collections: parent `phx-update="stream"`, child stream IDs, and re-stream when assigns affect items.
 - Forms are driven by `to_form` assigns and `<.input>`; icons use `<.icon>`.
 - `PublicCatalog` re-implements the Covers symlink/path guard for the read path (`safe_cached_file_path?`/`no_symlink_components?`); keep cache-path rules in sync across both files.
+- The cover proxy in `CoverController` serves a local miss from `Hiraeth.Covers.Store`, checks `Covers.proxyable_cover_asset?/1` for takedown and policy state, and writes the local file atomically. Do not serve an arbitrary object key without that database check.
 
 ## ANTI-PATTERNS
 - Calling `<.flash_group>` outside `layouts.ex`.

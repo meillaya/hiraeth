@@ -102,11 +102,11 @@ ENV PHX_SERVER="true"
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/hiraeth ./
 
-# The cover cache is a runtime volume (sandboxed writes only). Create the
-# mount point so the app can write covers at runtime; the cache itself is
-# never baked into the image. In a release the app's priv/static lives under
-# lib/hiraeth-<vsn>/, so symlink that covers/cache to the volume mount point
-# to keep Plug.Static (from: :hiraeth) serving the volume-backed cache.
+# The cover cache is a bounded runtime directory on the container disk. The
+# durable copy lives in object storage when HIRAETH_COVER_STORE=s3. Create the
+# directory so the app can write covers at runtime; nothing is baked into the
+# image. In a release the app's priv/static lives under lib/hiraeth-<vsn>/,
+# so symlink that covers/cache to this writable directory.
 RUN mkdir -p /app/priv/static/covers/cache \
   && touch /app/priv/static/covers/cache/.gitkeep \
   && chown -R nobody:nogroup /app/priv/static/covers/cache \

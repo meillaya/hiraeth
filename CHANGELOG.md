@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- R2-backed public cover storage. `Hiraeth.Covers.Store` has local and S3 implementations, cache writes upload originals and thumbnails, purge deletes both copies, and `mix hiraeth.covers.upload` backfills a bucket from the local cache.
+- `/covers/cache/*path` proxy for local misses. It validates the path, checks the cover is still public in the database, fetches from R2, writes the local cache atomically, and serves the bytes with the same same-origin URL.
+- `Hiraeth.Covers.CachePruner` and `HIRAETH_COVER_CACHE_MAX_BYTES` (default 1 GiB) bound the local working set.
 - Secure sidecar mode: the production image requires `HIRAETH_SIDECAR_TOKEN`, loads provider manifests from `/app/manifests`, ignores caller-supplied host policy, and rejects unsigned or stale data requests with a typed `unauthorized` error. Phoenix signs fetch, scrape, and detail bodies with an HMAC-SHA256 over the timestamp and raw body.
 - `RecordCandidate.applied_at` and the `mark_applied` action, migration `20261031170000_add_record_candidate_applied_at.exs`. `ApplyCandidates` sets the marker after the importer commits.
 - `sidecar/manifests/` build copies and `scripts/catalog/sync_sidecar_manifests.sh`; `tests/test_manifest_sync.py` fails when the copy and the governed source differ.
@@ -27,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The cover cache no longer depends on a Railway volume. The Docker image keeps a bounded ephemeral directory, and the durable copy lives in R2 when `HIRAETH_COVER_STORE=s3`. The bucket is private, so images stay proxied through Phoenix and the `img-src 'self'` CSP is unchanged.
 - `DiffCandidates` only treats applied candidates as the baseline, so a run that fails before apply cannot make the next run classify its records `unchanged`. Scheduled auto-approval drops `unchanged` because those rows are never applied.
 - Sidecar data requests are signed and the production image refuses to start without a token and manifests. Both Phoenix and the sidecar must set `SCRAPLING_SIDECAR_TOKEN`; `.env.example` marks it required.
 - Dependencies updated to the latest stable releases within their major versions: Ash 3.37, AshPostgres 2.15, Bandit 1.14, Mint 1.11, LiveView 1.2.13, PlugCrypto 2.2.1, Decimal 3.2. `mix hex.audit` reports no advisories. Ash 3.37 requires an explicit `default_string_length_count`, set to `:codepoints` so Elixir and Postgres count the same way.

@@ -3,8 +3,10 @@ defmodule Hiraeth.Covers do
 
   use Ash.Domain
 
-  alias Hiraeth.Covers.{CoverAsset, CoverAssignment}
+  alias Hiraeth.Covers.{CachePruner, CoverAsset, CoverAssignment, Store}
   alias Hiraeth.RealCatalog.SourcePolicy
+
+  require Logger
 
   @cache_root "priv/static/covers/cache"
   @thumbnail_timeout 5_000
@@ -91,6 +93,26 @@ defmodule Hiraeth.Covers do
   end
 
   def public_cover_asset?(_cover_asset), do: false
+
+  @doc """
+  Returns true when a cover may be served by the proxy.
+
+  This check does not require the local file to exist, because refilling that
+  file is the proxy's job. It still requires the stored policy, source host, and
+  takedown state to allow public serving.
+  """
+  @spec proxyable_cover_asset?(term()) :: boolean()
+  def proxyable_cover_asset?(%CoverAsset{} = cover_asset) do
+    uri = parse_uri(cover_asset.source_url)
+
+    cover_asset.takedown_state == "visible" and present?(cover_asset.source_url) and
+      present?(cover_asset.provider) and present?(cover_asset.rights_basis) and
+      uri.scheme == "https" and SourcePolicy.cover_host_allowed?(cover_asset.provider, uri.host) and
+      cover_asset.cache_policy == "cache_allowed" and
+      cover_asset.rights_basis == "local_cache_permitted"
+  end
+
+  def proxyable_cover_asset?(_cover_asset), do: false
 
   def public_cover_provenance_valid?(%CoverAsset{} = cover_asset) do
     uri = parse_uri(cover_asset.source_url)
@@ -219,6 +241,8 @@ defmodule Hiraeth.Covers do
           |> Ash.Changeset.for_update(:update, %{thumbnail_file_path: thumbnail_file_path})
           |> Ash.update!(authorize?: false)
 
+        upload_cached_paths([asset.cached_file_path, thumbnail_file_path])
+
         %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
 
       {:ok, {:adopt, asset, cache_path, thumbnail_path}}, summary ->
@@ -231,6 +255,8 @@ defmodule Hiraeth.Covers do
             cached_at: DateTime.utc_now(:second)
           })
           |> Ash.update!(authorize?: false)
+
+        upload_cached_paths([cache_path, thumbnail_path])
 
         %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
 
@@ -256,6 +282,8 @@ defmodule Hiraeth.Covers do
           })
           |> Ash.update!(authorize?: false)
 
+        upload_cached_paths([cache_path, thumbnail_file_path])
+
         %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
 
       {:ok, {:error, asset, reason}}, summary ->
@@ -266,6 +294,7 @@ defmodule Hiraeth.Covers do
     end)
     |> Map.update!(:assets, &Enum.reverse/1)
     |> Map.update!(:failures, &Enum.reverse/1)
+    |> tap(fn _summary -> CachePruner.prune!(cache_root: cache_root) end)
   end
 
   defp filter_source_urls(assets, :all), do: assets
@@ -348,6 +377,9 @@ defmodule Hiraeth.Covers do
   end
 
   def purge_cached_cover!(%CoverAsset{} = asset) do
+    delete_stored_cover(asset.cached_file_path)
+    delete_stored_cover(asset.thumbnail_file_path)
+
     if safe_cached_file_path?(asset.cached_file_path) and File.exists?(asset.cached_file_path) do
       File.rm!(asset.cached_file_path)
     end
@@ -365,6 +397,112 @@ defmodule Hiraeth.Covers do
     })
     |> Ash.update!(authorize?: false)
   end
+
+  @doc """
+  Returns the object key for a cached file, relative to `priv/static`.
+
+  The key matches the public URL path, for example `covers/cache/<sha>.jpg`.
+  """
+  @spec object_key(String.t()) :: String.t() | nil
+  def object_key(path) when is_binary(path) do
+    expanded = Path.expand(path)
+    static_root = Path.expand("priv/static")
+
+    if String.starts_with?(expanded, static_root <> "/") do
+      Path.relative_to(expanded, static_root)
+    end
+  end
+
+  def object_key(_path), do: nil
+
+  @doc """
+  Returns true for a cache path that is under the cache root and has no symlink
+  ancestor. The file itself may be missing, which is the proxy fetch case.
+  """
+  @spec cache_file_path_safe?(String.t()) :: boolean()
+  def cache_file_path_safe?(path) when is_binary(path) do
+    expanded = Path.expand(path)
+    root = expanded_cache_root()
+    relative = Path.relative_to(expanded, root)
+
+    String.starts_with?(expanded, root <> "/") and
+      relative not in ["", "."] and
+      not String.starts_with?(relative, "..") and
+      no_symlink_ancestors?(expanded, root)
+  end
+
+  def cache_file_path_safe?(_path), do: false
+
+  @doc """
+  Uploads every locally cached cover and thumbnail to the configured store.
+  """
+  @spec upload_cached_covers!() :: %{uploaded: non_neg_integer(), failed: non_neg_integer()}
+  def upload_cached_covers! do
+    if Store.configured?() do
+      CoverAsset
+      |> Ash.read!(authorize?: false)
+      |> Enum.reduce(%{uploaded: 0, failed: 0}, &upload_asset/2)
+    else
+      %{uploaded: 0, failed: 0}
+    end
+  end
+
+  defp upload_asset(asset, summary) do
+    [asset.cached_file_path, asset.thumbnail_file_path]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.reduce(summary, &upload_and_count/2)
+  end
+
+  defp upload_and_count(path, summary) do
+    case upload_cached_path(path) do
+      :ok -> %{summary | uploaded: summary.uploaded + 1}
+      :error -> %{summary | failed: summary.failed + 1}
+      :skipped -> summary
+    end
+  end
+
+  defp upload_cached_paths(paths) do
+    Enum.each(paths, &upload_cached_path/1)
+  end
+
+  defp upload_cached_path(path) when is_binary(path) do
+    key = object_key(path)
+
+    cond do
+      is_nil(key) ->
+        :skipped
+
+      not File.regular?(path) ->
+        :skipped
+
+      true ->
+        content_type = MIME.from_path(path)
+
+        with {:ok, body} <- File.read(path),
+             :ok <- Store.put(key, body, content_type) do
+          :ok
+        else
+          {:error, reason} ->
+            Logger.warning("cover upload failed key=#{key}: #{inspect(reason)}")
+            :error
+        end
+    end
+  end
+
+  defp upload_cached_path(_path), do: :skipped
+
+  defp delete_stored_cover(path) when is_binary(path) do
+    key = object_key(path)
+
+    if is_binary(key) do
+      case Store.delete(key) do
+        :ok -> :ok
+        {:error, reason} -> Logger.warning("cover delete failed key=#{key}: #{inspect(reason)}")
+      end
+    end
+  end
+
+  defp delete_stored_cover(_path), do: :ok
 
   def cache_path(%CoverAsset{} = asset, cache_root \\ @cache_root) do
     extension = asset.source_url |> URI.parse() |> Map.get(:path) |> extension_from_path()
@@ -514,6 +652,22 @@ defmodule Hiraeth.Covers do
       end
     end)
     |> is_binary()
+  end
+
+  defp no_symlink_ancestors?(path, cache_root) do
+    path
+    |> Path.relative_to(cache_root)
+    |> Path.split()
+    |> Enum.reduce_while(cache_root, fn component, parent ->
+      current = Path.join(parent, component)
+
+      case File.lstat(current) do
+        {:ok, %{type: :symlink}} -> {:halt, false}
+        {:ok, _stat} -> {:cont, current}
+        {:error, _reason} -> {:halt, current}
+      end
+    end)
+    |> Kernel.!=(false)
   end
 
   defp cached_file_present?(path) when is_binary(path) do

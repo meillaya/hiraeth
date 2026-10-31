@@ -49,7 +49,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | Migrations | `priv/repo/migrations` | Ash + custom migration history |
 | Provider manifests | `priv/catalog_sources/provider_manifests` | per-provider source allowlists |
 | Source snapshots | `priv/resource_snapshots/repo` | governed snapshot/replay evidence |
-| Cover cache | `priv/static/covers` | hashed local cache; sandboxed writes only |
+| Cover cache | `priv/static/covers` | bounded local cache; R2 is the durable origin at `/covers/cache/...` |
 | DB backup/restore drills | `scripts/ops`, `Makefile` (`db-backup`, `db-restore-drill`) | restore drills target a separate DB, never live |
 | Release/deployment | `Dockerfile` | multi-stage release image; Railway |
 
@@ -95,6 +95,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Devenv local processes own Postgres `127.0.0.1:54320`, sidecar `127.0.0.1:8000`, Phoenix `127.0.0.1:4000`.
 - Docker sidecar image (`sidecar/Dockerfile`) is the production service-network boundary; do not claim production is fully Nix/devenv-only.
 - Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL`, `SCRAPLING_SIDECAR_URL`, and `SCRAPLING_SIDECAR_TOKEN` are required release env. The sidecar image runs in secure mode with server-side manifests and HMAC-signed requests.
+- Public covers use a bounded local cache plus Cloudflare R2 when `HIRAETH_COVER_STORE=s3`; `/covers/cache/...` is same-origin and the proxy refills local misses from R2. Purge deletes both copies.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Unversioned, write-capable, or undocumented HTTP surface. The only HTTP API is the read-only, schema-described `/api/v1` in `docs/api/v1.md`; new routes need a deliberate update to the route contract test and the OpenAPI document.
@@ -121,6 +122,7 @@ HIRAETH_ALLOW_DEV_DB_RESET=1 make verify   # drops/reseeds dev DB; refuses non-l
 make db-backup           # scripts/ops/db_backup.sh
 make db-restore-drill    # scripts/ops/db_restore_drill.sh (separate DB only)
 bash scripts/catalog/sync_sidecar_manifests.sh   # after changing a provider manifest
+mix hiraeth.covers.upload                         # backfill R2 from the local cover cache
 cd sidecar && uv run --extra dev pytest -q
 cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```
@@ -134,4 +136,4 @@ cd sidecar && uv run ruff check . && uv run pyright && uv audit
 - `.omx`, `.omo`, `.omc`, `_build`, `deps`, `.devenv`, `.direnv`, caches, and artifacts are workspace/tool state unless a task explicitly targets them.
 - Custom Mix aliases (`gate`, `ci`, `test.fast`, `test.full`) auto-run under `MIX_ENV=test` via `preferred_envs`; `mix test` auto-creates and migrates the DB first.
 - `priv/repo/structure.sql` is a gitignored, untracked local pg_dump artifact; neither governed nor referenced. Do not commit it without explicit intent.
-- Root `Dockerfile` builds the multi-stage release image (covers/cache symlinked to a volume mount); Docker remains the production-boundary reference while Railway runs the deployed catalog.
+- Root `Dockerfile` builds the multi-stage release image (covers/cache is a bounded runtime directory, backed by R2 when configured); Docker remains the production-boundary reference while Railway runs the deployed catalog.

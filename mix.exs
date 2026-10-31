@@ -80,6 +80,7 @@ defmodule Hiraeth.MixProject do
        compile: false,
        depth: 1},
       {:req, "~> 0.5"},
+      {:req_s3, "~> 0.2"},
       {:open_api_spex, "~> 3.22"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
