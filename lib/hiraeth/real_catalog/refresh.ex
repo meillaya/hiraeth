@@ -376,6 +376,11 @@ defmodule Hiraeth.RealCatalog.Refresh do
         do: Map.put(config, :spider, manifest.spider),
         else: config
 
+    config =
+      if is_map(manifest.cover_source) and manifest.cover_source != %{},
+        do: Map.put(config, :cover_source, manifest.cover_source),
+        else: config
+
     if is_map(manifest.rate_limit),
       do: Map.put(config, :rate_limit, manifest.rate_limit),
       else: config

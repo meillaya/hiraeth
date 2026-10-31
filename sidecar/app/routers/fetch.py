@@ -85,6 +85,21 @@ def _validate_api_endpoint(config: JsonObject) -> None:
         config=config,
     )
 
+    cover_source = config.get("cover_source")
+    cover_endpoint = cover_source.get("endpoint") if isinstance(cover_source, dict) else None
+    if cover_endpoint is not None:
+        if not isinstance(cover_endpoint, str) or cover_endpoint.strip() == "":
+            raise sidecar_http_error(
+                422,
+                SidecarErrorCode.INVALID_HOST,
+                "Missing config.cover_source.endpoint",
+            )
+        validate_url_against_source_hosts(
+            cover_endpoint,
+            field_name="config.cover_source.endpoint",
+            config=config,
+        )
+
 
 def _api_type(config: JsonObject) -> str | None:
     api = config.get("api")

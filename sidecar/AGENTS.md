@@ -40,6 +40,7 @@ pytest tests/
 - Lint/type/supply-chain gates: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright` (`pyrightconfig.json`, basic mode), and `uv audit` run in the deep CI lane; keep them passing.
 - `httpx` is a runtime dependency (the hardened image boots on it); dev extras are pytest/ruff/pyright only.
 - `Dockerfile` is hardened: pinned base image, no dev extras, non-root USER, healthcheck. Keep docs UI disabled and never publish host ports.
+- Deploy the sidecar from a *sidecar-only* build context (stage `Dockerfile`, `railway.json`, `pyproject.toml`, `uv.lock`, `app/`, and `manifests/` in a directory outside the repo, then `railway up` there with explicit project/environment/service). Running `railway up` from inside the repo uploads the repository root and applies the web service's `railway.json`, which replaces the sidecar's Dockerfile build setting and boots the Phoenix image in its place.
 
 ## ANTI-PATTERNS
 - Binding the sidecar publicly in local guidance.

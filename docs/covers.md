@@ -73,6 +73,30 @@ the next run can retry.
 - Browser caches can retain a cover for up to 24 hours. Purging removes the
   local and R2 copies immediately, so the proxy cannot serve it again; an
   already-cached browser copy expires within the max-age.
+- `Hiraeth.Covers.Policy` is the single cover decision for every public read.
+  A work shows exactly one cover, owned by one edition: the newest print
+  (paperback/hardcover) cover wins, so a reissued title shows the new printing's
+  cover (or the publisher's "cover coming soon" image) instead of the retired
+  one. A work with no displayable print cover falls back to its newest
+  displayable non-print cover. Cards, the hero, and the API all receive the
+  same cover object.
+
+## Backfill after a seed or import
+
+A seed only adopts cover files that already exist in the local cache; new
+cover URLs stay uncached until a cache pass runs. Two mechanisms close that
+gap:
+
+- `mix hiraeth.covers.sync --all --missing` fills everything immediately and is
+  the operator path after a manual seed. With `HIRAETH_COVER_STORE=s3` it
+  uploads originals and thumbnails to R2.
+- In production, `Hiraeth.Oban.CoverBackfillWorker` runs once at boot and is
+  scoped to assets with no cached original. It is a no-op when nothing is
+  missing, and its ten-minute unique window collapses restart storms. Set
+  `HIRAETH_COVER_BACKFILL_ON_BOOT=false` to disable it; unlike cron, it is not
+  governed by `HIRAETH_SCHEDULED_INGEST` because it never ingests catalog data,
+  only caches covers already present in the governed dataset. The weekly
+  `CoverRefreshWorker` remains the full-catalog sweep.
 
 ## Provider refresh and covers
 
@@ -89,6 +113,26 @@ cover sync. The refresh strategy per provider lives in
 Publisher datasets and their cover URLs are regenerated from official sources;
 the generated authority/artifact/coverage evidence is refreshed by the same
 command.
+
+When a Squarespace shop lists one product per format, the manifest can declare
+the canonical print listing instead of relying on whichever product the shop
+returns first:
+
+```json
+"cover_source": {
+  "endpoint": "https://www.tiltedaxispress.com/shop?category=print",
+  "match": "title"
+}
+```
+
+The sidecar sources print products' covers from that listing, so a reissue or
+corrected listing replaces whichever image the general shop listing exposed.
+Non-print products keep their own cover only as a digital-only fallback; the
+work-level policy still renders the print cover whenever the work has one, so a
+title never shows two formats' art. Tilted Axis Press uses this declaration. The
+manifest field is generic: another provider with the same print/digital split
+only needs the manifest entry, not a provider-specific code path or a manual
+cover pass.
 
 ## Current coverage notes
 

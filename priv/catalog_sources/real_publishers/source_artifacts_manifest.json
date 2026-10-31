@@ -67192,12 +67192,12 @@
       ],
       "approved_count": 110,
       "dataset_file": "tilted_axis_press.json",
-      "dataset_sha256": "48d94814f6bf93c14389bb4853005044c7dc618481305fe06cb48a31ea470214",
+      "dataset_sha256": "0273897c0cd85e7b6728af18236e22bbd9d771226d54dfc6627ab12cfec096f3",
       "expected_record_count": 110,
       "max_response_bytes": 8000000,
       "provider": "tilted_axis_press_official_site",
       "record_count": 110,
-      "retrieved_at": "2026-10-31T19:48:25Z",
+      "retrieved_at": "2026-10-31T21:35:58Z",
       "source_record_entries": [
         {
           "identity": "source:tilted_axis_press_official_site:61e17ada8c9d7a66e50736b6-default",
@@ -67236,9 +67236,11 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/2024-digital-subscription"
         },
         {
-          "identity": "isbn:9781471228360",
-          "isbn_13": "9781471228360",
-          "missing_fields": {},
+          "identity": "source:tilted_axis_press_official_site:65c21cd3fd808d44fcc31d32-d2fb8161-451f-4d2d-8360-0c90346982c7",
+          "isbn_13": null,
+          "missing_fields": {
+            "isbn_13": "not present in source record"
+          },
           "source_product_id": "65c21cd3fd808d44fcc31d32-d2fb8161-451f-4d2d-8360-0c90346982c7",
           "source_uri": "https://www.tiltedaxispress.com/shop/2024-print-subsription"
         },
@@ -67282,7 +67284,7 @@
           "identity": "source:tilted_axis_press_official_site:65f2fa891ce7524140698c19-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "65f2fa891ce7524140698c19-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/a-book-untitled-ebook"
@@ -67298,7 +67300,7 @@
           "identity": "source:tilted_axis_press_official_site:59d9534ae9bfdf464d3c31e9-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "59d9534ae9bfdf464d3c31e9-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/abandon-ebook-epub"
@@ -67314,7 +67316,7 @@
           "identity": "source:tilted_axis_press_official_site:65d753f730f0981e872a999e-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "65d753f730f0981e872a999e-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/again-i-hear-these-waters-ebook"
@@ -67330,7 +67332,7 @@
           "identity": "source:tilted_axis_press_official_site:660152db07a3765a3ff2458a-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "660152db07a3765a3ff2458a-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/against-healing-e-chapbook"
@@ -67339,7 +67341,7 @@
           "identity": "source:tilted_axis_press_official_site:69de1f6d0d7cda50fe2718c1-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "69de1f6d0d7cda50fe2718c1-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/andhar-bil-ebook"
@@ -67355,7 +67357,7 @@
           "identity": "source:tilted_axis_press_official_site:691f5c49dfab611ecf09e082-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "691f5c49dfab611ecf09e082-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/annah-infinite-ebook"
@@ -67371,7 +67373,7 @@
           "identity": "source:tilted_axis_press_official_site:5eb6ff5a06715c555812d67b-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5eb6ff5a06715c555812d67b-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/arid-dreams-ebook"
@@ -67387,7 +67389,7 @@
           "identity": "source:tilted_axis_press_official_site:60ed6525423b562616c95820-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "60ed6525423b562616c95820-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/black-box-ebook-epub"
@@ -67403,7 +67405,7 @@
           "identity": "source:tilted_axis_press_official_site:69033be2be4a5c5f1a6bdcbb-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "69033be2be4a5c5f1a6bdcbb-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/capitalists-must-starve-ebook"
@@ -67412,17 +67414,10 @@
           "identity": "source:tilted_axis_press_official_site:683dca93cc6de75b44d60120-2a06ec93-e4fc-4c89-9cb5-b19c20c5e874",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "683dca93cc6de75b44d60120-2a06ec93-e4fc-4c89-9cb5-b19c20c5e874",
           "source_uri": "https://www.tiltedaxispress.com/shop/capitalists-must-starve-paperback"
-        },
-        {
-          "identity": "isbn:9781917126199",
-          "isbn_13": "9781917126199",
-          "missing_fields": {},
-          "source_product_id": "683dcd22cc6de75b44d60399-5f32f808-4010-46dd-9cac-91b45b97d98b",
-          "source_uri": "https://www.tiltedaxispress.com/shop/carnaval-fever-paperback"
         },
         {
           "identity": "source:tilted_axis_press_official_site:6a3ceb1816d56f3a046c7952-default",
@@ -67434,10 +67429,17 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/carnaval-fever-ebook"
         },
         {
+          "identity": "isbn:9781917126199",
+          "isbn_13": "9781917126199",
+          "missing_fields": {},
+          "source_product_id": "683dcd22cc6de75b44d60399-5f32f808-4010-46dd-9cac-91b45b97d98b",
+          "source_uri": "https://www.tiltedaxispress.com/shop/carnaval-fever-paperback"
+        },
+        {
           "identity": "source:tilted_axis_press_official_site:62c3210473a4521369795b04-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "62c3210473a4521369795b04-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/chinatown-1"
@@ -67453,7 +67455,7 @@
           "identity": "source:tilted_axis_press_official_site:65c475ebbfd6bb3bcb6837cd-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "65c475ebbfd6bb3bcb6837cd-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/dds-umbrella-ebook"
@@ -67469,7 +67471,7 @@
           "identity": "source:tilted_axis_press_official_site:66e156a6f7a7160a29b1816a-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "66e156a6f7a7160a29b1816a-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/delicious-hunger-ebook"
@@ -67485,7 +67487,7 @@
           "identity": "source:tilted_axis_press_official_site:6601531207a3765a3ff24591-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "6601531207a3765a3ff24591-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/desires-becomes-demons-e-chapbook"
@@ -67503,7 +67505,7 @@
           "identity": "source:tilted_axis_press_official_site:66daca3b14a4dd2ed87d1596-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "66daca3b14a4dd2ed87d1596-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/elevator-in-si-gn-ebook"
@@ -67519,7 +67521,7 @@
           "identity": "source:tilted_axis_press_official_site:5dcb6e383c02be70584e2e7b-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5dcb6e383c02be70584e2e7b-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/every-fire-you-tend-epub"
@@ -67535,7 +67537,7 @@
           "identity": "source:tilted_axis_press_official_site:6246ec1be0bf0c0509de0214-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "6246ec1be0bf0c0509de0214-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/father-may-be-an-elephant-and-mother-only-a-small-basket-but"
@@ -67587,7 +67589,7 @@
           "identity": "source:tilted_axis_press_official_site:61893c61f3e75f6151660ad5-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "61893c61f3e75f6151660ad5-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/happy-stories-mostly-epub"
@@ -67610,7 +67612,7 @@
           "identity": "source:tilted_axis_press_official_site:5860c3f4725e25ca578fdcf2-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5860c3f4725e25ca578fdcf2-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/indigenous-species-ebook-accessible-pdf"
@@ -67619,7 +67621,7 @@
           "identity": "source:tilted_axis_press_official_site:5860c945f7e0ab0e6ad8042e-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5860c945f7e0ab0e6ad8042e-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/indigenous-species-ebook-fixed-layout-epub"
@@ -67635,7 +67637,7 @@
           "identity": "source:tilted_axis_press_official_site:5e5c53566b59fb4dac21efdc-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5e5c53566b59fb4dac21efdc-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/killing-kanoko-ebook"
@@ -67651,7 +67653,7 @@
           "identity": "source:tilted_axis_press_official_site:6168203d6ce4676af7a88c12-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "6168203d6ce4676af7a88c12-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/love-in-the-big-city-epub"
@@ -67667,7 +67669,7 @@
           "identity": "source:tilted_axis_press_official_site:61645837fd7f511ac0684253-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "61645837fd7f511ac0684253-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/manaschi-ebook-epub"
@@ -67683,7 +67685,7 @@
           "identity": "source:tilted_axis_press_official_site:6601511207a3765a3ff244f9-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "6601511207a3765a3ff244f9-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/moon-fevers-e-chapbook"
@@ -67692,7 +67694,7 @@
           "identity": "source:tilted_axis_press_official_site:5bea45b02b6a28f852aa2e60-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5bea45b02b6a28f852aa2e60-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/moving-parts-ebook-epub"
@@ -67708,7 +67710,7 @@
           "identity": "source:tilted_axis_press_official_site:66dac96f96240f14b29b83f8-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "66dac96f96240f14b29b83f8-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/my-dream-job-ebook"
@@ -67724,7 +67726,7 @@
           "identity": "source:tilted_axis_press_official_site:66015240aa1d0858f5b1182c-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "66015240aa1d0858f5b1182c-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/night-e-chapbook"
@@ -67749,7 +67751,7 @@
           "identity": "source:tilted_axis_press_official_site:5f56512a36732345b4fd434e-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5f56512a36732345b4fd434e-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/no-presents-please-epub"
@@ -67765,7 +67767,7 @@
           "identity": "source:tilted_axis_press_official_site:5db1cef6bf4c5f7666518de0-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5db1cef6bf4c5f7666518de0-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/of-strangers-and-bees-epub"
@@ -67781,7 +67783,7 @@
           "identity": "source:tilted_axis_press_official_site:682e13e04d2d3263ee4b55d0-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "682e13e04d2d3263ee4b55d0-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/off-white-ebook"
@@ -67797,7 +67799,7 @@
           "identity": "source:tilted_axis_press_official_site:670e3eb5c24a9f121b1034e8-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "670e3eb5c24a9f121b1034e8-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/on-a-womans-madness-ebook"
@@ -67810,6 +67812,15 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/onawomansmadness-paperback"
         },
         {
+          "identity": "source:tilted_axis_press_official_site:57e78a2f37c58188b6736711-default",
+          "isbn_13": null,
+          "missing_fields": {
+            "isbn_13": "not present in source record"
+          },
+          "source_product_id": "57e78a2f37c58188b6736711-default",
+          "source_uri": "https://www.tiltedaxispress.com/shop/one-hundred-shadows-ebook-epub"
+        },
+        {
           "identity": "isbn:9781911284024",
           "isbn_13": "9781911284024",
           "missing_fields": {},
@@ -67817,19 +67828,10 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/one-hundred-shadows-print-pre-order"
         },
         {
-          "identity": "source:tilted_axis_press_official_site:57e78a2f37c58188b6736711-default",
-          "isbn_13": null,
-          "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
-          },
-          "source_product_id": "57e78a2f37c58188b6736711-default",
-          "source_uri": "https://www.tiltedaxispress.com/shop/one-hundred-shadows-ebook-epub"
-        },
-        {
           "identity": "source:tilted_axis_press_official_site:681a1ff72a94dc617cc59057-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "681a1ff72a94dc617cc59057-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/our-city-that-year-ebook"
@@ -67845,7 +67847,7 @@
           "identity": "source:tilted_axis_press_official_site:6601535507a3765a3ff245aa-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "6601535507a3765a3ff245aa-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/pa-liwanag-e-chapbook"
@@ -67870,7 +67872,7 @@
           "identity": "source:tilted_axis_press_official_site:672c8a4e8c1a29008792346d-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "672c8a4e8c1a29008792346d-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/revathi-a-life-in-trans-activism-ebook"
@@ -67886,7 +67888,7 @@
           "identity": "source:tilted_axis_press_official_site:5f564a15a081cc5ab3479e04-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5f564a15a081cc5ab3479e04-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/sergius-seeks-bacchus-epub"
@@ -67902,7 +67904,7 @@
           "identity": "source:tilted_axis_press_official_site:635a4ba46ffb72148d7441e1-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "635a4ba46ffb72148d7441e1-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/chinatown-1-9bm7d"
@@ -67918,7 +67920,7 @@
           "identity": "source:tilted_axis_press_official_site:5fbf21435147b14804253019-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5fbf21435147b14804253019-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/strange-beasts-digital"
@@ -67934,7 +67936,7 @@
           "identity": "source:tilted_axis_press_official_site:5aa1de3a53450a267acdb671-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5aa1de3a53450a267acdb671-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/the-devils-dance-ebook"
@@ -67950,7 +67952,7 @@
           "identity": "source:tilted_axis_press_official_site:5904874e46c3c4287ecbd3a5-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5904874e46c3c4287ecbd3a5-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/the-impossible-fairytale-ebook"
@@ -67963,6 +67965,15 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/the-impossible-fairy-tale-print"
         },
         {
+          "identity": "source:tilted_axis_press_official_site:58a971469de4bb32da57a68d-default",
+          "isbn_13": null,
+          "missing_fields": {
+            "isbn_13": "not present in source record"
+          },
+          "source_product_id": "58a971469de4bb32da57a68d-default",
+          "source_uri": "https://www.tiltedaxispress.com/shop/the-sad-part-was-ebook-epub"
+        },
+        {
           "identity": "isbn:9781911284062",
           "isbn_13": "9781911284062",
           "missing_fields": {},
@@ -67970,19 +67981,10 @@
           "source_uri": "https://www.tiltedaxispress.com/shop/the-sad-part-was-print"
         },
         {
-          "identity": "source:tilted_axis_press_official_site:58a971469de4bb32da57a68d-default",
-          "isbn_13": null,
-          "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
-          },
-          "source_product_id": "58a971469de4bb32da57a68d-default",
-          "source_uri": "https://www.tiltedaxispress.com/shop/the-sad-part-was-ebook-epub"
-        },
-        {
           "identity": "source:tilted_axis_press_official_site:5d390ee30fd35d00012dc8bb-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5d390ee30fd35d00012dc8bb-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/the-yogini-digital"
@@ -67998,7 +68000,7 @@
           "identity": "source:tilted_axis_press_official_site:66015072a1b5bd408d08acc0-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "66015072a1b5bd408d08acc0-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/to-hell-with-poets-ebook"
@@ -68014,7 +68016,7 @@
           "identity": "source:tilted_axis_press_official_site:616460772b1dfd4eb6c81d2e-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "616460772b1dfd4eb6c81d2e-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/tomb-of-sand-ebook-epub"
@@ -68039,7 +68041,7 @@
           "identity": "source:tilted_axis_press_official_site:5f4590befbbbb05848efb0e1-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5f4590befbbbb05848efb0e1-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/unexpected-vanilla-epub"
@@ -68055,7 +68057,7 @@
           "identity": "source:tilted_axis_press_official_site:62c325eb7d77b76dbb017947-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "62c325eb7d77b76dbb017947-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/violent-phenomena-21-essays-on-translation-ebook"
@@ -68071,7 +68073,7 @@
           "identity": "source:tilted_axis_press_official_site:5e5c526c118337590dc31b76-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5e5c526c118337590dc31b76-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/wild-ladies-ebook"
@@ -68087,7 +68089,7 @@
           "identity": "source:tilted_axis_press_official_site:5f883df1f0dff6396bfa28d7-default",
           "isbn_13": null,
           "missing_fields": {
-            "isbn_13": "Approved source record has no ISBN for this edition."
+            "isbn_13": "not present in source record"
           },
           "source_product_id": "5f883df1f0dff6396bfa28d7-default",
           "source_uri": "https://www.tiltedaxispress.com/shop/women-dreaming-epub"

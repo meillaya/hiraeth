@@ -38,6 +38,7 @@ defmodule Hiraeth.Ingestion.ManifestValidator do
       |> add_source_urls_finding(manifest)
       |> add_api_type_finding(manifest)
       |> add_api_endpoint_finding(manifest)
+      |> add_cover_source_finding(manifest)
       |> add_spider_module_finding(manifest)
       |> add_spider_start_urls_finding(manifest)
       |> add_expected_record_count_finding(manifest)
@@ -101,6 +102,49 @@ defmodule Hiraeth.Ingestion.ManifestValidator do
         source_hosts(manifest)
       )
     end)
+  end
+
+  # --- optional print cover source (Squarespace providers with per-format products) ---
+
+  defp add_cover_source_finding(findings, manifest) do
+    case get_field(manifest, :cover_source) do
+      nil ->
+        findings
+
+      source when is_map(source) ->
+        cover_source_findings(findings, manifest, source)
+
+      _invalid ->
+        [finding(manifest, :cover_source, "cover_source must be an object") | findings]
+    end
+  end
+
+  defp cover_source_findings(findings, manifest, source) do
+    endpoint = Map.get(source, :endpoint) || Map.get(source, "endpoint")
+    match = Map.get(source, :match) || Map.get(source, "match")
+
+    findings =
+      findings
+      |> add_blank(manifest, :cover_source, endpoint, "cover_source.endpoint is required")
+      |> add_if(
+        present?(endpoint) and match not in [nil, "title"],
+        manifest,
+        :cover_source,
+        "cover_source.match must be \"title\""
+      )
+
+    if present?(endpoint) do
+      add_url_policy_findings(
+        findings,
+        manifest,
+        :cover_source,
+        "cover_source.endpoint",
+        endpoint,
+        source_hosts(manifest)
+      )
+    else
+      findings
+    end
   end
 
   # --- api.type when effective source_mode is "api" ---

@@ -17,6 +17,7 @@ defmodule Hiraeth.Ingestion.ProviderManifest do
     :spider,
     :rate_limit,
     :detail_enrichment,
+    :cover_source,
     :expected_record_count,
     :permission_basis,
     :takedown_contact,
@@ -116,7 +117,7 @@ defmodule Hiraeth.Ingestion.ProviderManifest do
     api spider rate_limit detail_enrichment expected_record_count permission_basis
     takedown_contact excluded_content cover_cache_policy not_legal_advice
     type endpoint auth allowed_vendors collection_path vendor_as_author post_type taxonomy include_imprints exclude_imprints fetch_detail_pages detail_path_prefixes source_handle_patterns host path_prefix handle_pattern module start_urls selectors use_stealthy_fetcher
-    max_concurrency min_delay_ms max_bytes
+    max_concurrency min_delay_ms max_bytes cover_source match
     method key_env book title author
   )
   @known_atoms Map.new(@known_keys, &{&1, String.to_atom(&1)})

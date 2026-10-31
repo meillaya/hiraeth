@@ -169,6 +169,14 @@ if config_env() == :prod do
 
   config :hiraeth, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Fill cover assets that a seed/import created without a cached original.
+  # This only caches covers already present in the governed dataset; it does not
+  # ingest catalog data, so it has its own switch instead of following the
+  # autonomous-ingestion kill switch (a public demo can run it with ingestion off).
+  config :hiraeth,
+         :cover_backfill_on_boot,
+         System.get_env("HIRAETH_COVER_BACKFILL_ON_BOOT", "true") in ~w(true 1)
+
   config :hiraeth, HiraethWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

@@ -1,6 +1,8 @@
 import asyncio
 import re
+import unicodedata
 from typing import Any
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -184,6 +186,21 @@ def _author_from_excerpt(excerpt: str) -> str:
     return byline.group(1).strip() if byline else ""
 
 
+_AUTHOR_BYLINE_RE = re.compile(
+    r"\b(?:translated|edited|introduction|foreword|afterword|chapbook|anthology)\b",
+    re.IGNORECASE,
+)
+_AUTHOR_MAX_LENGTH = 120
+
+
+def _clean_author(value: str) -> str:
+    """Reject excerpt text that the byline regex mistook for a person's name."""
+    text = re.sub(r"\s+", " ", str(value or "")).strip(" ,;:-")
+    if not text or len(text) > _AUTHOR_MAX_LENGTH or _AUTHOR_BYLINE_RE.search(text):
+        return ""
+    return text
+
+
 def _isbn_from_text(value: str | None) -> str:
     for match in re.finditer(r"(?<!\d)(97[89](?:[\s-]?\d){10})(?!\d)", value or ""):
         digits = re.sub(r"[^0-9]", "", match.group(1))
@@ -202,6 +219,168 @@ def _strip_html(raw_html: str | None) -> str | None:
 
 def _canonical_title(title: str) -> str:
     return _EBOOK_TITLE_SUFFIX.sub("", title).strip()
+
+
+_EDITION_SUFFIX_RE = re.compile(
+    r"\s*(?:"
+    r"[\(\[][^)\]]*\b(?:paperback|hardcover|print|e-?book|ebook|epub|pdf|chapbook|digital)\b[^)\]]*[\)\]]"
+    r"|[-–—]\s*(?:e-?book|ebook|epub|pdf|print|digital)\b(?:\s*\([^)]*\))?"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_edition_suffixes(value: str) -> str:
+    previous = None
+    while previous != value:
+        previous = value
+        value = _EDITION_SUFFIX_RE.sub("", value)
+        value = re.sub(r"\s*[-–—]\s*out of print\s*$", "", value, flags=re.IGNORECASE)
+    return value
+
+
+def _clean_display_title(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip(" ,;:-")
+    return re.sub(r"\s+:\s*", ": ", text)
+
+
+def _work_title(title: str) -> str:
+    """Display title for a work: no format decoration, no doubled spacing."""
+    return _clean_display_title(_strip_edition_suffixes(str(title or "")))
+
+
+def _title_key(title: str) -> str:
+    value = unicodedata.normalize("NFKC", _work_title(title))
+    value = value.replace("\u2019", "'").replace("\u2018", "'")
+    value = re.split(r"\s*:\s+", value, maxsplit=1)[0]
+    return re.sub(r"[^0-9a-z]+", " ", value.lower()).strip()
+
+
+def _match_print_entry(
+    index: dict[str, tuple[str, str, str]], title: str
+) -> tuple[str, str, str] | None:
+    key = _title_key(title)
+    if not key:
+        return None
+
+    if key in index:
+        return index[key]
+
+    candidates = [
+        candidate
+        for candidate in index
+        if candidate.startswith(key + " ") or key.startswith(candidate + " ")
+    ]
+    if len(candidates) == 1:
+        return index[candidates[0]]
+
+    return None
+
+
+def _with_json_format(endpoint: str) -> str:
+    parsed = urlsplit(endpoint)
+    query = parse_qs(parsed.query)
+    query["format"] = ["json"]
+    return urlunsplit(
+        (parsed.scheme, parsed.netloc, parsed.path, urlencode(query, doseq=True), parsed.fragment)
+    )
+
+
+def _item_source_uri(item: dict[str, Any], endpoint: str) -> str:
+    full_url = item.get("fullUrl", "")
+    if full_url:
+        return absolute_url(endpoint, str(full_url))
+    return f"{endpoint}/{item.get('id', '')}"
+
+
+async def _print_cover_index(
+    client: httpx.AsyncClient,
+    cover_source: dict[str, Any],
+    max_bytes: int,
+) -> dict[str, tuple[str, str, str]]:
+    """Build title -> (work title, cover URL, product page) from a print listing.
+
+    The manifest names one print category per provider (for example Tilted Axis
+    `/shop?category=print`). That listing is the canonical cover source; ebook
+    products inherit the print cover instead of advertising their own image.
+    Any failure is a miss: the adapter then keeps the record's own cover.
+    """
+    cover_endpoint = str(cover_source.get("endpoint") or "").strip()
+    if not cover_endpoint:
+        return {}
+
+    try:
+        response = await client.get(_with_json_format(cover_endpoint), headers=_HEADERS)
+        if response.status_code >= 400 or len(response.content) > max_bytes:
+            return {}
+
+        listing_response = await client.get(cover_endpoint, headers=_HEADERS)
+        html_cover_urls = (
+            listing_cover_urls(listing_response.text, cover_endpoint)
+            if listing_response.status_code < 400 and len(listing_response.content) <= max_bytes
+            else {}
+        )
+
+        data = response.json()
+        collection = data.get("collection", {})
+        if isinstance(collection, dict) and collection.get("items"):
+            items = collection["items"]
+        else:
+            items = data.get("items", [])
+
+        index: dict[str, tuple[str, str, str]] = {}
+        for item in items:
+            if not _is_book_item(item):
+                continue
+
+            cover_url = _cover_url(item, html_cover_urls)
+            key = _title_key(str(item.get("title") or ""))
+            if cover_url and key:
+                index.setdefault(
+                    key,
+                    (
+                        _work_title(str(item.get("title") or "")),
+                        cover_url,
+                        _item_source_uri(item, cover_endpoint),
+                    ),
+                )
+
+        return index
+    except Exception:
+        return {}
+
+
+_PRINT_FORMATS = {"paperback", "hardcover"}
+
+
+def _align_print_metadata(record: dict[str, Any], index: dict[str, tuple[str, str, str]]) -> None:
+    """Make the print listing canonical for its work's title and print cover.
+
+    Format products on the same shop often decorate titles differently
+    ("Capitalists Must Starve" vs "Capitalists Must Starve: A Novel" vs
+    "... (paperback)"). Grouping by the decorated title would split one book
+    into several works. The declared print listing supplies the work title and
+    the print cover; non-print records keep their own cover only so a
+    digital-only work still has one, and the read policy always prefers the
+    print edition when the work has one.
+    """
+    match = _match_print_entry(index, str(record["work"].get("title") or ""))
+    if match is None:
+        return
+
+    print_title, cover_url, source_uri = match
+    record["work"]["title"] = print_title
+
+    if record["edition"]["format"] not in _PRINT_FORMATS:
+        return
+
+    record["cover"]["source_url"] = cover_url
+    record["cover"]["attribution_url"] = source_uri
+    record["field_sources"]["cover"]["source_uri"] = source_uri
+    record.pop("no_cover_reason", None)
+
+    if "cover" not in record["displayed_fields"]:
+        record["displayed_fields"].append("cover")
 
 
 def _format_from_item(item: dict[str, Any], custom_format: Any) -> str:
@@ -232,7 +411,7 @@ def _item_to_record(
     source_uri = (
         absolute_url(endpoint, full_url) if full_url else f"{endpoint}/{item.get('id', '')}"
     )
-    title = _canonical_title(str(item.get("title", "")))
+    title = _work_title(str(item.get("title", "")))
     body = item.get("body", "") or item.get("excerpt", "")
     description = _strip_html(body)
     custom_content = item.get("customContent", {})
@@ -245,6 +424,7 @@ def _item_to_record(
     author = custom_content.get("author", "") if isinstance(custom_content, dict) else ""
     if not author and isinstance(body, str):
         author = _author_from_excerpt(body)
+    author = _clean_author(author)
     custom_format = custom_content.get("format", "") if isinstance(custom_content, dict) else ""
     fmt = _format_from_item(item, custom_format)
     published_on = custom_content.get("publishedOn", "") if isinstance(custom_content, dict) else ""
@@ -345,7 +525,7 @@ async def fetch(config: dict[str, Any]) -> list[dict[str, Any]]:
     max_bytes = rate_limit.get("max_bytes", 10 * 1024 * 1024)
 
     async with httpx.AsyncClient() as client:
-        url = f"{endpoint}?format=json"
+        url = _with_json_format(endpoint)
         response = await client.get(url, headers=_HEADERS)
         response.raise_for_status()
 
@@ -366,11 +546,20 @@ async def fetch(config: dict[str, Any]) -> list[dict[str, Any]]:
         else:
             items = data.get("items", [])
 
+        cover_source = config.get("cover_source")
+        print_covers = (
+            await _print_cover_index(client, cover_source, max_bytes)
+            if isinstance(cover_source, dict)
+            else {}
+        )
+
         records: list[dict[str, Any]] = []
         for item in items:
             if not _is_book_item(item):
                 continue
             record = _item_to_record(item, provider, endpoint, publisher_name, html_cover_urls)
+            if print_covers:
+                _align_print_metadata(record, print_covers)
             if record["contributors"]:
                 records.append(record)
 

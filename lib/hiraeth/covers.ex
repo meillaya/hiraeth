@@ -334,6 +334,23 @@ defmodule Hiraeth.Covers do
   def cache_eligible?(%CoverAsset{} = asset), do: cache_candidate?(asset)
   def cache_eligible?(_asset), do: false
 
+  @doc """
+  Returns the source URLs of cache-eligible assets that have no cached original.
+
+  These are the assets a public page cannot render yet. A seed or import can
+  create them faster than the weekly refresh runs, so the backfill worker uses
+  this scope instead of sweeping the whole catalog.
+  """
+  @spec missing_cache_source_urls() :: [String.t()]
+  def missing_cache_source_urls do
+    CoverAsset
+    |> Ash.read!(authorize?: false)
+    |> Enum.filter(&(cache_candidate?(&1) and not present?(&1.cached_file_path)))
+    |> Enum.map(& &1.source_url)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
   @doc "Returns true when the stored cache path exists and is safe to serve."
   @spec cached_file_available?(String.t() | nil) :: boolean()
   def cached_file_available?(path), do: cached_file_present?(path)

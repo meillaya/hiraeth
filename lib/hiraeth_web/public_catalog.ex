@@ -8,6 +8,7 @@ defmodule HiraethWeb.PublicCatalog do
 
   alias Hiraeth.Catalog.PublicProjection
   alias Hiraeth.Covers
+  alias Hiraeth.Covers.Policy
   alias Hiraeth.Covers.Store
   alias Hiraeth.RealCatalog.SourcePolicy
 
@@ -821,11 +822,11 @@ defmodule HiraethWeb.PublicCatalog do
             and cover.takedown_state = 'visible'
             and cover.cache_policy = 'cache_allowed'
             and cover.rights_basis = 'local_cache_permitted'
-          order by e.published_on desc nulls last, e.slug, ca.position nulls last
+          order by (e.format = any($1::text[])) desc, e.published_on desc nulls last, e.slug, ca.position nulls last
           limit 1
         ) sample_cover on true
         """,
-        []
+        [Policy.print_formats()]
       )
 
     rows
@@ -1516,7 +1517,6 @@ defmodule HiraethWeb.PublicCatalog do
         :contributor_names,
         :series_titles,
         :series_slug,
-        :cover,
         :source,
         :original_title,
         :original_language_code,
@@ -1525,6 +1525,7 @@ defmodule HiraethWeb.PublicCatalog do
     )
     |> Map.put(:id, primary.work_id)
     |> Map.put(:slug, work_slug(primary))
+    |> Map.put(:cover, book_cover(editions))
     |> Map.put(:description, first_present(editions, :description))
     |> Map.put(:editorial_praise, first_present(editions, :editorial_praise) || [])
     |> Map.put(:praise, first_present(editions, :editorial_praise) || [])
@@ -1549,6 +1550,10 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.reject(&is_nil/1)
     |> Enum.max(Date, fn -> nil end)
   end
+
+  # Books are represented by their oldest paperback for stable metadata; the
+  # cover decision lives in Hiraeth.Covers.Policy so every public read agrees.
+  defp book_cover(editions), do: Policy.cover_edition(editions)
 
   defp format_projection(edition) do
     PublicProjection.format!(%{

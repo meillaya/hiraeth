@@ -150,6 +150,48 @@ defmodule Hiraeth.Ingestion.ManifestValidatorTest do
     end
   end
 
+  describe "validate/1 with cover_source" do
+    test "accepts a print cover source on an allowed host" do
+      manifest =
+        valid_api_manifest(%{
+          cover_source: %{
+            endpoint: "https://www.example.com/shop?category=print",
+            match: "title"
+          }
+        })
+
+      assert {:ok, _manifest} = ManifestValidator.validate(manifest)
+    end
+
+    test "rejects a cover_source endpoint outside source_hosts" do
+      manifest =
+        valid_api_manifest(%{
+          cover_source: %{endpoint: "https://evil.example.com/shop?category=print"}
+        })
+
+      assert {:error, findings} = ManifestValidator.validate(manifest)
+
+      assert findings
+             |> Enum.map(& &1.reason)
+             |> Enum.any?(
+               &String.contains?(&1, "cover_source.endpoint host must be listed in source_hosts")
+             )
+    end
+
+    test "rejects an unsupported cover_source match mode" do
+      manifest =
+        valid_api_manifest(%{
+          cover_source: %{endpoint: "https://www.example.com/shop?category=print", match: "isbn"}
+        })
+
+      assert {:error, findings} = ManifestValidator.validate(manifest)
+
+      assert findings
+             |> Enum.map(& &1.reason)
+             |> Enum.any?(&String.contains?(&1, "cover_source.match must be"))
+    end
+  end
+
   describe "validate/1 with unsafe api.endpoint values" do
     test "rejects API endpoint hosts outside source_hosts" do
       manifest =

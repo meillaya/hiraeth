@@ -718,6 +718,123 @@ def test_fetch_squarespace_filters_bundles_and_uses_store_item_fields():
     assert "cover" not in placeholder["displayed_fields"]
 
 
+def test_fetch_squarespace_uses_declared_print_cover_source():
+    full_items = {
+        "collection": {
+            "items": [
+                {
+                    "id": "cathedrals-print",
+                    "title": "Cathedrals (paperback)",
+                    "fullUrl": "/bookstore/cathedrals-paperback",
+                    "excerpt": "<h3>Claudia Piñeiro</h3>",
+                    "assetUrl": "https://images.example.com/cathedrals-print.png",
+                    "categories": ["Print"],
+                },
+                {
+                    "id": "cathedrals-ebook",
+                    "title": "Cathedrals (eBook)",
+                    "fullUrl": "/bookstore/cathedrals-ebook",
+                    "excerpt": "<h3>Claudia Piñeiro</h3>",
+                    "assetUrl": "https://images.example.com/cathedrals-ebook.png",
+                    "categories": ["Digital"],
+                },
+            ]
+        }
+    }
+
+    listing_html = """
+    <article data-item-id="cathedrals-print">
+      <img data-src="https://images.example.com/cathedrals-print-listing.png" />
+    </article>
+    <article data-item-id="cathedrals-ebook">
+      <img data-src="https://images.example.com/cathedrals-ebook-listing.png" />
+    </article>
+    """
+
+    print_items = {
+        "collection": {
+            "items": [
+                {
+                    "id": "cathedrals-print",
+                    "title": "Cathedrals (paperback)",
+                    "fullUrl": "/bookstore/cathedrals-paperback",
+                    "excerpt": "<h3>Claudia Piñeiro</h3>",
+                    "categories": ["Print"],
+                }
+            ]
+        }
+    }
+
+    print_listing_html = """
+    <article data-item-id="cathedrals-print">
+      <img data-src="https://images.example.com/cathedrals-print-listing.png" />
+    </article>
+    """
+
+    mock = _mock_httpx_client(
+        [
+            (200, full_items, {}),
+            (200, listing_html, {}),
+            (200, print_items, {}),
+            (200, print_listing_html, {}),
+        ]
+    )
+
+    with mock:
+        response = client.post(
+            "/fetch/",
+            json={
+                "provider": "tilted_axis_press",
+                "config": {
+                    "api": {
+                        "type": "squarespace",
+                        "endpoint": "https://www.tiltedaxispress.com/shop",
+                    },
+                    "cover_source": {
+                        "endpoint": "https://www.tiltedaxispress.com/shop?category=print",
+                        "match": "title",
+                    },
+                    "source_hosts": ["www.tiltedaxispress.com"],
+                    "rate_limit": {"min_delay_ms": 0, "max_bytes": 10_000_000},
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    records = response.json()["records"]
+    assert len(records) == 2
+
+    print_record, ebook_record = records
+    assert print_record["edition"]["format"] == "paperback"
+    assert ebook_record["edition"]["format"] == "ebook"
+    # Format products decorate their titles differently; the print listing is
+    # the work-title authority so both editions group under one work.
+    assert print_record["work"]["title"] == "Cathedrals"
+    assert ebook_record["work"]["title"] == "Cathedrals"
+
+    assert (
+        print_record["cover"]["source_url"]
+        == "https://images.example.com/cathedrals-print-listing.png"
+    )
+    assert (
+        print_record["cover"]["attribution_url"]
+        == "https://www.tiltedaxispress.com/bookstore/cathedrals-paperback"
+    )
+    assert (
+        print_record["field_sources"]["cover"]["source_uri"]
+        == "https://www.tiltedaxispress.com/bookstore/cathedrals-paperback"
+    )
+    assert "cover" in print_record["displayed_fields"]
+
+    # A non-print record keeps its own cover only as a digital-only fallback;
+    # the work-level policy still renders the print cover whenever one exists.
+    assert (
+        ebook_record["cover"]["source_url"]
+        == "https://images.example.com/cathedrals-ebook-listing.png"
+    )
+    assert "cover" in ebook_record["displayed_fields"]
+
+
 # ---------------------------------------------------------------------------
 # WordPress
 # ---------------------------------------------------------------------------

@@ -18,6 +18,10 @@
     "endpoint": "https://www.tiltedaxispress.com/shop",
     "auth": null
   },
+  "cover_source": {
+    "endpoint": "https://www.tiltedaxispress.com/shop?category=print",
+    "match": "title"
+  },
   "rate_limit": {
     "max_concurrency": 1,
     "min_delay_ms": 500,

@@ -481,7 +481,7 @@
       "approved_source_records": 110,
       "attempted_records": 110,
       "checksums": {
-        "dataset_sha256": "48d94814f6bf93c14389bb4853005044c7dc618481305fe06cb48a31ea470214"
+        "dataset_sha256": "0273897c0cd85e7b6728af18236e22bbd9d771226d54dfc6627ab12cfec096f3"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "tilted_axis_press.json",
@@ -489,10 +489,10 @@
       "expected_record_count": 110,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 65,
+        "missing_isbn": 66,
         "missing_purchase_link": 0,
         "missing_review_links": 110,
-        "structured_missing_fields": 65
+        "structured_missing_fields": 66
       },
       "gap_policy": "import_with_gaps",
       "provider": "tilted_axis_press_official_site",
