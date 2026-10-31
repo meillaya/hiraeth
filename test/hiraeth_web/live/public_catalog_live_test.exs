@@ -36,6 +36,45 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     :ok
   end
 
+  test "home features one forthcoming hero and four random recent/forthcoming books",
+       %{conn: conn} do
+    PublicCatalog.clear_cache()
+
+    candidates = PublicCatalog.home_candidates()
+    selection = PublicCatalog.home_selection(4)
+
+    assert candidates != []
+    refute Enum.any?(candidates, &non_book_title?/1)
+
+    assert selection.spotlight
+    assert selection.spotlight.published_on
+    assert Date.compare(selection.spotlight.published_on, Date.utc_today()) == :gt
+    refute non_book_title?(selection.spotlight)
+
+    assert length(selection.recent) == 4
+
+    refute Enum.any?(selection.recent, fn book ->
+             book.work_id == selection.spotlight.work_id
+           end)
+
+    refute Enum.any?(selection.recent, &non_book_title?/1)
+
+    {:ok, home, _html} = live(conn, ~p"/")
+
+    assert has_element?(home, "#home-spotlight", selection.spotlight.title)
+    assert has_element?(home, "#recent-acquisitions", "Four more")
+
+    doc = home |> render() |> LazyHTML.from_fragment()
+
+    assert doc
+           |> LazyHTML.query("#recent-books .sb-book")
+           |> LazyHTML.to_tree()
+           |> length() == 4
+
+    home_html = render(home)
+    refute home_html =~ ~r/NORTH AMERICAN DIGITAL SUBSCRIPTION|2023 print bundle/i
+  end
+
   test "home and browse render real publisher catalog with pagination and filtering", %{
     conn: conn
   } do
@@ -43,7 +82,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     assert has_element?(home, "#home-shell")
     assert has_element?(home, "#home-spotlight")
-    assert has_element?(home, "#recent-acquisitions", "Upcoming")
+    assert has_element?(home, "#recent-acquisitions", "Four more")
     home_html = render(home)
     refute home_html =~ "Spotlight Volume"
     refute home_html =~ "Traceable metadata for independent presses."
@@ -59,8 +98,6 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
              "#catalog-page-count",
              "Page 1 of #{ceil_div(PublicCatalog.book_page(nil, 1).total_count, PublicCatalog.page_size())}"
            )
-
-    assert has_element?(browse, "#book-reader", "Selected book")
 
     for {isbn, title} <- [
           {"9781628976830", "My Paris"},
@@ -160,7 +197,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     assert has_element?(
              view,
              "#search-results",
-             "#{PublicCatalog.book_page(nil, 1).total_count} found"
+             "#{format_count(PublicCatalog.book_page(nil, 1).total_count)} found"
            )
 
     assert has_element?(view, "#catalog-pagination")
@@ -230,18 +267,18 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     assert has_element?(
              browse,
-             ~s|#catalog-filter-form input[name="filters[publisher]"][value="#{fixture.publisher_slug}"]|
+             ~s|#catalog-filter-form select[name="filters[publisher]"] option[selected][value="#{fixture.publisher_slug}"]|
            )
 
     assert has_element?(
              browse,
-             ~s|#catalog-filter-form input[name="filters[series]"][value="#{fixture.series_slug}"]|
+             ~s|#catalog-filter-form select[name="filters[series]"] option[selected][value="#{fixture.series_slug}"]|
            )
 
     assert has_element?(
              browse,
              ~s|#catalog-filter-form select[name="filters[sort]"] option[selected][value="newest"]|,
-             "Publication date, newest first"
+             "Newest first"
            )
 
     refute has_element?(browse, "#catalog-grid", "Immigrant")
@@ -942,6 +979,16 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       "source_type" => "publisher_dataset",
       "rights_basis" => "field-level provenance"
     }
+  end
+
+  defp format_count(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  end
+
+  defp non_book_title?(book) do
+    book.title =~ ~r/subscription|bundle|gift card|gift_card|merch|box set|boxed set/i
   end
 
   defp cache_cover_for_edition_slug!(slug, provider, source_url, filename, attribution_text) do

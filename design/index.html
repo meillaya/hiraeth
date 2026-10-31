@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiraeth Softbound — Design System &amp; Tokens</title>
+<meta name="description" content="Formal UI/UX specification for the Hiraeth Softbound edition: tokens, type scale, responsive grid, components, and pixel rules.">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/softbound.css">
+<link rel="stylesheet" href="spec.css">
+</head>
+<body class="spec-body">
+<main class="spec">
+  <header class="spec-header">
+    <p class="spec-wordmark">Hiraeth<span>.</span> — Softbound design system</p>
+    <h1>One quiet sheet, measured to the pixel.</h1>
+    <p class="spec-lede">
+      This document formalises the Softbound edition: the canonical token set, the responsive
+      type and grid rules, the component contracts, and the device matrix the implementation is
+      held to. Every value below is read from the live token stylesheet, so this page cannot drift
+      from the running site.
+    </p>
+    <p class="spec-meta">
+      <span><strong>Version</strong> 4.0 · Softbound</span>
+      <span><strong>Source</strong> design/softbound_index.html</span>
+      <span><strong>Prototypes</strong> <a href="softbound_index.html">home</a> · <a href="softbound_browse.html">books</a> · <a href="softbound_book.html">book</a> · <a href="softbound_publishers.html">publishers</a> · <a href="softbound_press.html">press</a> · <a href="softbound_series.html">collections</a></span>
+    </p>
+    <div class="spec-viewport" aria-live="polite">
+      <span>Viewport <strong id="spec-width">—</strong></span>
+      <span>Active band <strong id="spec-band">—</strong></span>
+      <span class="spec-breakpoints" aria-label="Breakpoints">
+        <span class="spec-breakpoint" data-band="compact">≤560</span>
+        <span class="spec-breakpoint" data-band="mobile">≤760</span>
+        <span class="spec-breakpoint" data-band="tablet">≤900</span>
+        <span class="spec-breakpoint" data-band="small-desktop">≤1040</span>
+        <span class="spec-breakpoint" data-band="desktop">≤1280</span>
+        <span class="spec-breakpoint" data-band="wide">≥1281</span>
+      </span>
+    </div>
+  </header>
+
+  <section class="spec-section" id="principles">
+    <h2>Principles</h2>
+    <p class="spec-note">
+      The interface is an edition, not a dashboard. Content sits on one paper sheet over a sage
+      ground; hairlines replace boxes; serif display type carries hierarchy and Archivo carries
+      interface text. Nothing floats, nothing glows, and nothing crowds the page.
+    </p>
+    <div class="spec-grid spec-grid--3">
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">01 · Sheet</p>
+        <p class="spec-card-title" style="margin-top: 8px;">One reading surface</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">The page is a single rounded sheet on the sage ground. Content never escapes the sheet; the only full-bleed element is the sage field behind it.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">02 · Type</p>
+        <p class="spec-card-title" style="margin-top: 8px;">Serif voice, sans tools</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">Newsreader sets titles, decks, and long-form prose. Archivo sets labels, controls, captions, and numbers. No third voice is introduced.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">03 · Measure</p>
+        <p class="spec-card-title" style="margin-top: 8px;">Print rhythm</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">Rules are 1px, radii are generous, and the page gutter is the only horizontal constant. Spacing steps in 2px increments at small sizes and 4px above 16px.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-section" id="tokens">
+    <h2>Token set</h2>
+    <p class="spec-note">
+      Canonical file: <code>assets/css/tokens.css</code>. Names are stable API: components consume
+      them by name, never by raw value. The tables are generated from the live stylesheet at load.
+    </p>
+
+    <h3 class="spec-subhead">Colour</h3>
+    <div class="spec-swatch-list" id="token-colors"></div>
+
+    <h3 class="spec-subhead">Type families</h3>
+    <table class="spec-table" aria-label="Type family tokens">
+      <thead><tr><th>Token</th><th>Value</th><th>Role</th></tr></thead>
+      <tbody id="token-type"></tbody>
+    </table>
+
+    <h3 class="spec-subhead">Layout, radii, and motion</h3>
+    <table class="spec-table" aria-label="Layout tokens">
+      <thead><tr><th>Token</th><th>Value</th><th>Role</th></tr></thead>
+      <tbody id="token-layout"></tbody>
+    </table>
+
+    <h3 class="spec-subhead">Copy-paste token block</h3>
+    <pre class="spec-code" id="token-block" aria-label="Generated CSS token block"></pre>
+  </section>
+
+  <section class="spec-section" id="type">
+    <h2>Typography</h2>
+    <p class="spec-note">
+      Display sizes are fluid with a hard cap; long titles step down through the
+      <code>--medium</code>, <code>--long</code>, and <code>--xlong</code> modifiers rather than
+      pushing the cover below the fold.
+    </p>
+
+    <div class="spec-frame spec-frame--paper">
+      <div class="spec-type-row">
+        <span class="spec-type-label">Hero display</span>
+        <span class="spec-display">Garden</span>
+        <span class="spec-type-spec">Newsreader 400<br>clamp(80px, 12vw, 184px)<br>line-height 0.90 · tracking −0.06em</span>
+      </div>
+      <div class="spec-type-row">
+        <span class="spec-type-label">Hero byline</span>
+        <span class="spec-byline">Hiroko Oyamada</span>
+        <span class="spec-type-spec">Newsreader italic 400<br>clamp(21px, 2.2vw, 29px)<br>line-height 1.15</span>
+      </div>
+      <div class="spec-type-row">
+        <span class="spec-type-label">Hero deck</span>
+        <span class="spec-deck">Crabs scurrying over a landfill. Huge tadpoles writhing in a pond. A gecko stuck to the window.</span>
+        <span class="spec-type-spec">Newsreader 400<br>clamp(17px, 1.55vw, 21px)<br>measure 39ch · 1.55</span>
+      </div>
+      <div class="spec-type-row">
+        <span class="spec-type-label">Kicker / label</span>
+        <span class="spec-kicker">Featured book / New Directions</span>
+        <span class="spec-type-spec">Archivo 500<br>10px · 1.5 · 0.11em uppercase</span>
+      </div>
+      <div class="spec-type-row">
+        <span class="spec-type-label">Card title</span>
+        <span class="spec-card-title">Night on the Galactic Railroad</span>
+        <span class="spec-type-spec">Newsreader 400<br>18px · 1.18 · −0.012em</span>
+      </div>
+      <div class="spec-type-row">
+        <span class="spec-type-label">Meta</span>
+        <span class="spec-small">Archipelago Books · 2026 · Paperback, Ebook</span>
+        <span class="spec-type-spec">Archivo 400<br>9.5px · 1.6 · 0.05em uppercase</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-section" id="layout">
+    <h2>Layout and grid</h2>
+    <p class="spec-note">
+      The sheet is centred with a fixed outer margin and a fluid inner gutter. All content blocks
+      align to the gutter; the only other horizontal measures are the hero gap, the browse filter
+      radius, and the cover widths.
+    </p>
+    <table class="spec-table" aria-label="Layout specifications">
+      <thead><tr><th>Property</th><th>Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Sheet width</td><td class="spec-value">min(100% − inset × 2, 1640px)</td><td>Inset 18px · 8px at ≤760 · 6px at ≤560</td></tr>
+        <tr><td>Sheet radius</td><td class="spec-value">clamp(24px, 2.8vw, 38px)</td><td>20px at ≤560</td></tr>
+        <tr><td>Page gutter</td><td class="spec-value">clamp(18px, 4.6vw, 64px)</td><td>All content blocks start and end here</td></tr>
+        <tr><td>Header</td><td class="spec-value">19px gutter padding · 1fr auto 1fr grid</td><td>Nav hides at ≤1040; menu button appears</td></tr>
+        <tr><td>Hero</td><td class="spec-value">1.04fr / 0.96fr · gap clamp(36px, 7vw, 110px)</td><td>Single column at ≤900</td></tr>
+        <tr><td>Hero cover</td><td class="spec-value">min(100%, 390px)</td><td>Left aligned at ≤900, width min(78vw, 340px)</td></tr>
+        <tr><td>Ledger</td><td class="spec-value">3 equal columns · 1px rules</td><td>Edge-to-edge inside the gutter</td></tr>
+        <tr><td>Shelf tray</td><td class="spec-value">margin clamp(10px, 2vw, 22px) · padding clamp(20px, 3vw, 32px) · radius clamp(18px, 2.2vw, 28px)</td><td>4 columns; 2 at ≤760</td></tr>
+        <tr><td>Browse grid</td><td class="spec-value">4 columns · gap clamp(16px, 2.4vw, 28px)</td><td>3 at ≤1280 · 2 at ≤760</td></tr>
+        <tr><td>Book record</td><td class="spec-value">0.78fr / 1.22fr · gap clamp(36px, 6vw, 96px)</td><td>Single column at ≤900 · cover max 430px</td></tr>
+        <tr><td>Press index</td><td class="spec-value">38px / 1fr / auto / 56px</td><td>No. · name · count · cover thumb</td></tr>
+        <tr><td>Footer</td><td class="spec-value">1fr auto 1fr · 22px 0 19px</td><td>Nav hides at ≤900; counts wrap left at ≤760</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="spec-section" id="responsive">
+    <h2>Responsive matrix</h2>
+    <p class="spec-note">
+      The matrix is computed from the same clamp formulas the stylesheet uses. Pixel-perfect
+      acceptance is checked at 390, 560, 760, 834, 900, 1040, 1180, 1280, and 1440 CSS pixels.
+    </p>
+    <div class="spec-frame spec-frame--paper" style="overflow-x: auto;">
+      <table class="spec-table" id="responsive-table" aria-label="Responsive matrix">
+        <thead id="responsive-head"></thead>
+        <tbody id="responsive-body"></tbody>
+      </table>
+    </div>
+    <p class="spec-caption">
+      <span>Rounded to 0.1px. Sheet/gutter values are rounded to whole pixels.</span>
+      <span>Breakpoints are max-width based; the header switches at 1041px.</span>
+    </p>
+  </section>
+
+  <section class="spec-section" id="components">
+    <h2>Components</h2>
+    <p class="spec-note">
+      Specimens below use the production component classes and tokens. Open the prototype pages
+      for the full compositions; these frames verify type, rules, radii, and spacing in isolation.
+    </p>
+
+    <h3 class="spec-subhead">Sheet, header, and footer</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <header class="sb-header">
+          <div class="sb-header__in">
+            <a class="sb-brand" href="#components">Hiraeth<span class="sb-brand__dot">.</span></a>
+            <nav class="sb-nav" aria-label="Sample navigation">
+              <a href="#components" aria-current="page">Books</a>
+              <a href="#components">Publishers</a>
+              <a href="#components">Collections</a>
+            </nav>
+            <div class="sb-tools"><span class="sb-tool">Search</span></div>
+          </div>
+        </header>
+        <div style="padding: 18px var(--sb-gutter); color: var(--sb-muted); font-size: 10px;">Header height follows its 19px vertical padding; rules are 1px var(--sb-line).</div>
+        <footer class="sb-footer">
+          <div class="sb-footer__in">
+            <a class="sb-footer__brand" href="#components">Hiraeth<span class="sb-brand__dot">.</span></a>
+            <nav class="sb-footer__nav"><a href="#components">Books</a><a href="#components">Publishers</a><a href="#components">Collections</a></nav>
+            <p class="sb-footer__counts">7,582 books / 19 presses / 8 collections</p>
+          </div>
+          <div class="sb-footer__base"><span>Softbound edition, 2026</span><span>7,582 volumes indexed</span></div>
+        </footer>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Hero, ledger, four more, presses</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <section class="sb-hero">
+          <div class="sb-hero__copy">
+            <p class="sb-kicker">Featured forthcoming <span>/ Archipelago Books</span></p>
+            <h1>Garden</h1>
+            <p class="sb-hero__byline">Hiroko Oyamada</p>
+            <p class="sb-hero__deck">Crabs scurrying over a landfill. Huge tadpoles writhing in a pond. A gecko stuck to the window.</p>
+            <p class="sb-hero__meta">Archipelago Books, 2026 <span>/</span> Paperback, Ebook</p>
+            <span class="sb-button">Open the book <span>→</span></span>
+          </div>
+          <div class="sb-hero__cover">
+            <div class="sb-fallback"><span class="sb-fallback__press">Archipelago Books</span><span class="sb-fallback__title">Garden</span><span class="sb-fallback__author">Hiroko Oyamada</span></div>
+            <p class="sb-figcap"><span>Garden</span><span>Hiroko Oyamada</span></p>
+          </div>
+        </section>
+        <section class="sb-ledger">
+          <a href="#components"><strong>7,582</strong><span>Books in this edition</span></a>
+          <a href="#components"><strong>19</strong><span>Independent presses</span></a>
+          <a href="#components"><strong>8</strong><span>Collections</span></a>
+        </section>
+        <section class="sb-shelf">
+          <div class="sb-shelf__head"><div><h2>Four more</h2><p>From the catalogue</p></div><a class="sb-link" href="#components">All 7,582 books →</a></div>
+          <div class="sb-shelf__grid">
+            <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">New Directions</span><span class="sb-fallback__title">The Complete Stories</span><span class="sb-fallback__author">Ingeborg Bachmann</span></span></span><span class="sb-book__meta"><span class="sb-book__title">The Complete Stories</span><span class="sb-book__author">Ingeborg Bachmann</span></span><span class="sb-book__foot"><span>New Directions</span><span>2026</span></span></a>
+            <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">New Directions</span><span class="sb-fallback__title">Labyrinths</span><span class="sb-fallback__author">Jorge Luis Borges</span></span></span><span class="sb-book__meta"><span class="sb-book__title">Labyrinths</span><span class="sb-book__author">Jorge Luis Borges</span></span><span class="sb-book__foot"><span>New Directions</span><span>2026</span></span></a>
+            <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Archipelago</span><span class="sb-fallback__title">Night on the Galactic Railroad</span><span class="sb-fallback__author">Kenji Miyazawa</span></span></span><span class="sb-book__meta"><span class="sb-book__title">Night on the Galactic Railroad</span><span class="sb-book__author">Kenji Miyazawa</span></span><span class="sb-book__foot"><span>Archipelago</span><span>2026</span></span></a>
+            <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Seagull Books</span><span class="sb-fallback__title">Fear Reverence Terror</span><span class="sb-fallback__author">Carlo Ginzburg</span></span></span><span class="sb-book__meta"><span class="sb-book__title">Fear Reverence Terror</span><span class="sb-book__author">Carlo Ginzburg</span></span><span class="sb-book__foot"><span>Seagull Books</span><span>2026</span></span></a>
+          </div>
+        </section>
+        <section class="sb-presses">
+          <div class="sb-sectionhead"><div><p class="sb-kicker">The presses</p><h2>Independent publishers</h2></div><a class="sb-link" href="#components">All 19 presses →</a></div>
+          <div class="sb-presslist">
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">01</span><span class="sb-pressrow__name">New Directions</span><span class="sb-pressrow__count">1,504 books</span></a>
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">02</span><span class="sb-pressrow__name">Seven Stories Press</span><span class="sb-pressrow__count">1,136 books</span></a>
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">03</span><span class="sb-pressrow__name">NYRB</span><span class="sb-pressrow__count">881 books</span></a>
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">04</span><span class="sb-pressrow__name">Seagull Books</span><span class="sb-pressrow__count">855 books</span></a>
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">05</span><span class="sb-pressrow__name">Dalkey Archive</span><span class="sb-pressrow__count">794 books</span></a>
+            <a class="sb-pressrow" href="#components"><span class="sb-pressrow__no">06</span><span class="sb-pressrow__name">Historical Materialism</span><span class="sb-pressrow__count">403 books</span></a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Browse filter, covers grid, and pager</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <section class="sb-filter" aria-label="Sample filter">
+          <div class="sb-filter__search"><label>Search</label><input type="search" placeholder="Title, author, press" aria-label="Sample search"><span class="sb-filter__clear">Clear</span></div>
+          <div class="sb-filter__controls">
+            <div class="sb-control"><label>Press</label><select><option>All presses</option></select></div>
+            <div class="sb-control"><label>Format</label><select><option>All formats</option></select></div>
+            <div class="sb-control"><label>Collection</label><select><option>All collections</option></select></div>
+            <div class="sb-control"><label>Sort</label><select><option>Newest first</option></select></div>
+            <div class="sb-control sb-control--view"><span>View</span><div class="sb-view"><button type="button" aria-pressed="true">Covers</button><button type="button" aria-pressed="false">Index</button></div></div>
+          </div>
+        </section>
+        <div class="sb-resultsline"><p><strong>7,582</strong> books</p><p>Showing 1–24 of 7,582</p></div>
+        <div class="sb-grid">
+          <article class="sb-card"><span class="sb-card__well"><span class="sb-fallback"><span class="sb-fallback__press">New Directions</span><span class="sb-fallback__title">The Complete Stories</span><span class="sb-fallback__author">Ingeborg Bachmann</span></span></span><div class="sb-card__meta"><h4 class="sb-card__title">The Complete Stories</h4><span class="sb-card__author">Ingeborg Bachmann</span></div><div class="sb-card__foot"><span>New Directions</span><span>2026</span></div></article>
+          <article class="sb-card"><span class="sb-card__well"><span class="sb-fallback"><span class="sb-fallback__press">New Directions</span><span class="sb-fallback__title">Labyrinths</span><span class="sb-fallback__author">Jorge Luis Borges</span></span></span><div class="sb-card__meta"><h4 class="sb-card__title">Labyrinths</h4><span class="sb-card__author">Jorge Luis Borges</span></div><div class="sb-card__foot"><span>New Directions</span><span>2026</span></div></article>
+          <article class="sb-card"><span class="sb-card__well"><span class="sb-fallback"><span class="sb-fallback__press">Archipelago</span><span class="sb-fallback__title">Night on the Galactic Railroad</span><span class="sb-fallback__author">Kenji Miyazawa</span></span></span><div class="sb-card__meta"><h4 class="sb-card__title">Night on the Galactic Railroad</h4><span class="sb-card__author">Kenji Miyazawa</span></div><div class="sb-card__foot"><span>Archipelago</span><span>2026</span></div></article>
+          <article class="sb-card"><span class="sb-card__well"><span class="sb-fallback"><span class="sb-fallback__press">Seagull Books</span><span class="sb-fallback__title">Fear Reverence Terror</span><span class="sb-fallback__author">Carlo Ginzburg</span></span></span><div class="sb-card__meta"><h4 class="sb-card__title">Fear Reverence Terror</h4><span class="sb-card__author">Carlo Ginzburg</span></div><div class="sb-card__foot"><span>Seagull Books</span><span>2026</span></div></article>
+        </div>
+        <nav class="sb-pager" aria-label="Sample pages"><span class="sb-pager__step" aria-disabled="true">← Previous</span><div class="sb-pager__pages"><a class="sb-pager__page is-current" aria-current="page" href="#components">1</a><a class="sb-pager__page" href="#components">2</a><a class="sb-pager__page" href="#components">3</a></div><a class="sb-pager__step sb-pager__step--next" href="#components">Next →</a></nav>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Book record</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <nav class="sb-crumbs"><a href="#components">Books</a><span aria-hidden="true">/</span><a href="#components">Archipelago Books</a><span aria-hidden="true">/</span><span>Garden</span></nav>
+        <article class="sb-record">
+          <div class="sb-record__cover"><div class="sb-fallback"><span class="sb-fallback__press">Archipelago Books</span><span class="sb-fallback__title">Garden</span><span class="sb-fallback__author">Hiroko Oyamada</span></div></div>
+          <div class="sb-record__body">
+            <p class="sb-record__kicker">Archipelago Books <span>/</span> Paperback, Ebook</p>
+            <h1>Garden</h1>
+            <p class="sb-record__byline">Hiroko Oyamada</p>
+            <p class="sb-description">Crabs scurrying over a landfill. Huge tadpoles writhing in a pond. A gecko stuck to the window. Nature mysteriously creeps in and overruns the realm of humans in this collection of stories.</p>
+            <div class="sb-record__actions"><span class="sb-button">Publisher page <span>→</span></span><span class="sb-link">More from this press →</span></div>
+            <dl class="sb-facts">
+              <div class="sb-fact"><dt>Publisher</dt><dd>Archipelago Books</dd></div>
+              <div class="sb-fact"><dt>Publication</dt><dd>2026-04-14</dd></div>
+              <div class="sb-fact"><dt>Formats</dt><dd>Paperback, Ebook</dd></div>
+              <div class="sb-fact"><dt>ISBN-13</dt><dd>9781962770651</dd></div>
+            </dl>
+            <section class="sb-editions"><h2>Editions</h2><div class="sb-edition sb-edition--head"><span>Format</span><span>ISBN-13</span><span>Publication</span></div><div class="sb-edition"><span>Paperback</span><span>9781962770651</span><span>2026-04-14</span></div><div class="sb-edition"><span>Ebook</span><span>9781962770668</span><span>2026-04-14</span></div></section>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Press index and profile</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <div class="sb-pressindex">
+          <a class="sb-pressitem" href="#components"><span class="sb-pressitem__no">01</span><span class="sb-pressitem__name">Archipelago Books</span><span class="sb-pressitem__count">270 books</span><span class="sb-pressitem__thumb"><span class="sb-pressmark">A</span></span></a>
+          <a class="sb-pressitem" href="#components"><span class="sb-pressitem__no">02</span><span class="sb-pressitem__name">Dalkey Archive</span><span class="sb-pressitem__count">794 books</span><span class="sb-pressitem__thumb"><span class="sb-pressmark">D</span></span></a>
+        </div>
+        <header class="sb-presshead">
+          <div class="sb-presshead__cover"><div class="sb-pressmark">D</div><p class="sb-figcap"><span>Dalkey Archive</span><span>794 books</span></p></div>
+          <div class="sb-presshead__body"><p class="sb-kicker">Publisher dossier <span>/</span> 1 collection</p><h1>Dalkey Archive</h1><p class="sb-presshead__intro">Independent publisher of literary fiction, poetry, and criticism, catalogued from official store records.</p><div class="sb-pressledger"><span><strong>794</strong> books</span><span><strong>1</strong> collections</span><span><strong>4</strong> formats</span></div></div>
+        </header>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-section" id="interaction">
+    <h2>Interaction and accessibility</h2>
+    <div class="spec-grid spec-grid--2">
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Focus.</strong> 2px solid <code>--sb-green</code>, offset 3px, on every interactive element. No focus styles are removed.</span></li>
+          <li><span class="spec-no">02</span><span><strong>Hover.</strong> Colour and 1px border changes only; no lift, scale, or shadow. Transition 140ms ease.</span></li>
+          <li><span class="spec-no">03</span><span><strong>Motion.</strong> <code>prefers-reduced-motion</code> removes smooth scroll and transitions.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Contrast.</strong> Ink on paper ≥ 15:1; muted on paper ≥ 5.4:1; green-ink on green ≥ 7:1.</span></li>
+          <li><span class="spec-no">05</span><span><strong>Targets.</strong> Minimum 30px tall for page controls; 44px recommended in mobile filter rows.</span></li>
+        </ul>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Images.</strong> Covers carry descriptive alt text; fallbacks are labelled “Typographic cover fallback; no cover asset is available.”</span></li>
+          <li><span class="spec-no">02</span><span><strong>Structure.</strong> One h1 per page; shelf trays use h2; cards use h4 under their section heading.</span></li>
+          <li><span class="spec-no">03</span><span><strong>Labels.</strong> Every select and input has a visible label; decorative rules are aria-hidden.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Live regions.</strong> Result counts and the flash group are polite live regions.</span></li>
+          <li><span class="spec-no">05</span><span><strong>No remote assets.</strong> Fonts and covers are same-origin; the CSP stays <code>default-src 'self'</code>.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-section" id="implementation">
+    <h2>Implementation map</h2>
+    <table class="spec-table" aria-label="Implementation files">
+      <thead><tr><th>Surface</th><th>File</th><th>Contract</th></tr></thead>
+      <tbody>
+        <tr><td>Tokens</td><td class="spec-value">assets/css/tokens.css</td><td>Single source; names are stable API.</td></tr>
+        <tr><td>Components</td><td class="spec-value">assets/css/softbound.css</td><td>Ports the prototype rules and adds catalogue-only states.</td></tr>
+        <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header, mobile menu, colophon footer, flash.</td></tr>
+        <tr><td>Home</td><td class="spec-value">lib/hiraeth_web/live/home_live.ex</td><td>Featured forthcoming hero, ledger, four random picks, presses.</td></tr>
+        <tr><td>Books</td><td class="spec-value">lib/hiraeth_web/live/browse_live/*</td><td>Filter tray, covers/index views, pager.</td></tr>
+        <tr><td>Book</td><td class="spec-value">lib/hiraeth_web/live/book_live/*</td><td>Record, facts, praise, reviews, editions, subjects.</td></tr>
+        <tr><td>Publishers / collections / contributors</td><td class="spec-value">lib/hiraeth_web/live/{publishers,series,contributors}_live*</td><td>Pagehead, index rows, profile headers, book grids.</td></tr>
+        <tr><td>Search</td><td class="spec-value">lib/hiraeth_web/live/search_live/*</td><td>Search field, results grid, empty state.</td></tr>
+        <tr><td>Cover component</td><td class="spec-value">lib/hiraeth_web/components/catalog_components.ex</td><td>Same-origin cover or labelled typographic fallback.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="spec-subhead">Verification gate</h3>
+    <ul class="spec-check">
+      <li>Capture <code>/</code>, <code>/browse</code>, a book, publishers, a press, collections, a collection, contributors, and search at 390, 560, 760, 834, 900, 1040, 1180, 1280, and 1440 CSS px.</li>
+      <li>Assert the sheet inset is 6 / 8 / 18px by band and never exceeds 1640px total width.</li>
+      <li>Assert the gutter equals the clamp value at every captured width (within 0.5px).</li>
+      <li>Assert hero h1 uses the short/medium/long/xlong tier for its title length and never overflows the copy column.</li>
+      <li>Assert shelf and browse grids are 4 / 3 / 2 columns at the specified bands, with no horizontal scroll.</li>
+      <li>Assert every interactive element has a visible focus ring and no hover transform or shadow.</li>
+      <li>Assert no remote font, script, stylesheet, or image URL appears in the rendered page.</li>
+    </ul>
+  </section>
+
+  <footer class="spec-footer">
+    <span>Hiraeth Softbound · design system 4.0 · tokens read from assets/css/tokens.css</span>
+    <span><a href="softbound_index.html">Open the homepage prototype →</a></span>
+  </footer>
+</main>
+
+<script>
+(function () {
+  const root = document.documentElement;
+  const style = getComputedStyle(root);
+  const value = (name) => style.getPropertyValue(name).trim();
+
+  const colorTokens = [
+    ["--sb-sage", "Page ground"],
+    ["--sb-tray", "Inset panels and shelf tray"],
+    ["--sb-paper", "Sheet and raised reading surface"],
+    ["--sb-ink", "Primary text and rules"],
+    ["--sb-muted", "Secondary text and captions"],
+    ["--sb-green", "Brand accent, links, primary buttons"],
+    ["--sb-green-hover", "Accent hover and active"],
+    ["--sb-green-ink", "Text on accent"],
+    ["--sb-line", "Hairline rules on paper"],
+    ["--sb-line-dark", "Rules inside tray surfaces"],
+    ["--sb-body", "Hero deck text"],
+    ["--sb-body-soft", "Book description text"],
+    ["--sb-placeholder", "Input placeholders"],
+    ["--sb-hairline", "Sheet outer border"],
+    ["--sb-cover-line", "Cover image border"],
+    ["--sb-overlay", "Dialog backdrop"]
+  ];
+
+  const colorHost = document.getElementById("token-colors");
+  colorTokens.forEach(([name, role]) => {
+    const hex = value(name);
+    const item = document.createElement("div");
+    item.className = "spec-swatch-item";
+    item.innerHTML = '<span class="spec-chip" style="background:' + hex + '"></span>' +
+      '<span><code>' + name + '</code><br><span class="spec-note-inline">' + hex + ' · ' + role + '</span></span>';
+    colorHost.appendChild(item);
+  });
+
+  const typeTokens = [
+    ["--sb-serif", "Display, prose, titles"],
+    ["--sb-sans", "Labels, controls, captions, numbers"]
+  ];
+  const typeHost = document.getElementById("token-type");
+  typeTokens.forEach(([name, role]) => {
+    const row = document.createElement("tr");
+    row.innerHTML = '<td><code>' + name + '</code></td><td class="spec-value">' +
+      value(name) + '</td><td class="spec-note-inline">' + role + '</td>';
+    typeHost.appendChild(row);
+  });
+
+  const layoutTokens = [
+    ["--sb-sheet-max", "Maximum sheet width"],
+    ["--sb-sheet-inset", "Outer sheet margin (desktop)"],
+    ["--sb-gutter", "Content gutter"],
+    ["--sb-sheet-radius", "Sheet corner radius"],
+    ["--sb-tray-radius", "Tray and panel radius"],
+    ["--sb-cover-radius", "Cover image radius"],
+    ["--sb-transition", "Standard interaction transition"],
+    ["--sb-ease", "Motion curve"]
+  ];
+  const layoutHost = document.getElementById("token-layout");
+  layoutTokens.forEach(([name, role]) => {
+    const row = document.createElement("tr");
+    row.innerHTML = '<td><code>' + name + '</code></td><td class="spec-value">' +
+      value(name) + '</td><td class="spec-note-inline">' + role + '</td>';
+    layoutHost.appendChild(row);
+  });
+
+  const tokenBlock = document.getElementById("token-block");
+  const allTokens = ["--sb-sage", "--sb-tray", "--sb-paper", "--sb-ink", "--sb-muted",
+    "--sb-green", "--sb-green-hover", "--sb-green-ink", "--sb-line", "--sb-line-dark",
+    "--sb-serif", "--sb-sans", "--sb-sheet-max", "--sb-sheet-inset", "--sb-gutter",
+    "--sb-sheet-radius", "--sb-tray-radius", "--sb-cover-radius", "--sb-transition"];
+  tokenBlock.textContent = ":root {\n" +
+    allTokens.map((name) => "  " + name + ": " + value(name) + ";").join("\n") +
+    "\n}";
+
+  const clamp = (min, pref, max) => Math.min(max, Math.max(min, pref));
+
+  const widthBands = [
+    { label: "390", width: 390, band: "compact" },
+    { label: "560", width: 560, band: "compact" },
+    { label: "760", width: 760, band: "mobile" },
+    { label: "834", width: 834, band: "tablet" },
+    { label: "900", width: 900, band: "tablet" },
+    { label: "1040", width: 1040, band: "small-desktop" },
+    { label: "1180", width: 1180, band: "desktop" },
+    { label: "1280", width: 1280, band: "desktop" },
+    { label: "1440", width: 1440, band: "wide" }
+  ];
+
+  const head = document.getElementById("responsive-head");
+  head.innerHTML = "<tr><th>Measure</th>" +
+    widthBands.map((entry) => "<th>" + entry.label + "px</th>").join("") + "</tr>";
+
+  const rows = [
+    ["Sheet inset", (w) => (w <= 560 ? 6 : w <= 760 ? 8 : 18) + "px"],
+    ["Sheet width", (w) => Math.round(Math.min(w - (w <= 560 ? 12 : w <= 760 ? 16 : 36), 1640)) + "px"],
+    ["Gutter", (w) => clamp(18, 0.046 * w, 64).toFixed(1) + "px"],
+    ["Header nav", (w) => (w <= 1040 ? "Menu button" : "Inline")],
+    ["Hero columns", (w) => (w <= 900 ? "1" : "2")],
+    ["Hero title (short)", (w) => {
+      if (w <= 560) return clamp(64, 0.2 * w, 92).toFixed(1) + "px";
+      if (w <= 760) return clamp(74, 0.19 * w, 110).toFixed(1) + "px";
+      if (w <= 900) return clamp(86, 0.15 * w, 138).toFixed(1) + "px";
+      if (w <= 1040) return clamp(76, 0.12 * w, 140).toFixed(1) + "px";
+      return clamp(80, 0.12 * w, 184).toFixed(1) + "px";
+    }],
+    ["Shelf columns", (w) => (w <= 760 ? "2" : "4")],
+    ["Browse grid", (w) => (w <= 760 ? "2" : w <= 1280 ? "3" : "4")],
+    ["Press list", (w) => (w <= 900 ? "1" : "2")],
+    ["Record columns", (w) => (w <= 900 ? "1" : "2")],
+    ["Footer", (w) => (w <= 760 ? "Stacked" : w <= 900 ? "Brand + counts" : "3 columns")]
+  ];
+
+  const body = document.getElementById("responsive-body");
+  rows.forEach(([label, compute]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + label + "</td>" +
+      widthBands.map((entry) => '<td class="spec-value">' + compute(entry.width) + "</td>").join("");
+    body.appendChild(tr);
+  });
+
+  const widthEl = document.getElementById("spec-width");
+  const bandEl = document.getElementById("spec-band");
+  const breakpoints = document.querySelectorAll(".spec-breakpoint");
+
+  function bandFor(width) {
+    if (width <= 560) return "compact";
+    if (width <= 760) return "mobile";
+    if (width <= 900) return "tablet";
+    if (width <= 1040) return "small-desktop";
+    if (width <= 1280) return "desktop";
+    return "wide";
+  }
+
+  function updateViewport() {
+    const width = window.innerWidth;
+    const band = bandFor(width);
+    widthEl.textContent = width + "px";
+    bandEl.textContent = band.replace("-", " ");
+    breakpoints.forEach((el) => el.classList.toggle("is-active", el.dataset.band === band));
+  }
+
+  updateViewport();
+  window.addEventListener("resize", updateViewport);
+})();
+</script>
+</body>
+</html>

@@ -2,29 +2,39 @@ defmodule HiraethWeb.PublishersLive do
   use HiraethWeb, :live_view
 
   alias HiraethWeb.CatalogComponents
+  alias HiraethWeb.CatalogText
   alias HiraethWeb.PublicCatalog
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Curated Publishers")}
+    publishers = PublicCatalog.publishers()
+
+    {:ok,
+     socket
+     |> assign(:publishers, publishers)
+     |> assign(:publisher_count, length(publishers))
+     |> assign(:series_count, length(PublicCatalog.series()))
+     |> assign(:publisher, nil)}
   end
 
   @impl true
   def handle_params(%{"slug" => slug}, _uri, socket) do
+    publisher = PublicCatalog.publisher(slug)
+
     {:noreply,
      socket
-     |> assign(:page_title, "Publisher")
-     |> assign_publisher(PublicCatalog.publisher(slug))}
+     |> assign(:page_title, if(publisher, do: publisher.name, else: "Publisher"))
+     |> assign(:publisher, publisher)
+     |> assign(:publisher_index, index_for(socket.assigns.publishers, slug))
+     |> stream(:publisher_editions, (publisher && publisher.editions) || [], reset: true)}
   end
 
   def handle_params(_params, _uri, socket) do
-    publishers = PublicCatalog.publishers()
-
     {:noreply,
      socket
-     |> assign(:page_title, "Curated Publishers")
-     |> assign(:publisher_count, length(publishers))
-     |> stream(:publishers, publishers,
+     |> assign(:page_title, "Publishers")
+     |> assign(:publisher, nil)
+     |> stream(:publishers, socket.assigns.publishers,
        reset: true,
        dom_id: &"publisher-#{&1.slug}"
      )}
@@ -36,191 +46,227 @@ defmodule HiraethWeb.PublishersLive do
 
   defp render_index(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={%{}}>
-      <div id="publishers-shell" class="archive-wash space-y-10">
-        <header class="grid gap-7 border-b border-[var(--hiraeth-line)] pb-7 md:grid-cols-[minmax(0,1fr)_18rem] md:items-end">
-          <div class="max-w-3xl">
-            <p class="font-sans text-[11px] font-semibold uppercase tracking-[0.26em] text-[var(--hiraeth-thread)]">
-              Independent presses
-            </p>
-            <h1 class="mt-2 font-serif text-4xl font-light tracking-tight text-[var(--hiraeth-ink)] sm:text-5xl">
-              Publishers
-            </h1>
-            <p class="qi-muted mt-4 font-serif text-lg italic leading-relaxed">
-              A reading-room index of the presses represented in Hiraeth.
+    <Layouts.app
+      flash={@flash}
+      current_scope={%{}}
+      press_count={@publisher_count}
+      series_count={@series_count}
+    >
+      <div id="publishers-shell">
+        <header class="sb-pagehead">
+          <p class="sb-kicker">
+            The presses <span>/</span> {format_count(@publisher_count)} imprints
+          </p>
+          <div class="sb-pagehead__row">
+            <h1>Publishers</h1>
+            <p class="sb-pagehead__intro">
+              An index of the independent presses represented in Hiraeth: fiction, poetry,
+              essays, and criticism, catalogued from their official sources.
             </p>
           </div>
-          <p class="sr-only">{@publisher_count} publishers represented.</p>
+          <p class="sb-pagehead__meta">
+            <span><strong>{format_count(@publisher_count)}</strong> presses</span>
+            <span><strong>{format_count(@series_count)}</strong> collections</span>
+          </p>
         </header>
 
-        <div
-          id="publishers-grid"
-          phx-update="stream"
-          class="grid gap-x-10 gap-y-0 lg:grid-cols-2"
-        >
-          <article
-            :for={{dom_id, pub} <- @streams.publishers}
-            id={dom_id}
-            class="group grid gap-6 border-b border-[var(--hiraeth-line)] py-8 transition-colors duration-200 sm:grid-cols-[minmax(0,1fr)_6.875rem]"
-          >
-            <div class="min-w-0 space-y-3">
-              <h2 class="font-serif text-3xl font-light leading-none text-[var(--hiraeth-ink)] sm:text-[34px]">
-                <.link
-                  navigate={~p"/publishers/#{pub.slug}"}
-                  class="transition-colors duration-200 group-hover:text-[var(--hiraeth-thread)]"
-                >
-                  {pub.name}
-                </.link>
-              </h2>
-              <p
-                :if={pub.description}
-                class="max-w-2xl font-serif text-base italic leading-relaxed text-[var(--hiraeth-muted)]"
-              >
-                {pub.description}
-              </p>
-              <p class="sr-only">{pub.editions_count} books currently represented.</p>
-              <.link
-                navigate={~p"/publishers/#{pub.slug}"}
-                class="qi-action-link inline-flex font-mono text-xs uppercase tracking-wider"
-              >
-                Open shelf
-              </.link>
-            </div>
-            <div class="flex items-center justify-start sm:justify-end">
-              <.link
-                navigate={~p"/publishers/#{pub.slug}"}
-                class="qi-focus block w-[84px]"
-                aria-label={"Open #{pub.name}"}
-              >
-                <img
-                  :if={sample_cover_src(pub.cover_sample)}
-                  src={sample_cover_src(pub.cover_sample)}
-                  alt={"Cover thumbnail for #{pub.cover_sample.title}"}
-                  loading="lazy"
-                  decoding="async"
-                  width="84"
-                  height="126"
-                  class="aspect-[2/3] w-full border border-[var(--hiraeth-line)] object-cover transition-colors group-hover:border-[var(--hiraeth-thread)]"
-                />
-                <div
-                  :if={!sample_cover_src(pub.cover_sample)}
-                  class="fallback-cover-grain relative flex aspect-[2/3] w-full items-center justify-center overflow-hidden border border-[var(--hiraeth-line)] p-2 text-center font-serif text-[40px] italic leading-tight text-[var(--hiraeth-label)]"
-                  aria-label="Typographic cover fallback; no cover asset is available."
-                >
-                  {pub.name |> String.first()}
-                </div>
-              </.link>
-            </div>
-          </article>
+        <div id="publishers-grid" phx-update="stream" class="sb-pressindex">
+          <.press_row
+            :for={{dom_id, publisher} <- @streams.publishers}
+            dom_id={dom_id}
+            publisher={publisher}
+            index={index_for(@publishers, publisher.slug)}
+          />
         </div>
       </div>
     </Layouts.app>
     """
   end
 
+  attr :dom_id, :string, required: true
+  attr :publisher, :map, required: true
+  attr :index, :integer, default: nil
+
+  defp press_row(assigns) do
+    ~H"""
+    <a
+      id={@dom_id}
+      class="sb-pressitem"
+      href={~p"/publishers/#{@publisher.slug}"}
+      aria-label={"Open #{@publisher.name}"}
+    >
+      <span class="sb-pressitem__no">{number(@index)}</span>
+      <span class="sb-pressitem__name">{@publisher.name}</span>
+      <span class="sb-pressitem__count">{format_count(@publisher.editions_count)} books</span>
+      <span class="sb-pressitem__thumb">
+        <CatalogComponents.softbound_cover
+          :if={sample_book(@publisher)}
+          book={sample_book(@publisher)}
+          variant={:thumb}
+        />
+        <span :if={!sample_book(@publisher)} class="sb-pressmark">{initial(@publisher.name)}</span>
+      </span>
+    </a>
+    """
+  end
+
   defp render_show(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={%{}}>
-      <div id="publisher-detail-shell" class="archive-wash space-y-10">
+    <Layouts.app
+      flash={@flash}
+      current_scope={%{}}
+      catalog_count={@publisher && @publisher.editions_count}
+      press_count={@publisher_count}
+      series_count={@series_count}
+    >
+      <div id="publisher-detail-shell">
         <%= if @publisher do %>
-          <header id="publisher-masthead" class="border-b border-[var(--hiraeth-line)] pb-7">
-            <.link
-              navigate={~p"/publishers"}
-              class="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--hiraeth-muted)] transition-colors hover:text-[var(--hiraeth-thread)]"
-            >← Publishers</.link>
-            <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-end">
-              <div class="space-y-4">
-                <p class="font-sans text-[11px] font-semibold uppercase tracking-[0.26em] text-[var(--hiraeth-thread)]">
-                  Publisher dossier
-                </p>
-                <h1
-                  id="publisher-title"
-                  class="max-w-4xl font-serif text-5xl font-light leading-none tracking-tight text-[var(--hiraeth-ink)] md:text-6xl"
-                >
-                  {@publisher.name}
-                </h1>
-                <p
-                  :if={@publisher.description}
-                  class="max-w-3xl font-serif text-lg italic leading-relaxed text-[var(--hiraeth-muted)]"
-                >
-                  {@publisher.description}
-                </p>
+          <header id="publisher-masthead" class="sb-presshead">
+            <div class="sb-presshead__cover">
+              <div :if={!sample_book(@publisher)} class="sb-pressmark">
+                {initial(@publisher.name)}
               </div>
-              <.link
-                id="publisher-browse-cta"
-                navigate={~p"/browse?publisher=#{@publisher.slug}"}
-                class="inline-flex items-center justify-center border border-[var(--hiraeth-thread)] bg-[var(--hiraeth-ink)] px-5 py-3 text-center font-sans text-xs font-semibold uppercase tracking-[0.14em] text-[var(--hiraeth-paper)] transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--hiraeth-thread)] focus:outline-none focus:ring-2 focus:ring-[var(--hiraeth-thread)] focus:ring-offset-2 focus:ring-offset-[var(--hiraeth-paper)]"
-              >
-                Browse this press
-              </.link>
+              <CatalogComponents.softbound_cover
+                :if={sample_book(@publisher)}
+                book={sample_book(@publisher)}
+                variant={:record}
+              />
+              <p class="sb-figcap">
+                <span>{@publisher.name}</span>
+                <span>{format_count(@publisher.editions_count)} books</span>
+              </p>
+            </div>
+
+            <div class="sb-presshead__body">
+              <p class="sb-kicker">
+                Publisher dossier
+                <span>/</span> {format_count(length(@publisher.groupings.series))} collections
+              </p>
+              <h1 id="publisher-title">{@publisher.name}</h1>
+              <p :if={@publisher.description} class="sb-presshead__intro">
+                {CatalogText.plain(@publisher.description, 420)}
+              </p>
+
+              <div class="sb-pressledger">
+                <span><strong>{format_count(@publisher.editions_count)}</strong> books</span>
+                <span><strong>{format_count(length(@publisher.groupings.series))}</strong> collections</span>
+                <span><strong>{format_count(length(@publisher.groupings.formats))}</strong> formats</span>
+              </div>
+
+              <div class="sb-presshead__actions">
+                <.link
+                  id="publisher-browse-cta"
+                  navigate={~p"/browse?publisher=#{@publisher.slug}"}
+                  class="sb-button"
+                >
+                  Browse this press <span>→</span>
+                </.link>
+                <.link navigate={~p"/publishers"} class="sb-link">All presses →</.link>
+              </div>
             </div>
           </header>
 
-          <section id="publisher-editions" class="space-y-6">
+          <section id="publisher-editions" class="sb-pressworks">
+            <div class="sb-sectionhead">
+              <div>
+                <p class="sb-kicker">The catalogue</p>
+                <h2>Books from this press</h2>
+              </div>
+              <span class="sb-link--plain">{format_count(@publisher.editions_count)} books</span>
+            </div>
+
             <%= if @publisher.editions_count == 0 do %>
-              <CatalogComponents.empty_state
-                id="publisher-no-editions"
-                title="No books are attached"
-                message="This publisher shelf is empty for now."
-                action_label="Back to publishers"
-                action_path="/publishers"
-              />
+              <div id="publisher-no-editions" class="sb-empty sb-empty--press">
+                <h2>No books are attached.</h2>
+                <p>This publisher shelf is empty for now.</p>
+                <.link navigate={~p"/publishers"} class="sb-link">Back to publishers</.link>
+              </div>
             <% else %>
               <div
                 id="publisher-editions-stream"
                 phx-update="stream"
-                class="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4"
+                class="sb-grid sb-grid--press"
               >
-                <CatalogComponents.edition_card
-                  :for={{dom_id, edition} <- @streams.publisher_editions}
+                <CatalogComponents.sb_book_card
+                  :for={{dom_id, book} <- @streams.publisher_editions}
                   dom_id={dom_id}
-                  edition={edition}
+                  book={book}
                   id_prefix="publisher-edition"
                 />
               </div>
             <% end %>
           </section>
+
+          <.press_nav index={@publisher_index} publishers={@publishers} />
         <% else %>
-          <CatalogComponents.empty_state
-            id="publisher-not-found"
-            title="No publisher matches"
-            message="No publisher matches that slug. The archive kept you on the publisher shelf so you can choose another press."
-            action_label="Back to publishers"
-            action_path="/publishers"
-          />
+          <div id="publisher-not-found" class="sb-empty">
+            <h2>No publisher matches.</h2>
+            <p>No publisher matches that slug. Choose another press from the index.</p>
+            <.link navigate={~p"/publishers"} class="sb-link">Back to publishers</.link>
+          </div>
         <% end %>
       </div>
     </Layouts.app>
     """
   end
 
-  defp sample_cover_src(nil), do: nil
+  defp press_nav(assigns) do
+    previous = neighbour(assigns.publishers, assigns.index, -1)
+    following = neighbour(assigns.publishers, assigns.index, 1)
 
-  defp sample_cover_src(%Hiraeth.Catalog.PublicProjection.CoverSample{} = sample) do
-    case sample.cover do
-      nil ->
-        nil
+    assigns = assign(assigns, previous: previous, following: following)
 
-      cover ->
-        local_cover_url(cover.thumbnail_url) || local_cover_url(cover.public_url)
-    end
+    ~H"""
+    <nav :if={@previous || @following} class="sb-pressnav" aria-label="Presses">
+      <.link :if={@previous} navigate={~p"/publishers/#{@previous.slug}"}>
+        <span>← Previous press</span>
+        <b>{@previous.name}</b>
+      </.link>
+      <span :if={!@previous}></span>
+      <.link :if={@following} navigate={~p"/publishers/#{@following.slug}"} class="sb-pressnav__next">
+        <span>Next press →</span>
+        <b>{@following.name}</b>
+      </.link>
+    </nav>
+    """
   end
 
-  defp local_cover_url(url) when is_binary(url) do
-    if String.starts_with?(url, "/covers/cache/"), do: url
+  defp neighbour(_publishers, nil, _offset), do: nil
+
+  defp neighbour(publishers, index, offset) do
+    Enum.at(publishers, index + offset)
   end
 
-  defp local_cover_url(_url), do: nil
-
-  defp assign_publisher(socket, nil) do
-    socket
-    |> assign(:publisher, nil)
-    |> stream(:publisher_editions, [], reset: true)
+  defp index_for(publishers, slug) do
+    Enum.find_index(publishers, &(&1.slug == slug))
   end
 
-  defp assign_publisher(socket, publisher) do
-    socket
-    |> assign(:publisher, publisher)
-    |> stream(:publisher_editions, publisher.editions, reset: true)
+  defp sample_book(%{slug: slug, cover_sample: %{title: title, cover: cover}})
+       when is_binary(title) and not is_nil(cover) do
+    %{
+      slug: "press-sample-#{slug}",
+      title: title,
+      publisher: nil,
+      authors: [],
+      published_on: nil,
+      cover: cover
+    }
   end
+
+  defp sample_book(_publisher), do: nil
+
+  defp initial(name) when is_binary(name) do
+    name |> String.first() |> Kernel.||("H") |> String.upcase()
+  end
+
+  defp number(nil), do: "—"
+  defp number(index), do: String.pad_leading(Integer.to_string(index + 1), 2, "0")
+
+  defp format_count(count) when is_integer(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  end
+
+  defp format_count(count), do: to_string(count)
 end

@@ -1,0 +1,107 @@
+/*
+ * Hiraeth Softbound — canonical design tokens.
+ *
+ * Single source of truth for the Softbound edition UI. Every colour, type
+ * family, radius, gutter, and layout measurement used by the public site lives
+ * here; component rules consume these variables and the design specification at
+ * design/index.html reads them back from the live stylesheet.
+ *
+ * Breakpoints are documented, not tokenised, because CSS custom properties
+ * cannot be used in media queries:
+ *   1280px — browse grid 4 → 3 columns
+ *   1040px — desktop nav → menu, filter controls reflow
+ *   900px  — hero and record stack, press list 2 → 1 column
+ *   760px  — sheet inset 18 → 8px, card grids 4 → 2 columns
+ *   560px  — sheet inset 8 → 6px, gutter 18 → 16px, compact type
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Palette (prototype: Softbound edition, 2026) */
+  --sb-sage: #dfe7de; /* page ground */
+  --sb-tray: #e7eee4; /* inset panels, shelf tray, filters */
+  --sb-paper: #f8f8f3; /* sheet, raised reading surface */
+  --sb-ink: #171916; /* primary text, rules, cover borders */
+  --sb-muted: #5f665d; /* secondary text, captions, labels */
+  --sb-green: #2c5b46; /* brand accent, links, primary buttons */
+  --sb-green-hover: #214735; /* accent hover/active */
+  --sb-green-ink: #f6f8f2; /* text on accent */
+  --sb-line: #cdd6cb; /* hairline rules on paper */
+  --sb-line-dark: #c9d4c6; /* rules inside tray surfaces */
+
+  /* Extended neutrals used by composed pages */
+  --sb-body: #383d36; /* long-form hero deck */
+  --sb-body-soft: #343934; /* book description */
+  --sb-body-strong: #3b4039; /* page intro */
+  --sb-placeholder: #626a60; /* input placeholders */
+  --sb-subtle: #899186; /* breadcrumb separators, disabled meta */
+  --sb-disabled: #9aa197; /* disabled controls */
+  --sb-hairline: rgba(23, 25, 22, 0.09); /* sheet outer border */
+  --sb-cover-line: rgba(23, 25, 22, 0.16); /* cover image border */
+  --sb-cover-line-soft: rgba(23, 25, 22, 0.14); /* small cover thumbs */
+  --sb-overlay: rgba(23, 25, 22, 0.42); /* dialog backdrop */
+
+  /* Type */
+  --sb-serif: "Newsreader", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --sb-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --sb-font-display: var(--sb-serif);
+  --sb-font-text: var(--sb-serif);
+  --sb-font-ui: var(--sb-sans);
+  --sb-weight-regular: 400;
+  --sb-weight-medium: 500;
+  --sb-weight-semibold: 600;
+
+  /* Layout */
+  --sb-sheet-max: 1640px;
+  --sb-sheet-inset: 18px;
+  --sb-sheet-inset-wide: 8px; /* ≤760px */
+  --sb-sheet-inset-compact: 6px; /* ≤560px */
+  --sb-gutter: clamp(18px, 4.6vw, 64px);
+  --sb-sheet-radius: clamp(24px, 2.8vw, 38px);
+  --sb-tray-radius: clamp(18px, 2.2vw, 28px);
+  --sb-cover-radius: clamp(10px, 1.2vw, 16px);
+  --sb-small-cover-radius: 6px;
+  --sb-thumb-radius: 4px;
+
+  /* Motion */
+  --sb-transition: 140ms ease;
+  --sb-transition-slow: 240ms ease;
+  --sb-ease: cubic-bezier(0.2, 0.65, 0.3, 1);
+
+  /* Stacking */
+  --sb-z-skip: 100;
+  --sb-z-header: 40;
+  --sb-z-dialog: 60;
+
+  /* Legacy aliases: keep older public components on the same palette while
+     their markup is migrated to sb-* classes. */
+  --hiraeth-paper: var(--sb-paper);
+  --hiraeth-surface: var(--sb-paper);
+  --hiraeth-wash: var(--sb-tray);
+  --hiraeth-warm: var(--sb-sage);
+  --hiraeth-ink: var(--sb-ink);
+  --hiraeth-muted: var(--sb-muted);
+  --hiraeth-label: var(--sb-muted);
+  --hiraeth-line: var(--sb-line);
+  --hiraeth-line-strong: var(--sb-line-dark);
+  --hiraeth-thread: var(--sb-green);
+  --hiraeth-thread-hover: var(--sb-green-hover);
+  --hiraeth-thread-soft: rgba(44, 91, 70, 0.12);
+  --hiraeth-on-thread: var(--sb-green-ink);
+  --hiraeth-shadow: none;
+  --hiraeth-cover-shadow: none;
+  --hiraeth-cover-shadow-hover: none;
+  --hiraeth-sheen: rgba(255, 255, 255, 0.55);
+  --hiraeth-sheen-soft: rgba(255, 255, 255, 0.45);
+  --hiraeth-error-bg: #f6eee9;
+  --hiraeth-error-ink: #7c2f1c;
+  --hiraeth-error-muted: #8f3a22;
+  --hiraeth-radius: 8px;
+  --hiraeth-header-height: 68px;
+  --hiraeth-measure: 73.75rem;
+  --hiraeth-font-ui: var(--sb-sans);
+  --hiraeth-font-serif: var(--sb-serif);
+  --hiraeth-font-mono: var(--sb-sans);
+}

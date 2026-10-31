@@ -24,7 +24,6 @@ defmodule HiraethWeb.UiStatesLiveTest do
     {:ok, browse, _html} = live(conn, ~p"/browse?q=zzzz-no-catalog-match-🚫&page=99")
     assert has_element?(browse, "#browse-empty", "No catalog entries match")
     assert has_element?(browse, "#browse-empty", "zzzz-no-catalog-match-🚫")
-    assert has_element?(browse, "#book-reader-empty", "Choose a cover from the shelf")
   end
 
   test "not-found and missing-cover states are explicit", %{conn: conn} do

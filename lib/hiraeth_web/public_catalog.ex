@@ -15,6 +15,11 @@ defmodule HiraethWeb.PublicCatalog do
   @page_size 24
   @max_page 10_000
   @publisher_group_limit 8
+  @home_candidate_limit 80
+  @home_spotlight_limit 20
+  @home_recent_window_months 18
+  @home_title_exclusions "subscription|bundle|gift card|gift_card|merch|box set|boxed set"
+  @home_non_book_formats ~w(bundle subscription gift_card merch supporter_only)
   @cache_missing :__hiraeth_public_catalog_cache_missing__
   @default_cache_ttl_ms :timer.seconds(30)
   @undated_sort_value Date.to_gregorian_days(~D[0001-01-01])
@@ -33,6 +38,43 @@ defmodule HiraethWeb.PublicCatalog do
   @spec search_books(book_query()) :: [PublicProjection.Book.t()]
   def search_books(query) do
     book_page(query, 1).entries
+  end
+
+  @doc """
+  Returns the homepage candidate pool: recent or forthcoming books only.
+
+  Subscriptions, bundles, gift cards, and merchandise are products, not books,
+  so they never enter the homepage pool. The filter lives here so the hero and
+  the random picks share one rule.
+  """
+  @spec home_candidates() :: [PublicProjection.Book.t()]
+  def home_candidates do
+    cached({:home_candidates}, fn -> load_home_candidates() end)
+  end
+
+  @doc """
+  Selects the homepage hero and random recent-or-forthcoming titles.
+
+  The hero is the nearest forthcoming book that has a displayable cover; when
+  no forthcoming title exists it falls back to the newest candidate. The other
+  titles are sampled per call so each homepage visit differs, excluding the
+  hero and preferring books with covers.
+  """
+  @spec home_selection() :: %{
+          spotlight: PublicProjection.Book.t() | nil,
+          recent: [PublicProjection.Book.t()]
+        }
+  @spec home_selection(pos_integer()) :: %{
+          spotlight: PublicProjection.Book.t() | nil,
+          recent: [PublicProjection.Book.t()]
+        }
+  def home_selection(limit \\ 4) when is_integer(limit) and limit > 0 do
+    spotlight = home_spotlight()
+
+    %{
+      spotlight: spotlight,
+      recent: home_random_recent(home_candidates(), spotlight, limit)
+    }
   end
 
   @spec book_page(book_query(), page_param()) ::
@@ -103,6 +145,94 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.map(fn {_work_id, editions} -> book_projection(editions) end)
     |> Enum.sort_by(fn book -> Map.get(work_order, book.work_id, 999_999) end)
   end
+
+  defp load_home_candidates do
+    {:ok, %{rows: rows}} =
+      Hiraeth.Repo.query(
+        """
+        select e.work_id
+        from editions e
+        join works w on w.id = e.work_id
+        join source_records sr on sr.edition_id = e.id
+        where e.published_on is not null
+          and (
+            e.published_on > current_date
+            or e.published_on >= current_date - make_interval(months => $3::int)
+          )
+          and w.title !~* $1
+          and coalesce(e.format, '') <> all($2::text[])
+        group by e.work_id
+        order by max(e.published_on) desc, min(w.title)
+        limit $4
+        """,
+        [
+          @home_title_exclusions,
+          @home_non_book_formats,
+          @home_recent_window_months,
+          @home_candidate_limit
+        ]
+      )
+
+    rows
+    |> Enum.map(&List.first/1)
+    |> books_for_work_ids()
+  end
+
+  defp home_spotlight do
+    cached({:home_spotlight}, fn -> load_home_spotlight() end)
+  end
+
+  defp load_home_spotlight do
+    upcoming =
+      upcoming_work_ids()
+      |> books_for_work_ids()
+
+    Enum.find(upcoming, &displayable_book_cover?/1) ||
+      List.first(upcoming) ||
+      fallback_spotlight()
+  end
+
+  defp upcoming_work_ids do
+    {:ok, %{rows: rows}} =
+      Hiraeth.Repo.query(
+        """
+        select e.work_id, min(e.published_on) as upcoming_on
+        from editions e
+        join works w on w.id = e.work_id
+        join source_records sr on sr.edition_id = e.id
+        where e.published_on > current_date
+          and w.title !~* $1
+          and coalesce(e.format, '') <> all($2::text[])
+        group by e.work_id
+        order by upcoming_on asc, min(w.title)
+        limit $3
+        """,
+        [@home_title_exclusions, @home_non_book_formats, @home_spotlight_limit]
+      )
+
+    Enum.map(rows, &List.first/1)
+  end
+
+  defp fallback_spotlight do
+    candidates = home_candidates()
+    Enum.find(candidates, &displayable_book_cover?/1) || List.first(candidates)
+  end
+
+  defp home_random_recent(candidates, spotlight, limit) do
+    spotlight_work_id = spotlight && spotlight.work_id
+
+    pool =
+      Enum.reject(candidates, fn book -> book.work_id == spotlight_work_id end)
+
+    covered = Enum.filter(pool, &displayable_book_cover?/1)
+    pool = if length(covered) >= limit, do: covered, else: pool
+
+    pool
+    |> Enum.shuffle()
+    |> Enum.take(limit)
+  end
+
+  defp displayable_book_cover?(%{cover: cover}), do: not is_nil(cover)
 
   defp editions_for_work_ids(work_ids) do
     edition_rows("where e.work_id = any($1::uuid[])", [work_ids])

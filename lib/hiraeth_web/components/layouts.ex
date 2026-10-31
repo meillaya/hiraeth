@@ -1,119 +1,127 @@
 defmodule HiraethWeb.Layouts do
   @moduledoc """
-  This module holds layouts and related functionality
-  used by your application.
+  Application layout for the Softbound edition.
+
+  The shell is a single paper sheet on a sage ground: brand and primary
+  navigation in a hairline header, the reading surface in the middle, and a
+  two-line colophon footer. All measurements come from the Softbound tokens in
+  `assets/css/tokens.css`.
   """
   use HiraethWeb, :html
 
   # Embed all files in layouts/* within this module.
-  # The default root.html.heex file contains the HTML
-  # skeleton of your application, namely HTML headers
-  # and other static content.
   embed_templates "layouts/*"
 
-  @doc """
-  Renders your app layout.
-
-  This function is typically invoked from every template,
-  and it often contains your application menu, sidebar,
-  or similar.
-
-  ## Examples
-
-      <Layouts.app flash={@flash}>
-        <h1>Content</h1>
-      </Layouts.app>
-
-  """
   attr :flash, :map, required: true, doc: "the map of flash messages"
 
   attr :current_scope, :map,
     default: nil,
     doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
 
-  attr :catalog_count, :integer, default: nil, doc: "public catalog count for the masthead"
+  attr :catalog_count, :integer, default: nil, doc: "public catalog count for the colophon"
+
+  attr :press_count, :integer, default: nil, doc: "public publisher count for the colophon"
+
+  attr :series_count, :integer, default: nil, doc: "public collection count for the colophon"
 
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
-    <header class="qi-header sticky top-0 z-40 transition-colors duration-300">
-      <div class="qi-container">
-        <div class="grid min-h-[var(--hiraeth-header-height)] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6">
-          <.link
-            navigate={~p"/"}
-            class="qi-focus flex min-w-0 items-baseline gap-3 justify-self-start"
-          >
-            <span class="qi-wordmark truncate text-[26px] font-normal">Hiraeth</span>
-            <span class="hidden font-sans text-[9.5px] font-semibold uppercase tracking-[0.24em] text-[var(--hiraeth-thread)] sm:inline-block">
-              Archive
-            </span>
+    <a class="sb-skip" href="#main">Skip to content</a>
+
+    <div class="sb-sheet">
+      <header class="sb-header">
+        <div class="sb-header__in">
+          <.link navigate={~p"/"} class="sb-brand" aria-label="Hiraeth — home">
+            Hiraeth<span class="sb-brand__dot">.</span>
           </.link>
 
-          <nav
-            class="hidden items-center gap-[30px] justify-self-center text-[13px] font-medium md:flex"
-            aria-label="Primary navigation"
-          >
-            <.link navigate={~p"/browse"} class="qi-nav-link">Browse</.link>
-            <.link navigate={~p"/search"} class="qi-nav-link">Search</.link>
-            <.link navigate={~p"/publishers"} class="qi-nav-link">Publishers</.link>
-            <.link navigate={~p"/series"} class="qi-nav-link">Series</.link>
+          <nav class="sb-nav" aria-label="Primary">
+            <.link navigate={~p"/browse"}>Books</.link>
+            <.link navigate={~p"/publishers"}>Publishers</.link>
+            <.link navigate={~p"/series"}>Collections</.link>
           </nav>
 
-          <div class="hidden min-w-0 items-center gap-[30px] justify-self-end sm:flex">
-            <nav class="flex min-w-0 items-center gap-[30px]" aria-label="Archive controls">
-              <span class="border-l qi-divider pl-[30px] font-mono text-[11px] lowercase text-[var(--hiraeth-label)]">
-                <%= if @catalog_count do %>
-                  {@catalog_count} vols
-                <% else %>
-                  Archive
-                <% end %>
-              </span>
-              <div class="flex items-center gap-2">
-                <span class="w-8 text-right font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--hiraeth-label)]">
-                  <span class="dark:hidden">Light</span>
-                  <span class="hidden dark:inline">Dark</span>
-                </span>
-                <.theme_toggle />
-              </div>
-            </nav>
+          <div class="sb-tools">
+            <.link navigate={~p"/search"} class="sb-tool">Search</.link>
+            <button
+              type="button"
+              class="sb-tool sb-tool--menu"
+              phx-click={JS.toggle_attribute({"hidden", "hidden"}, to: "#mobile-nav")}
+              aria-controls="mobile-nav"
+            >
+              Menu
+            </button>
           </div>
         </div>
-      </div>
-    </header>
 
-    <nav
-      class="qi-mobile-nav border-b px-4 py-3 md:hidden"
-      aria-label="Mobile primary navigation"
-    >
-      <div class="mx-auto flex max-w-[var(--hiraeth-measure)] items-center gap-4 overflow-x-auto text-sm font-semibold">
-        <.link navigate={~p"/browse"} class="qi-nav-link shrink-0">Browse</.link>
-        <.link navigate={~p"/search"} class="qi-nav-link shrink-0">Search</.link>
-        <.link navigate={~p"/publishers"} class="qi-nav-link shrink-0">Publishers</.link>
-        <.link navigate={~p"/series"} class="qi-nav-link shrink-0">Series</.link>
-      </div>
-    </nav>
+        <div class="sb-mobile" id="mobile-nav" hidden>
+          <nav aria-label="Mobile">
+            <.link navigate={~p"/browse"}>Books</.link>
+            <.link navigate={~p"/publishers"}>Publishers</.link>
+            <.link navigate={~p"/series"}>Collections</.link>
+            <.link navigate={~p"/search"}>Search</.link>
+          </nav>
+        </div>
+      </header>
 
-    <main class="flex-grow py-12">
-      <div class="qi-container">
+      <main id="main">
         {render_slot(@inner_block)}
-      </div>
-    </main>
+      </main>
 
-    <footer class="qi-footer mt-auto border-t py-8 text-xs">
-      <div class="mx-auto flex max-w-[var(--hiraeth-measure)] flex-col items-center justify-between gap-4 px-4 sm:px-6 md:flex-row lg:px-10">
-        <p class="font-serif qi-muted">
-          Hiraeth &mdash; A quiet editorial archive of independent publishers.
-        </p>
-        <p class="font-mono qi-label">
-          © {DateTime.utc_now().year} Hiraeth Project. All rights reserved.
-        </p>
-      </div>
-    </footer>
+      <footer class="sb-footer">
+        <div class="sb-footer__in">
+          <.link navigate={~p"/"} class="sb-footer__brand" aria-label="Hiraeth — home">
+            Hiraeth<span class="sb-brand__dot">.</span>
+          </.link>
+
+          <nav class="sb-footer__nav" aria-label="Footer">
+            <.link navigate={~p"/browse"}>Books</.link>
+            <.link navigate={~p"/publishers"}>Publishers</.link>
+            <.link navigate={~p"/series"}>Collections</.link>
+            <.link navigate={~p"/search"}>Search</.link>
+          </nav>
+
+          <p class="sb-footer__counts">{colophon_counts(assigns)}</p>
+        </div>
+
+        <div class="sb-footer__base">
+          <span>Softbound edition, {DateTime.utc_now().year}</span>
+          <span>{colophon_volumes(@catalog_count)}</span>
+        </div>
+      </footer>
+    </div>
 
     <.flash_group flash={@flash} />
     """
   end
+
+  defp colophon_counts(assigns) do
+    parts =
+      [
+        assigns[:catalog_count] && "#{format_count(assigns.catalog_count)} books",
+        assigns[:press_count] && "#{format_count(assigns.press_count)} presses",
+        assigns[:series_count] && "#{format_count(assigns.series_count)} collections"
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    case parts do
+      [] -> "Independent literary presses"
+      parts -> Enum.join(parts, " / ")
+    end
+  end
+
+  defp colophon_volumes(nil), do: "An index of independent literary presses"
+  defp colophon_volumes(count), do: "#{format_count(count)} volumes indexed"
+
+  defp format_count(count) when is_integer(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  end
+
+  defp format_count(count), do: to_string(count)
 
   @doc """
   Shows the flash group with standard titles and content.
@@ -127,7 +135,7 @@ defmodule HiraethWeb.Layouts do
 
   def flash_group(assigns) do
     ~H"""
-    <div id={@id} aria-live="polite">
+    <div id={@id} aria-live="polite" class="sb-flashes">
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
 
@@ -161,36 +169,6 @@ defmodule HiraethWeb.Layouts do
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
     </div>
-    """
-  end
-
-  @doc """
-  Provides dark vs light theme toggle based on themes defined in app.css.
-
-  See <head> in root.html.heex which applies the theme before page load.
-  """
-  def theme_toggle(assigns) do
-    ~H"""
-    <button
-      type="button"
-      class="qi-focus flex h-[26px] w-12 cursor-pointer items-center rounded-full border border-[var(--hiraeth-line)] bg-[var(--hiraeth-surface)] px-[3px] dark:hidden"
-      phx-click={JS.dispatch("phx:set-theme")}
-      data-phx-theme="dark"
-      aria-label="Switch to dark theme"
-      title="Switch to dark theme"
-    >
-      <span class="block size-5 rounded-full bg-[var(--hiraeth-thread)] shadow-sm transition-transform duration-200"></span>
-    </button>
-    <button
-      type="button"
-      class="qi-focus hidden h-[26px] w-12 cursor-pointer items-center rounded-full border border-[var(--hiraeth-line)] bg-[var(--hiraeth-surface)] px-[3px] dark:flex"
-      phx-click={JS.dispatch("phx:set-theme")}
-      data-phx-theme="light"
-      aria-label="Switch to light theme"
-      title="Switch to light theme"
-    >
-      <span class="block size-5 translate-x-[22px] rounded-full bg-[var(--hiraeth-thread)] shadow-sm transition-transform duration-200"></span>
-    </button>
     """
   end
 end

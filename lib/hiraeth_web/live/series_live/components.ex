@@ -3,66 +3,66 @@ defmodule HiraethWeb.SeriesLive.Components do
 
   alias HiraethWeb.CatalogComponents
 
+  attr :series, :list, required: true
   attr :series_empty?, :boolean, required: true
-  attr :streams, :map, required: true
 
   def index(assigns) do
+    assigns =
+      assigns
+      |> assign(:groups, group_by_press(assigns.series))
+      |> assign(:series_total, length(assigns.series))
+      |> assign(:volume_total, Enum.sum(Enum.map(assigns.series, &(&1.editions_count || 0))))
+
     ~H"""
-    <div id="series-shell" class="archive-wash space-y-12 pb-12">
-      <header class="border-b qi-divider pb-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p class="qi-kicker text-[var(--hiraeth-thread)]">Collections by press</p>
-            <h1 class="mt-2 font-serif text-4xl font-light tracking-tight text-[var(--hiraeth-ink)] sm:text-5xl">
-              Series & Collections
-            </h1>
-            <p class="qi-muted mt-4 max-w-2xl font-serif text-lg italic leading-relaxed">
-              Publisher-led shelves for reading across a line, imprint, or collection.
-            </p>
-          </div>
+    <div id="series-shell">
+      <header class="sb-pagehead">
+        <p class="sb-kicker">Collections <span>/</span> {format_count(@series_total)} series</p>
+        <div class="sb-pagehead__row">
+          <h1>Collections</h1>
+          <p class="sb-pagehead__intro">
+            Editorial series and imprints inside the catalogue, grouped by the press that
+            publishes them. Each collection opens into its records.
+          </p>
         </div>
+        <p class="sb-pagehead__meta">
+          <span><strong>{format_count(@series_total)}</strong> collections</span>
+          <span><strong>{format_count(@volume_total)}</strong> volumes</span>
+          <span>Grouped by press</span>
+        </p>
       </header>
 
-      <div id="series-rows" phx-update="stream" class="divide-y divide-[var(--hiraeth-line)]">
-        <CatalogComponents.empty_state
-          :if={@series_empty?}
-          id="series-empty"
-          title="No series shelves yet"
-          message="Series and collections will appear here as the archive grows."
-        />
-        <article
-          :for={{dom_id, ser} <- @streams.series_list}
-          id={dom_id}
-          class="grid gap-8 py-10 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start"
-        >
-          <div class="space-y-4">
-            <p :if={ser.publisher} class="qi-kicker text-[var(--hiraeth-thread)]">
-              {ser.publisher}
-            </p>
-            <h2 class="font-serif text-4xl font-light leading-tight tracking-tight text-[var(--hiraeth-ink)]">
-              <.link
-                navigate={~p"/series/#{ser.slug}"}
-                class="qi-focus rounded-sm hover:text-[var(--hiraeth-thread)]"
+      <div id="series-rows" class="sb-collections">
+        <div :if={@series_empty?} class="sb-empty" id="series-empty">
+          <h2>No collections yet.</h2>
+          <p>Series and collections will appear here as the archive grows.</p>
+        </div>
+
+        <section :for={{publisher, series_list} <- @groups} class="sb-collection">
+          <div class="sb-collection__press">
+            <h2>
+              <a
+                :if={publisher_slug(series_list)}
+                href={~p"/publishers/#{publisher_slug(series_list)}"}
               >
-                {ser.title}
-              </.link>
+                {publisher || "Independent press"}
+              </a>
+              <span :if={!publisher_slug(series_list)}>{publisher || "Independent press"}</span>
             </h2>
-            <p class="sr-only">{ser.editions_count} books in this shelf.</p>
-            <.link
-              navigate={~p"/series/#{ser.slug}"}
-              class="qi-action-link inline-flex font-mono text-xs uppercase tracking-wider"
+            <p>{collection_count(length(series_list))}</p>
+          </div>
+
+          <div class="sb-collection__list">
+            <a
+              :for={{series, index} <- Enum.with_index(series_list, 1)}
+              href={~p"/series/#{series.slug}"}
             >
-              Open series shelf
-            </.link>
+              <span class="sb-collection__no">{number(index)}</span>
+              <span class="sb-collection__title">{series.title}</span>
+              <span class="sb-collection__count">{format_count(series.editions_count)} books</span>
+              <span class="sb-collection__arrow">→</span>
+            </a>
           </div>
-          <div class="grid grid-cols-2 gap-5 sm:grid-cols-4">
-            <CatalogComponents.edition_card
-              :for={edition <- ser.preview_editions}
-              edition={edition}
-              id_prefix={"series-preview-#{ser.slug}"}
-            />
-          </div>
-        </article>
+        </section>
       </div>
     </div>
     """
@@ -73,90 +73,88 @@ defmodule HiraethWeb.SeriesLive.Components do
 
   def show(assigns) do
     ~H"""
-    <div id="series-detail-shell" class="archive-wash space-y-10 pb-12">
+    <div id="series-detail-shell">
       <%= if @series do %>
-        <header class="border-b qi-divider pb-7">
-          <.link
-            navigate={~p"/series"}
-            class="qi-action-link font-mono text-xs uppercase tracking-wider"
-          >← Series</.link>
-          <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
-            <div class="space-y-3">
-              <p :if={@series.publisher} class="qi-kicker text-[var(--hiraeth-thread)]">
-                {@series.publisher}
-              </p>
-              <h1
-                id="series-title"
-                class="font-serif text-5xl font-light tracking-tight text-[var(--hiraeth-ink)]"
-              >
-                {@series.title}
-              </h1>
-              <p class="qi-muted max-w-2xl font-serif text-lg italic leading-relaxed">
-                A shelf for reading this collection across the archive.
-              </p>
-            </div>
-            <.context_panel series={@series} />
+        <header class="sb-pagehead">
+          <p class="sb-kicker">
+            Collection <span>/</span> {@series.publisher || "Independent press"}
+          </p>
+          <div class="sb-pagehead__row">
+            <h1 id="series-title">{@series.title}</h1>
+            <p class="sb-pagehead__intro">
+              A shelf for reading this collection across the archive, grouped from {@series.publisher ||
+                "an independent press"}.
+            </p>
           </div>
+          <p class="sb-pagehead__meta">
+            <span><strong>{format_count(@series.editions_count)}</strong> books</span>
+            <span :if={@series.publisher}>
+              <a href={~p"/publishers/#{@series.publisher_slug}"}>{@series.publisher}</a>
+            </span>
+            <span>Series shelf</span>
+          </p>
         </header>
 
-        <section id="series-editions" class="space-y-6">
-          <div class="flex items-baseline justify-between border-b qi-divider pb-4">
-            <h2 class="font-serif text-2xl font-normal text-[var(--hiraeth-ink)]">Series editions</h2>
-            <span class="sr-only">{@series.editions_count} books</span>
+        <section id="series-editions" class="sb-pressworks">
+          <div class="sb-sectionhead">
+            <div>
+              <p class="sb-kicker">The collection</p>
+              <h2>Books in this collection</h2>
+            </div>
+            <span class="sb-link--plain">{format_count(@series.editions_count)} books</span>
           </div>
-          <div
-            id="series-editions-stream"
-            phx-update="stream"
-            class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-          >
-            <CatalogComponents.edition_card
-              :for={{dom_id, edition} <- @streams.series_editions}
+
+          <div id="series-editions-stream" phx-update="stream" class="sb-grid sb-grid--press">
+            <CatalogComponents.sb_book_card
+              :for={{dom_id, book} <- @streams.series_editions}
               dom_id={dom_id}
-              edition={edition}
+              book={book}
               id_prefix="series-detail-edition"
             />
           </div>
         </section>
+
+        <aside id="series-context" class="sb-pressworks">
+          <div class="sb-listbar">
+            <span>Collection</span>
+            <span>{@series.title}</span>
+          </div>
+          <div class="sb-listbar">
+            <span>Publisher</span>
+            <span>{@series.publisher || "Unknown"}</span>
+          </div>
+        </aside>
       <% else %>
-        <CatalogComponents.empty_state
-          id="series-not-found"
-          title="No series matches"
-          message="No series matches that slug. Choose another collection from the series shelf."
-          action_label="Back to series"
-          action_path="/series"
-        />
+        <div id="series-not-found" class="sb-empty">
+          <h2>No collection matches.</h2>
+          <p>Choose another collection from the index.</p>
+          <.link navigate={~p"/series"} class="sb-link">Back to collections</.link>
+        </div>
       <% end %>
     </div>
     """
   end
 
-  defp context_panel(assigns) do
-    ~H"""
-    <section id="series-context" class="qi-panel-soft grid gap-4 p-5 text-sm sm:grid-cols-2">
-      <div>
-        <p class="qi-label">Collection</p>
-        <p class="mt-1 font-serif text-xl text-[var(--hiraeth-ink)]">{@series.title}</p>
-      </div>
-      <div :if={facet_text(format_facets(@series.editions))}>
-        <p class="qi-label">Formats</p>
-        <p class="qi-muted mt-1">{facet_text(format_facets(@series.editions))}</p>
-      </div>
-    </section>
-    """
+  defp group_by_press(series) do
+    series
+    |> Enum.group_by(&(&1.publisher || "Independent press"))
+    |> Enum.sort_by(fn {publisher, _} -> String.downcase(publisher) end)
   end
 
-  defp format_facets(editions) do
-    editions
-    |> Enum.flat_map(fn edition ->
-      edition
-      |> Map.get(:formats, [])
-      |> Enum.map(&(&1[:format_label] || &1[:format]))
-    end)
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.uniq()
-    |> Enum.sort()
+  defp publisher_slug([%{publisher_slug: slug} | _]) when is_binary(slug), do: slug
+  defp publisher_slug(_series), do: nil
+
+  defp collection_count(1), do: "1 collection"
+  defp collection_count(count), do: "#{format_count(count)} collections"
+
+  defp number(index) when index < 10, do: "0#{index}"
+  defp number(index), do: to_string(index)
+
+  defp format_count(count) when is_integer(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
   end
 
-  defp facet_text([]), do: nil
-  defp facet_text(values), do: Enum.join(values, ", ")
+  defp format_count(count), do: to_string(count)
 end

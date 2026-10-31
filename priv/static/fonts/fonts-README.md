@@ -27,7 +27,20 @@ OFL 1.1 text with the family's copyright header.
   - `newsreader-variable-normal.woff2` (`newsreader-latin-wght-normal.woff2`, latin subset)
   - `newsreader-variable-italic.woff2` (`newsreader-latin-wght-italic.woff2`, latin subset)
 
-## Space Grotesk (UI sans — `--hiraeth-font-ui`)
+## Archivo (Softbound UI sans — `--sb-sans`)
+
+- Font version: variable, `wght` axis 400–700, normal
+- Copyright: Copyright 2020 The Archivo Project Authors
+  (https://github.com/Omnibus-Type/Archivo)
+- License: SIL Open Font License 1.1
+- Source: embedded Fontsource `Archivo` (latin subset) in the Softbound design
+  prototype (`design/softbound_index.html`); extracted byte-for-byte into
+  `archivo-variable-normal.woff2` and verified `wOF2` on placement.
+- Upstream: https://fonts.google.com/specimen/Archivo
+- Files:
+  - `archivo-variable-normal.woff2` (latin subset)
+
+## Space Grotesk (legacy UI sans — retained for older components)
 
 - Font version: 2.000 (variable font, `wght` axis 300–700, normal)
 - Copyright: Copyright 2020 The Space Grotesk Project Authors
@@ -58,4 +71,4 @@ OFL 1.1 text with the family's copyright header.
 
 - Every `.woff2` was verified to start with the `wOF2` magic bytes and its
   name-table version string was read with fontTools before placement here.
-- Only the latin subset is shipped (7 files); no other families are permitted.
+- Only latin subsets are shipped (8 files across Newsreader, Archivo, Space Grotesk, and Space Mono); no other families are permitted.

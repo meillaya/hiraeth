@@ -34,7 +34,7 @@ defmodule HiraethWeb.RouteShellLiveTest do
 
     {:ok, filtered, _html} = live(conn, ~p"/browse?q=Tunnel")
     assert has_element?(filtered, "#catalog-index h4", "The Tunnel")
-    assert has_element?(filtered, "#book-reader", "William H. Gass")
+    assert has_element?(filtered, "#catalog-grid", "William H. Gass")
   end
 
   test "GET /search filters items dynamically", %{conn: conn} do
@@ -45,7 +45,7 @@ defmodule HiraethWeb.RouteShellLiveTest do
     assert has_element?(
              view,
              "#search-results",
-             "#{PublicCatalog.book_page(nil, 1).total_count} found"
+             "#{format_count(PublicCatalog.book_page(nil, 1).total_count)} found"
            )
 
     view
@@ -59,6 +59,12 @@ defmodule HiraethWeb.RouteShellLiveTest do
     |> render_change()
 
     assert has_element?(view, "#search-empty", "No catalog entries match")
+  end
+
+  defp format_count(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
   end
 
   test "GET /publishers renders the real publisher directory", %{conn: conn} do

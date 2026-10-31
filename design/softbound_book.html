@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book — Hiraeth Softbound</title>
+<meta name="description" content="A book record from the Hiraeth catalogue of independent literary presses.">
+<meta property="og:title" content="Book — Hiraeth Softbound">
+<meta property="og:description" content="A book record from the Hiraeth catalogue of independent literary presses.">
+<meta property="og:type" content="website">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/css/softbound.css?v=4">
+</head>
+<body>
+<a class="sb-skip" href="#main">Skip to content</a>
+<div class="sb-sheet">
+  <header class="sb-header">
+    <div class="sb-header__in">
+      <a class="sb-brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
+      <nav class="sb-nav" aria-label="Primary">
+        <a href="browse.html" aria-current="page">Books</a>
+        <a href="publishers.html">Publishers</a>
+        <a href="series.html">Collections</a>
+      </nav>
+      <div class="sb-tools">
+        <button class="sb-tool" type="button" data-search-open aria-haspopup="dialog">Search</button>
+        <button class="sb-tool" type="button" data-shelf-open aria-haspopup="dialog">Shelf <span data-shelf-count>0</span></button>
+        <button class="sb-tool sb-tool--menu" type="button" data-menu-toggle aria-expanded="false" aria-controls="mobile-nav">Menu</button>
+      </div>
+    </div>
+    <div class="sb-mobile" id="mobile-nav" hidden>
+      <nav aria-label="Mobile">
+        <a href="browse.html" aria-current="page">Books</a>
+        <a href="publishers.html">Publishers</a>
+        <a href="series.html">Collections</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="book-root" data-book="new-directions-garden">
+      <p class="sb-loading">Loading record…</p>
+    </div>
+  </main>
+
+  <footer class="sb-footer">
+    <div class="sb-footer__in">
+      <a class="sb-footer__brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
+      <nav class="sb-footer__nav" aria-label="Footer">
+        <a href="browse.html">Books</a>
+        <a href="publishers.html">Publishers</a>
+        <a href="series.html">Collections</a>
+        <a href="shelf.html">Shelf</a>
+      </nav>
+      <p class="sb-footer__counts">112 books / 23 presses / 8 collections</p>
+    </div>
+    <div class="sb-footer__base">
+      <span>Softbound edition, 2026</span>
+      <span>7,011 volumes indexed</span>
+    </div>
+  </footer>
+</div>
+
+<dialog class="sb-dialog" id="search-dialog" aria-labelledby="search-dialog-title">
+  <div class="sb-dialog__head">
+    <span class="sb-dialog__title" id="search-dialog-title">Search the catalogue</span>
+    <button class="sb-dialog__close" type="button" data-search-close>Close</button>
+  </div>
+  <form class="sb-searchform" id="search-form" role="search">
+    <label class="visually-hidden" for="search-input">Search by title, author, press, or collection</label>
+    <input id="search-input" type="search" name="q" placeholder="Title, author, press" autocomplete="off">
+  </form>
+  <div class="sb-results" id="search-results" aria-live="polite"></div>
+  <p class="sb-dialog__hint">Search by title, author, press, or collection.</p>
+</dialog>
+
+<dialog class="sb-dialog sb-dialog--shelf" id="shelf-dialog" aria-labelledby="shelf-dialog-title">
+  <div class="sb-dialog__head">
+    <span class="sb-dialog__title" id="shelf-dialog-title">Your shelf</span>
+    <button class="sb-dialog__close" type="button" data-shelf-close>Close</button>
+  </div>
+  <div class="sb-shelf-list" id="shelf-list"></div>
+  <a class="sb-shelf-page-link" href="shelf.html">Open the shelf page →</a>
+  <p class="sb-dialog__hint">Saved in this browser.</p>
+</dialog>
+
+<script src="../assets/js/data.js?v=4"></script>
+<script src="../assets/js/softbound.js?v=4"></script>
+</body>
+</html>

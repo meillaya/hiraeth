@@ -2,379 +2,338 @@ defmodule HiraethWeb.BrowseLive.Components do
   use HiraethWeb, :html
 
   alias HiraethWeb.CatalogComponents
+  alias HiraethWeb.CatalogFilterParams
+  alias HiraethWeb.CatalogText
 
   def browse_shell(assigns) do
     ~H"""
-    <div id="browse-shell" class="space-y-10 pb-10">
-      <.browse_masthead form={@form} pagination={@pagination} query={@query} />
-      <.filter_rail
+    <div id="browse-shell">
+      <header class="sb-pagehead">
+        <p class="sb-kicker">
+          The catalogue <span>/</span> {format_count(@pagination.total_count)} records
+        </p>
+        <div class="sb-pagehead__row">
+          <h1>Books</h1>
+          <p class="sb-pagehead__intro">
+            Every record in the Softbound index, from {format_count(length(@publishers))} independent
+            literary presses. Filter by press, format, or collection.
+          </p>
+        </div>
+        <p class="sb-pagehead__meta">
+          <span><strong>{format_count(@pagination.total_count)}</strong> books</span>
+          <span><strong>{format_count(length(@publishers))}</strong> presses</span>
+          <span><strong>{format_count(length(@series))}</strong> collections</span>
+        </p>
+      </header>
+
+      <.filter_tray
         filter_form={@filter_form}
-        query={@query}
-        publisher_facets={@publisher_facets}
         filters={@filters}
+        publishers={@publishers}
+        series={@series}
+        query={@query}
+        view={@view}
       />
-      <div class="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
-        <.catalog_index pagination={@pagination} streams={@streams} query={@query} filters={@filters} />
-        <.reader_rail book={@selected_book} query={@query} />
-      </div>
-    </div>
-    """
-  end
 
-  defp browse_masthead(assigns) do
-    ~H"""
-    <header
-      id="browse-masthead"
-      class="grid gap-8 border-b qi-divider pb-8 md:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] md:items-end"
-    >
-      <div class="max-w-3xl">
-        <p class="qi-kicker text-[var(--hiraeth-thread)]">The catalog</p>
-        <h1 class="mt-3 font-serif text-5xl font-light leading-none tracking-tight text-[var(--hiraeth-ink)] sm:text-6xl">
-          Browse
-        </h1>
-        <p class="qi-muted mt-5 max-w-2xl font-serif text-lg italic leading-relaxed">
-          Move through the archive by press, title, contributor, or ISBN.
+      <div class="sb-resultsline">
+        <p><strong id="results-count">{format_count(@pagination.total_count)}</strong> books</p>
+        <p id="results-range">
+          Showing {range_text(@pagination)}
         </p>
       </div>
-      <.form
-        for={@form}
-        id="browse-search-form"
-        phx-change="search"
-        class="relative"
-      >
-        <.input
-          field={@form[:query]}
-          type="text"
-          label="Search catalog"
-          placeholder="Title, contributor, ISBN…"
-          phx-debounce="250"
-        />
-        <p class="sr-only">
-          {if @query == "", do: "Browsing catalog.", else: "Current search: #{@query}."}
-          {visible_page_text(@pagination)}
-        </p>
-      </.form>
-    </header>
-    """
-  end
 
-  defp filter_rail(assigns) do
-    ~H"""
-    <aside id="catalog-filters" class="space-y-4">
-      <.form for={@filter_form} id="catalog-filter-form" phx-change="filter" class="sr-only">
-        <input type="hidden" name="filters[q]" value={@query} />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Publisher filter"
-          name="filters[publisher]"
-          value={@filter_form[:publisher].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Contributor filter"
-          name="filters[contributor]"
-          value={@filter_form[:contributor].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Role filter"
-          name="filters[role]"
-          value={@filter_form[:role].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Format filter"
-          name="filters[format]"
-          value={@filter_form[:format].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Language filter"
-          name="filters[language]"
-          value={@filter_form[:language].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Year filter"
-          name="filters[year]"
-          value={@filter_form[:year].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Subject filter"
-          name="filters[subject]"
-          value={@filter_form[:subject].value || ""}
-        />
-        <input
-          type="text"
-          class="sr-only"
-          tabindex="-1"
-          aria-label="Series filter"
-          name="filters[series]"
-          value={@filter_form[:series].value || ""}
-        />
-        <select name="filters[sort]" aria-label="Sort catalog" class="sr-only" tabindex="-1">
-          <option value="newest" selected={@filter_form[:sort].value in [nil, "", "newest"]}>
-            Publication date, newest first
-          </option>
-        </select>
-      </.form>
-      <div class="space-y-3">
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="qi-label">Press shelves</h2>
-          <.link navigate={~p"/browse"} class={press_filter_class(@filters["publisher"] in [nil, ""])}>
-            All presses
-          </.link>
-        </div>
-        <div class="flex gap-2 overflow-x-auto pb-2">
-          <.link
-            :for={publisher <- @publisher_facets}
-            navigate={~p"/browse?publisher=#{publisher.slug}"}
-            class={press_filter_class(@filters["publisher"] == publisher.slug)}
-          >
-            <span class="truncate">{publisher.name}</span>
-          </.link>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <p class="sr-only">Format filters</p>
-        <div class="flex flex-wrap gap-2 text-[13px] text-[var(--hiraeth-ink)]">
-          <.link
-            navigate={~p"/browse?format=paperback"}
-            class={press_filter_class(@filters["format"] == "paperback")}
-          >
-            Paperback
-          </.link>
-          <.link
-            navigate={~p"/browse?format=hardcover"}
-            class={press_filter_class(@filters["format"] == "hardcover")}
-          >
-            Hardcover
-          </.link>
-          <.link
-            navigate={~p"/browse?format=ebook"}
-            class={press_filter_class(@filters["format"] == "ebook")}
-          >
-            Ebook
-          </.link>
-        </div>
-      </div>
-    </aside>
-    """
-  end
+      <section id="catalog-index" aria-label="Catalogue results">
+        <h2 class="visually-hidden">Shelf</h2>
 
-  defp catalog_index(assigns) do
-    ~H"""
-    <section id="catalog-index" class="min-w-0 space-y-6">
-      <div class="flex items-baseline justify-between gap-4">
-        <h2 class="font-serif text-2xl font-normal text-[var(--hiraeth-ink)]">Shelf</h2>
-        <span class="font-mono text-xs text-[var(--hiraeth-muted)]">
-          {visible_page_text(@pagination)}
-        </span>
-      </div>
-      <%= if @pagination.total_count == 0 do %>
-        <div id="browse-empty">
-          <CatalogComponents.empty_state
-            id="catalog-empty"
-            title="No catalog entries match"
-            message="Adjust the search or choose another shelf."
-            context={query_context(@query)}
-            action_label="Clear search"
-            action_path="/browse"
-          />
-        </div>
-      <% else %>
-        <div
-          id="catalog-grid"
-          phx-update="stream"
-          class="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-4"
-        >
-          <.book_card :for={{dom_id, book} <- @streams.books} dom_id={dom_id} book={book} />
-        </div>
-        <CatalogComponents.pagination
-          page={@pagination.page}
-          total_pages={@pagination.total_pages}
-          base_path="/browse"
-          query={@query}
-          params={@filters}
-        />
-      <% end %>
-    </section>
-    """
-  end
-
-  defp book_card(assigns) do
-    ~H"""
-    <article id={@dom_id} class="group space-y-3">
-      <button
-        type="button"
-        phx-click="select"
-        phx-value-slug={@book.slug}
-        class="block w-full rounded-sm text-left qi-focus"
-        aria-label={"Select #{@book.title} for the volume reader"}
-      >
-        <div class="relative">
-          <CatalogComponents.book_cover book={@book} />
-        </div>
-      </button>
-      <div class="space-y-1.5">
-        <h4 class="font-serif text-base font-normal leading-tight tracking-tight text-[var(--hiraeth-ink)]">
-          <.link
-            navigate={~p"/books/#{@book.slug}"}
-            class="qi-focus rounded-sm hover:text-[var(--hiraeth-thread)]"
-          >{@book.title}</.link>
-        </h4>
-        <div class="space-y-0.5 text-xs text-[var(--hiraeth-muted)]">
-          <p :if={role_names(@book[:authors])} class="truncate">{role_names(@book.authors)}</p>
-          <p :if={role_names(@book[:translators])} class="truncate">
-            tr. {role_names(@book.translators)}
-          </p>
-        </div>
-        <p :if={@book[:publisher]} class="qi-label truncate text-[10px]">
-          {@book.publisher || "Publisher unknown"}
-        </p>
-        <div class="sr-only">
-          <p :if={role_names(@book[:authors])}>by {role_names(@book.authors)}</p>
-          <p :if={role_names(@book[:translators])}>
-            translated by {role_names(@book.translators)}
-          </p>
-          <p :if={@book[:description]}>{description_excerpt(@book.description, 180)}</p>
-          <p :for={format <- @book[:formats] || []}>
-            {format.format} {Enum.join(format.identifiers, ", ")}
-          </p>
-        </div>
-      </div>
-    </article>
-    """
-  end
-
-  defp reader_rail(assigns) do
-    ~H"""
-    <aside id="book-reader" class="qi-panel-soft space-y-6 p-5 xl:sticky xl:top-24">
-      <h2 class="font-serif text-xl font-normal text-[var(--hiraeth-ink)]">Selected book</h2>
-      <%= if @book do %>
-        <.selected_reader book={@book} />
-      <% else %>
-        <CatalogComponents.empty_state
-          id="book-reader-empty"
-          title="No book selected"
-          message="Choose a cover from the shelf to preview it here."
-          context={query_context(@query)}
-          action_label="Clear search"
-          action_path="/browse"
-        />
-      <% end %>
-    </aside>
-    """
-  end
-
-  defp selected_reader(assigns) do
-    assigns =
-      assigns
-      |> assign(:authors, role_names(assigns.book[:authors]))
-      |> assign(:cover_image_src, reader_cover_src(assigns.book[:cover]))
-
-    ~H"""
-    <div class="space-y-6">
-      <div class="flex items-start gap-4">
-        <div class="w-24 flex-none">
-          <img
-            :if={@cover_image_src}
-            src={@cover_image_src}
-            alt={"Cover for #{@book.title}"}
-            loading="lazy"
-            decoding="async"
-            width="160"
-            height="240"
-            class="qi-cover-frame aspect-[2/3] w-full object-cover"
-          />
-          <div
-            :if={!@cover_image_src}
-            class="fallback-cover-grain qi-panel aspect-[2/3] w-full p-3 text-center"
-            aria-label="Typographic cover fallback; no cover asset is available."
-          >
-            <div class="flex h-full flex-col items-center justify-center gap-2">
-              <span class="h-px w-10 bg-[var(--hiraeth-line-strong)]"></span>
-              <span class="font-serif text-sm leading-tight text-[var(--hiraeth-ink)]">{@book.title}</span>
+        <%= if @pagination.total_count == 0 do %>
+          <div class="sb-empty" id="browse-empty">
+            <div id="catalog-empty">
+              <h2>No catalog entries match.</h2>
+              <p>Adjust the search or choose another shelf.</p>
+              <p :if={@query not in [nil, ""]} class="sb-kicker">Current search: {@query}</p>
+              <.link navigate={~p"/browse"} class="sb-link">Clear the filters</.link>
             </div>
           </div>
-        </div>
-        <div class="min-w-0 space-y-2">
-          <p class="qi-kicker text-[var(--hiraeth-thread)]">
-            {@book.publisher || "Publisher unknown"}
-          </p>
-          <h3 class="font-serif text-2xl font-light leading-tight text-[var(--hiraeth-ink)]">
-            {@book.title}
-          </h3>
-          <p :if={@authors} class="qi-muted text-sm">{@authors}</p>
-        </div>
-      </div>
-      <p
-        :if={@book[:description]}
-        class="qi-muted border-l border-[var(--hiraeth-line-strong)] pl-4 font-serif text-sm italic leading-relaxed"
-      >
-        {description_excerpt(@book.description, 160)}
-      </p>
-      <div class="flex flex-wrap gap-3 border-t qi-divider pt-4">
-        <.link navigate={~p"/books/#{@book.slug}"} class="qi-button qi-focus">Full record</.link>
-        <.link
-          :if={@book[:publisher_slug]}
-          navigate={~p"/browse?publisher=#{@book.publisher_slug}"}
-          class="qi-button-secondary qi-focus"
-        >More from press</.link>
-      </div>
+        <% else %>
+          <div
+            :if={@view == "covers"}
+            id="catalog-grid"
+            phx-update="stream"
+            class="sb-grid"
+          >
+            <CatalogComponents.sb_book_card
+              :for={{dom_id, book} <- @streams.books}
+              dom_id={dom_id}
+              book={book}
+            />
+          </div>
+
+          <div :if={@view == "index"} id="catalogue-index" class="sb-index">
+            <div class="sb-index__head">
+              <span>No.</span>
+              <span></span>
+              <span>Title</span>
+              <span>Press</span>
+              <span>Year</span>
+              <span>Formats</span>
+            </div>
+            <div
+              :for={{book, index} <- Enum.with_index(@page_books, 1)}
+              id={"index-#{book.work_id}"}
+              class="sb-index__row"
+            >
+              <span class="sb-index__no">{number(index)}</span>
+              <a
+                class="sb-index__thumb"
+                href={~p"/books/#{book.slug}"}
+                tabindex="-1"
+                aria-hidden="true"
+              >
+                <CatalogComponents.softbound_cover book={book} variant={:thumb} />
+              </a>
+              <div>
+                <a class="sb-index__title" href={~p"/books/#{book.slug}"}>{book.title}</a>
+                <span :if={author_line(book)} class="sb-index__author">{author_line(book)}</span>
+              </div>
+              <span class="sb-index__press">{book.publisher || "Unknown press"}</span>
+              <span class="sb-index__year">{book_year(book)}</span>
+              <span class="sb-index__formats">{format_summary(book)}</span>
+            </div>
+          </div>
+
+          <.pager page={@pagination.page} total_pages={@pagination.total_pages} filters={@filters} />
+        <% end %>
+      </section>
     </div>
     """
   end
 
-  defp role_names(contributors) when is_list(contributors) do
-    names = contributors |> Enum.map(& &1[:name]) |> Enum.reject(&is_nil/1) |> Enum.join(", ")
-    if names == "", do: nil, else: names
+  defp filter_tray(assigns) do
+    ~H"""
+    <.form
+      for={@filter_form}
+      id="catalog-filter-form"
+      phx-change="filter"
+      phx-submit="filter"
+      class="sb-filter"
+      aria-label="Filter the catalogue"
+    >
+      <input type="hidden" name="filters[role]" value={@filters["role"]} />
+      <input type="hidden" name="filters[contributor]" value={@filters["contributor"]} />
+      <input type="hidden" name="filters[language]" value={@filters["language"]} />
+      <input type="hidden" name="filters[subject]" value={@filters["subject"]} />
+      <input type="hidden" name="filters[year]" value={@filters["year"]} />
+
+      <div class="sb-filter__search">
+        <label for="browse-search">Search</label>
+        <input
+          id="browse-search"
+          type="search"
+          name="filters[q]"
+          value={@filters["q"]}
+          placeholder="Title, author, press"
+          autocomplete="off"
+          phx-debounce="300"
+        />
+        <.link :if={@filters["q"] not in [nil, ""]} navigate={~p"/browse"} class="sb-filter__clear">
+          Clear
+        </.link>
+      </div>
+
+      <div class="sb-filter__controls">
+        <div class="sb-control">
+          <label for="filter-press">Press</label>
+          <select id="filter-press" name="filters[publisher]">
+            <option value="" selected={blank?(@filters["publisher"])}>All presses</option>
+            <option
+              :for={publisher <- @publishers}
+              value={publisher.slug}
+              selected={@filters["publisher"] == publisher.slug}
+            >
+              {publisher.name}
+            </option>
+          </select>
+        </div>
+
+        <div class="sb-control">
+          <label for="filter-format">Format</label>
+          <select id="filter-format" name="filters[format]">
+            <option value="" selected={blank?(@filters["format"])}>All formats</option>
+            <option value="paperback" selected={@filters["format"] == "paperback"}>Paperback</option>
+            <option value="hardcover" selected={@filters["format"] == "hardcover"}>Hardcover</option>
+            <option value="ebook" selected={@filters["format"] == "ebook"}>Ebook</option>
+            <option value="audiobook" selected={@filters["format"] == "audiobook"}>Audiobook</option>
+          </select>
+        </div>
+
+        <div class="sb-control">
+          <label for="filter-series">Collection</label>
+          <select id="filter-series" name="filters[series]">
+            <option value="" selected={blank?(@filters["series"])}>All collections</option>
+            <option
+              :for={series <- @series}
+              value={series.slug}
+              selected={@filters["series"] == series.slug}
+            >
+              {series.title}
+            </option>
+          </select>
+        </div>
+
+        <div class="sb-control">
+          <label for="filter-sort">Sort</label>
+          <select id="filter-sort" name="filters[sort]">
+            <option value="newest" selected={default_sort?(@filters["sort"])}>
+              Newest first
+            </option>
+            <option value="title" selected={@filters["sort"] == "title"}>Title A–Z</option>
+            <option value="author" selected={@filters["sort"] == "author"}>Author A–Z</option>
+            <option value="recently_added" selected={@filters["sort"] == "recently_added"}>
+              Recently added
+            </option>
+          </select>
+        </div>
+
+        <div class="sb-control sb-control--view">
+          <span>View</span>
+          <div class="sb-view" role="group" aria-label="View">
+            <button
+              type="button"
+              phx-click="view"
+              phx-value-view="covers"
+              aria-pressed={to_string(@view == "covers")}
+            >
+              Covers
+            </button>
+            <button
+              type="button"
+              phx-click="view"
+              phx-value-view="index"
+              aria-pressed={to_string(@view == "index")}
+            >
+              Index
+            </button>
+          </div>
+        </div>
+      </div>
+    </.form>
+    """
   end
 
-  defp role_names(_contributors), do: nil
+  attr :page, :integer, required: true
+  attr :total_pages, :integer, required: true
+  attr :filters, :map, required: true
 
-  defp reader_cover_src(nil), do: nil
+  defp pager(assigns) do
+    assigns = assign(assigns, :pages, page_numbers(assigns.page, assigns.total_pages))
 
-  defp reader_cover_src(cover) do
-    local_cover_url(cover[:public_url]) || local_cover_url(cover[:thumbnail_url])
+    ~H"""
+    <nav id="catalog-pagination" class="sb-pager" aria-label="Catalogue pages">
+      <.link
+        :if={@page > 1}
+        navigate={page_path(@filters, @page - 1)}
+        class="sb-pager__step"
+        id="catalog-prev-page"
+      >
+        ← Previous
+      </.link>
+      <span :if={@page == 1} class="sb-pager__step" aria-disabled="true">← Previous</span>
+
+      <div class="sb-pager__pages">
+        <span id="catalog-page-count" class="visually-hidden">Page {@page} of {@total_pages}</span>
+        <.link
+          :for={number <- @pages}
+          navigate={page_path(@filters, number)}
+          class={["sb-pager__page", number == @page && "is-current"]}
+          aria-current={number == @page && "page"}
+        >
+          {number}
+        </.link>
+      </div>
+
+      <.link
+        :if={@page < @total_pages}
+        navigate={page_path(@filters, @page + 1)}
+        class="sb-pager__step sb-pager__step--next"
+        id="catalog-next-page"
+      >
+        Next →
+      </.link>
+      <span
+        :if={@page >= @total_pages}
+        class="sb-pager__step sb-pager__step--next"
+        aria-disabled="true"
+      >
+        Next →
+      </span>
+    </nav>
+    """
   end
 
-  defp local_cover_url(url) when is_binary(url) do
-    if String.starts_with?(url, "/covers/cache/"), do: url
+  defp page_numbers(_current, total) when total <= 7, do: Enum.to_list(1..total)
+
+  defp page_numbers(current, total) do
+    first = max(1, current - 2)
+    last = min(total, first + 4)
+
+    Enum.to_list(first..last)
   end
 
-  defp local_cover_url(_url), do: nil
+  defp page_path(filters, page) do
+    params =
+      filters
+      |> Map.put("page", Integer.to_string(page))
+      |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
+      |> Map.new()
 
-  defp description_excerpt(description, length) when is_binary(description),
-    do: description |> String.trim() |> String.slice(0, length)
-
-  defp query_context(""), do: nil
-  defp query_context(query), do: "Current search: #{query}"
-
-  defp visible_page_text(%{page: page, total_pages: total_pages}) do
-    "Page #{page} of #{total_pages}"
+    "/browse?" <> URI.encode_query(params)
   end
 
-  defp press_filter_class(true) do
-    "qi-focus shrink-0 border border-[var(--hiraeth-ink)] bg-[var(--hiraeth-ink)] px-3 py-2 font-sans text-xs font-semibold text-[var(--hiraeth-paper)] transition duration-200"
+  defp range_text(%{page: page, page_size: size, total_count: total}) do
+    from = (page - 1) * size + 1
+    to = min(page * size, total)
+    "#{format_count(from)}–#{format_count(to)} of #{format_count(total)}"
   end
 
-  defp press_filter_class(false) do
-    "qi-focus shrink-0 border border-[var(--hiraeth-line)] bg-[var(--hiraeth-paper)] px-3 py-2 font-sans text-xs font-medium text-[var(--hiraeth-muted)] transition duration-200 hover:border-[var(--hiraeth-thread)] hover:text-[var(--hiraeth-thread)]"
+  defp author_line(book) do
+    book
+    |> Map.get(:authors, [])
+    |> Enum.map(& &1[:name])
+    |> Enum.reject(fn name -> is_nil(name) or CatalogText.unknown_contributor?(name) end)
+    |> Enum.join(", ")
+    |> case do
+      "" -> nil
+      names -> names
+    end
   end
+
+  defp book_year(%{published_on: %Date{} = date}), do: to_string(date.year)
+  defp book_year(_book), do: "—"
+
+  defp format_summary(book) do
+    book
+    |> Map.get(:formats, [])
+    |> Enum.map(& &1[:format_label])
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
+    |> Enum.join(", ")
+  end
+
+  defp number(index) when index < 10, do: "0#{index}"
+  defp number(index), do: to_string(index)
+
+  defp format_count(count) when is_integer(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  end
+
+  defp format_count(count), do: to_string(count)
+
+  defp blank?(value), do: value in [nil, ""]
+
+  defp default_sort?(value), do: value in [nil, "", "newest"]
+
+  # Kept for callers that still build filter URLs from a params map.
+  def filtered_path(base_path, params), do: CatalogFilterParams.filtered_path(base_path, params)
 end

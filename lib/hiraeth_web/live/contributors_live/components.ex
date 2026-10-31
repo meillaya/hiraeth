@@ -8,65 +8,51 @@ defmodule HiraethWeb.ContributorsLive.Components do
 
   def index(assigns) do
     ~H"""
-    <div id="contributors-shell" class="archive-wash space-y-10 pb-12">
-      <header class="border-b qi-divider pb-6">
-        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p class="qi-kicker text-[var(--hiraeth-thread)]">Role-aware directory</p>
-            <h1 class="mt-2 font-serif text-4xl font-light tracking-tight text-[var(--hiraeth-ink)] sm:text-5xl">
-              {title(@role)}
-            </h1>
-            <p class="qi-muted mt-3 max-w-2xl font-serif text-lg italic leading-relaxed">
-              Authors, translators, and other sourced contributors represented in the public catalog.
-            </p>
-          </div>
-          <nav
-            id="contributor-roles"
-            class="flex flex-wrap gap-2 text-xs font-mono uppercase tracking-wider"
-            aria-label="Contributor role filters"
-          >
-            <.link navigate={~p"/contributors"} class={role_link_class(@role, nil)}>All</.link>
-            <.link navigate={~p"/contributors?role=author"} class={role_link_class(@role, "author")}>Authors</.link>
-            <.link
-              navigate={~p"/contributors?role=translator"}
-              class={role_link_class(@role, "translator")}
-            >Translators</.link>
-          </nav>
+    <div id="contributors-shell">
+      <header class="sb-pagehead">
+        <p class="sb-kicker">Role-aware directory <span>/</span> {title(@role)}</p>
+        <div class="sb-pagehead__row">
+          <h1>{title(@role)}</h1>
+          <p class="sb-pagehead__intro">
+            Authors, translators, and other sourced contributors represented in the public
+            catalogue. Roles come from the publisher's own record, never inferred.
+          </p>
         </div>
+        <p class="sb-pagehead__meta">
+          <span>Directory</span>
+          <span>Grouped by sourced role</span>
+        </p>
+
+        <nav
+          id="contributor-roles"
+          class="sb-rolebar"
+          aria-label="Contributor role filters"
+        >
+          <.link navigate={~p"/contributors"} class={role_link_class(@role, nil)}>All</.link>
+          <.link navigate={~p"/contributors?role=author"} class={role_link_class(@role, "author")}>
+            Authors
+          </.link>
+          <.link
+            navigate={~p"/contributors?role=translator"}
+            class={role_link_class(@role, "translator")}
+          >
+            Translators
+          </.link>
+        </nav>
       </header>
 
-      <div id="contributors-grid" phx-update="stream" class="divide-y divide-[var(--hiraeth-line)]">
-        <article
+      <div id="contributors-grid" phx-update="stream" class="sb-pressindex">
+        <a
           :for={{dom_id, contributor} <- @streams.contributors}
           id={dom_id}
-          class="qi-row grid gap-5 py-7 transition duration-200 md:grid-cols-[4rem_minmax(0,1fr)_10rem] md:items-center"
+          class="sb-pressitem"
+          href={~p"/contributors/#{contributor.slug}"}
         >
-          <p class="qi-label text-xs">{count_label(contributor.books_count)}</p>
-          <div class="min-w-0 space-y-3">
-            <div class="flex flex-wrap gap-2" aria-label="Contributor roles">
-              <span
-                :for={role <- contributor.roles}
-                class="rounded-sm border border-[var(--hiraeth-line-strong)] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--hiraeth-muted)]"
-              >
-                {role}
-              </span>
-            </div>
-            <h2 class="font-serif text-3xl font-light leading-tight text-[var(--hiraeth-ink)]">
-              <.link
-                navigate={~p"/contributors/#{contributor.slug}"}
-                class="qi-focus rounded-sm hover:text-[var(--hiraeth-thread)]"
-              >
-                {contributor.name}
-              </.link>
-            </h2>
-          </div>
-          <.link
-            navigate={~p"/contributors/#{contributor.slug}"}
-            class="qi-action-link justify-self-start font-mono text-xs uppercase tracking-wider md:justify-self-end"
-          >
-            Open shelf →
-          </.link>
-        </article>
+          <span class="sb-pressitem__no">{count_label(contributor.books_count)}</span>
+          <span class="sb-pressitem__name">{contributor.name}</span>
+          <span class="sb-pressitem__count">{role_list(contributor.roles)}</span>
+          <span class="sb-pressitem__thumb"><span class="sb-pressmark">{initial(contributor.name)}</span></span>
+        </a>
       </div>
     </div>
     """
@@ -77,70 +63,57 @@ defmodule HiraethWeb.ContributorsLive.Components do
 
   def show(assigns) do
     ~H"""
-    <div id="contributor-detail-shell" class="archive-wash space-y-10 pb-12">
+    <div id="contributor-detail-shell">
       <%= if @contributor do %>
-        <header class="border-b qi-divider pb-7">
-          <.link
-            navigate={~p"/contributors"}
-            class="qi-action-link font-mono text-xs uppercase tracking-wider"
-          >← Contributors</.link>
-          <div class="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
-            <div class="space-y-4">
-              <div id="contributor-roles" class="flex flex-wrap gap-2">
-                <span
-                  :for={role <- @contributor.roles}
-                  class="rounded-sm border border-[var(--hiraeth-line-strong)] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--hiraeth-muted)]"
-                >
-                  {role}
-                </span>
-              </div>
-              <h1
-                id="contributor-title"
-                class="font-serif text-5xl font-light tracking-tight text-[var(--hiraeth-ink)]"
-              >
-                {@contributor.name}
-              </h1>
-              <p class="qi-muted max-w-2xl font-serif text-lg italic leading-relaxed">
-                Related records appear only when the contributor relationship is sourced in the catalog.
-              </p>
-            </div>
-            <div class="qi-panel-soft p-4">
-              <p class="qi-label">Sourced shelf</p>
-              <p class="mt-2 font-serif text-3xl font-light text-[var(--hiraeth-ink)]">
-                {@contributor.books_count} books
-              </p>
+        <header class="sb-presshead">
+          <div class="sb-presshead__cover">
+            <div class="sb-pressmark">{initial(@contributor.name)}</div>
+            <p class="sb-figcap">
+              <span>{role_list(@contributor.roles)}</span>
+              <span>{@contributor.books_count} books</span>
+            </p>
+          </div>
+
+          <div class="sb-presshead__body">
+            <p class="sb-kicker">Contributor <span>/</span> sourced shelf</p>
+            <h1 id="contributor-title">{@contributor.name}</h1>
+            <p id="contributor-roles" class="sb-presshead__intro">
+              {role_list(@contributor.roles)}
+            </p>
+            <p class="sb-presshead__intro">
+              Related records appear only when the contributor relationship is sourced in the
+              catalogue.
+            </p>
+            <div class="sb-pressledger">
+              <span><strong>{@contributor.books_count}</strong> books</span>
+              <span><strong>{length(@contributor.roles)}</strong> roles</span>
             </div>
           </div>
         </header>
 
-        <section id="contributor-books" class="space-y-6">
-          <div class="flex items-baseline justify-between border-b qi-divider pb-4">
-            <h2 class="font-serif text-2xl font-normal text-[var(--hiraeth-ink)]">
-              Related sourced books
-            </h2>
-            <span class="font-mono text-xs text-[var(--hiraeth-muted)]">{@contributor.books_count} records</span>
+        <section id="contributor-books" class="sb-pressworks">
+          <div class="sb-sectionhead">
+            <div>
+              <p class="sb-kicker">The catalogue</p>
+              <h2>Related sourced books</h2>
+            </div>
+            <span class="sb-link--plain">{@contributor.books_count} records</span>
           </div>
-          <div
-            id="contributor-books-stream"
-            phx-update="stream"
-            class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-          >
-            <CatalogComponents.edition_card
+          <div id="contributor-books-stream" phx-update="stream" class="sb-grid sb-grid--press">
+            <CatalogComponents.sb_book_card
               :for={{dom_id, book} <- @streams.contributor_books}
               dom_id={dom_id}
-              edition={book}
+              book={book}
               id_prefix="contributor-book"
             />
           </div>
         </section>
       <% else %>
-        <CatalogComponents.empty_state
-          id="contributor-not-found"
-          title="No contributor matches"
-          message="No sourced contributor matches that slug. Choose another name from the contributor directory."
-          action_label="Back to contributors"
-          action_path="/contributors"
-        />
+        <div id="contributor-not-found" class="sb-empty">
+          <h2>No contributor matches.</h2>
+          <p>No sourced contributor matches that slug. Choose another name from the directory.</p>
+          <.link navigate={~p"/contributors"} class="sb-link">Back to contributors</.link>
+        </div>
       <% end %>
     </div>
     """
@@ -150,24 +123,32 @@ defmodule HiraethWeb.ContributorsLive.Components do
   defp title("translator"), do: "Translators"
   defp title(_role), do: "Contributors"
 
-  defp count_label(1), do: "01 book"
+  defp role_list(roles) when is_list(roles) do
+    roles
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map_join(", ", &to_string/1)
+  end
 
-  defp count_label(count) do
-    count
-    |> Integer.to_string()
-    |> String.pad_leading(2, "0")
-    |> Kernel.<>(" books")
+  defp role_list(_roles), do: "Contributor"
+
+  defp count_label(1), do: "01"
+
+  defp count_label(count) when is_integer(count),
+    do: String.pad_leading(Integer.to_string(count), 2, "0")
+
+  defp count_label(_count), do: "—"
+
+  defp initial(name) when is_binary(name) do
+    name |> String.first() |> Kernel.||("H") |> String.upcase()
   end
 
   defp role_link_class(current, role) do
-    base = "rounded-sm border px-3 py-1 transition-colors qi-focus"
+    active? = current == role
 
-    if current == role do
-      base <>
-        " border-[var(--hiraeth-thread)] bg-[var(--hiraeth-thread)] text-[var(--hiraeth-paper)]"
-    else
-      base <>
-        " border-[var(--hiraeth-line-strong)] text-[var(--hiraeth-muted)] hover:border-[var(--hiraeth-thread)] hover:text-[var(--hiraeth-thread)]"
-    end
+    [
+      "sb-tool",
+      "sb-role-link",
+      active? && "is-current"
+    ]
   end
 end

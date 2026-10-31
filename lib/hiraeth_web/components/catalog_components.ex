@@ -61,6 +61,108 @@ defmodule HiraethWeb.CatalogComponents do
     """
   end
 
+  @doc """
+  Renders a Softbound catalogue card: cover well, serif title, byline, and a
+  press/year footer. `h4` keeps the established catalogue heading contract.
+  """
+  attr :book, :map, required: true
+  attr :dom_id, :string, default: nil
+  attr :id_prefix, :string, default: "book"
+
+  def sb_book_card(assigns) do
+    assigns =
+      assigns
+      |> assign(:authors, role_names(assigns.book[:authors]))
+      |> assign(:id, assigns.dom_id || "#{assigns.id_prefix}-#{assigns.book.slug}")
+
+    ~H"""
+    <article id={@id} class="sb-card">
+      <a class="sb-card__well" href={~p"/books/#{@book.slug}"} aria-label={"Open #{@book.title}"}>
+        <.softbound_cover book={@book} variant={:card} />
+      </a>
+      <div class="sb-card__meta">
+        <h4 class="sb-card__title">
+          <a href={~p"/books/#{@book.slug}"}>{@book.title}</a>
+        </h4>
+        <span :if={@authors} class="sb-card__author">{@authors}</span>
+        <span class="visually-hidden">
+          <span :if={@authors}>by {@authors}</span>
+          <span :if={translator_names(@book[:translators])}>
+            translated by {translator_names(@book[:translators])}
+          </span>
+          <span :if={@book[:description]}>
+            {HiraethWeb.CatalogText.plain(@book.description, 180)}
+          </span>
+          <span>{format_summary(@book[:formats])}</span>
+          <span :for={format <- @book[:formats] || []}>
+            {format[:format]} {Enum.join(format[:identifiers] || [], ", ")}
+          </span>
+        </span>
+      </div>
+      <div class="sb-card__foot">
+        <span>{@book.publisher || "Unknown press"}</span>
+        <span>{book_year(@book)}</span>
+      </div>
+    </article>
+    """
+  end
+
+  defp book_year(%{published_on: %Date{} = date}), do: to_string(date.year)
+  defp book_year(_book), do: "—"
+
+  @doc """
+  Renders a Softbound cover: the same-origin cache image when available, or the
+  typographic fallback used by the design. The `id` contract stays stable for
+  tests and QA (`public-cover-<slug>` / `missing-cover-<slug>`).
+  """
+  attr :book, :map, required: true
+  attr :variant, :atom, default: :card, values: [:hero, :card, :record, :thumb, :result]
+  attr :loading, :string, default: "lazy"
+  attr :fetchpriority, :string, default: "auto"
+
+  def softbound_cover(assigns) do
+    assigns =
+      assigns
+      |> assign(:cover_image_src, softbound_cover_src(assigns.book, assigns.variant))
+      |> assign(:cover_authors, role_names(assigns.book[:authors]))
+
+    ~H"""
+    <figure :if={@cover_image_src} id={"public-cover-#{@book.slug}"} class="sb-cover-figure">
+      <img
+        src={@cover_image_src}
+        alt={"Cover for #{@book.title}"}
+        loading={@loading}
+        decoding="async"
+        fetchpriority={@fetchpriority}
+        width="400"
+        height="600"
+        class="sb-cover-image"
+      />
+    </figure>
+    <div :if={!@cover_image_src} id={"missing-cover-#{@book.slug}"} class="sb-fallback">
+      <span class="sb-fallback__press">{@book.publisher || "Publisher unknown"}</span>
+      <span class="sb-fallback__title">{@book.title}</span>
+      <span :if={@cover_authors} class="sb-fallback__author">{@cover_authors}</span>
+      <span class="visually-hidden">Typographic cover fallback; no cover asset is available.</span>
+    </div>
+    """
+  end
+
+  defp softbound_cover_src(book, variant) do
+    cover = Map.get(book, :cover)
+
+    url =
+      case variant do
+        :hero -> cover_url(cover, [:public_url, :thumbnail_url])
+        _ -> cover_url(cover, [:thumbnail_url, :public_url])
+      end
+
+    if is_binary(url) and String.starts_with?(url, "/covers/cache/"), do: url
+  end
+
+  defp cover_url(nil, _keys), do: nil
+  defp cover_url(cover, keys), do: Enum.find_value(keys, &Map.get(cover, &1))
+
   defp cover_image_src(book, variant) do
     book
     |> Map.get(:cover)
@@ -144,10 +246,27 @@ defmodule HiraethWeb.CatalogComponents do
 
   defp format_summary(_formats), do: nil
 
+  defp translator_names(contributors) when is_list(contributors) do
+    contributors
+    |> Enum.map(& &1[:name])
+    |> Enum.reject(fn name ->
+      is_nil(name) or HiraethWeb.CatalogText.unknown_contributor?(name)
+    end)
+    |> Enum.join(", ")
+    |> case do
+      "" -> nil
+      names -> names
+    end
+  end
+
+  defp translator_names(_contributors), do: nil
+
   defp role_names(contributors) when is_list(contributors) do
     contributors
     |> Enum.map(& &1[:name])
-    |> Enum.reject(&is_nil/1)
+    |> Enum.reject(fn name ->
+      is_nil(name) or HiraethWeb.CatalogText.unknown_contributor?(name)
+    end)
     |> Enum.join(", ")
     |> case do
       "" -> nil

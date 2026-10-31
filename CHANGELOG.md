@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Softbound design system: canonical tokens in `assets/css/tokens.css`, the component layer in `assets/css/softbound.css`, the self-hosted Archivo variable font, and a formal responsive specification in `design/index.html` (tokens, type scale, breakpoint matrix, component contracts, and acceptance checklist).
+- `scripts/qa/design_screenshots.mjs` captures every public surface at nine acceptance widths (390–1440px) and fails on horizontal overflow, sheet inset drift, or header-mode drift.
 - R2-backed public cover storage. `Hiraeth.Covers.Store` has local and S3 implementations, cache writes upload originals and thumbnails, purge deletes both copies, and `mix hiraeth.covers.upload` backfills a bucket from the local cache.
 - `/covers/cache/*path` proxy for local misses. It validates the path, checks the cover is still public in the database, fetches from R2, writes the local cache atomically, and serves the bytes with the same same-origin URL.
 - `Hiraeth.Covers.CachePruner` and `HIRAETH_COVER_CACHE_MAX_BYTES` (default 1 GiB) bound the local working set.
@@ -31,6 +33,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The public browser UI is rebuilt as the Softbound edition: a single paper sheet on a sage ground, Newsreader display type with Archivo interface text, a featured-forthcoming homepage hero, a four-title recent/forthcoming shelf, filter-tray browse, book records, press dossiers, collection shelves, contributor directory, and search. The dark theme toggle and its palette are retired; Softbound is light-only.
+- The homepage hero is now the nearest forthcoming book with a displayable cover, and the four cards beneath it are sampled per visit from recent or forthcoming books. Subscriptions, bundles, gift cards, and merchandise are excluded from both the hero and the cards by a single candidate rule in `HiraethWeb.PublicCatalog`.
 - Public cover selection is centralized in `Hiraeth.Covers.Policy` for every read path. A work shows exactly one cover, owned by one edition: the newest displayable print cover wins (so a reissue replaces the retired cover, including a publisher "cover coming soon" image), with a newest non-print cover as the fallback for ebook-only works. The rule is evaluated at read time, so changing it never refetches cached covers.
 - Provider manifests can declare a canonical print cover listing with `cover_source` (`{"endpoint": "...", "match": "title"}`). The Squarespace adapter sources print products' covers from that listing and keeps a non-print cover only as a digital-only fallback; the read policy still renders the print cover whenever the work has one. Tilted Axis Press now sources print covers from `/shop?category=print`; the rule is generic, so another split-format provider only needs a manifest declaration.
 - The cover cache no longer depends on a Railway volume. The Docker image keeps a bounded ephemeral directory, and the durable copy lives in R2 when `HIRAETH_COVER_STORE=s3`. The bucket is private, so images stay proxied through Phoenix and the `img-src 'self'` CSP is unchanged.
