@@ -12,7 +12,7 @@
  *   1040px — desktop nav → menu, filter controls reflow
  *   900px  — hero and record stack, press list 2 → 1 column
  *   760px  — sheet inset 18 → 8px, card grids 4 → 2 columns
- *   560px  — sheet inset 8 → 6px, gutter 18 → 16px, compact type
+ *   560px  — sheet inset 8 → 6px, compact type (the gutter clamp floor stays 18px)
  */
 
 :root {

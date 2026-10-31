@@ -10,12 +10,15 @@ if (!base) {
 const outDir = "docs/screenshots";
 await mkdir(outDir, { recursive: true });
 
-const booksResponse = await fetch(new URL("/api/v1/books?page_size=1", base));
+const booksResponse = await fetch(new URL("/api/v1/books?page_size=12", base));
 if (!booksResponse.ok) {
   throw new Error(`book API returned ${booksResponse.status}`);
 }
 const books = await booksResponse.json();
-const slug = books.data?.[0]?.slug;
+const displayable = books.data?.find(
+  (book) => book.cover && !/placeholder|coming.?soon/i.test(book.cover.source_url || "")
+);
+const slug = displayable?.slug || books.data?.[0]?.slug;
 if (!slug) {
   throw new Error("catalog API returned no books; seed the database first");
 }
