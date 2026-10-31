@@ -52,7 +52,7 @@ defmodule Hiraeth.Oban.ProviderIngestionWorker do
 
   require Ash.Query
 
-  @scheduled_approvable_diff_classifications ~w(new changed unchanged)
+  @scheduled_approvable_diff_classifications ~w(new changed)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, inserted_at: inserted_at}) do

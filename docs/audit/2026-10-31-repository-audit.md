@@ -16,15 +16,15 @@ path, running the query or test that exposes it, or reproducing the behavior in
 | Check | Before | After |
 |---|---|---|
 | `mix compile --warnings-as-errors` | clean | clean |
-| `mix test.fast` | 517 passed | 534 passed |
-| `mix test.full` | not run | 534 passed |
-| `mix ci` | not run | passed, 534 tests |
+| `mix test.fast` | 517 passed | 538 passed |
+| `mix test.full` | not run | 538 passed |
+| `mix ci` | not run | passed, 538 tests |
 | `mix dialyzer` | 2 errors (`call_without_opaque` on literal `MapSet`s) | 0 errors |
 | `mix credo --strict` | clean | clean |
 | `mix format --check-formatted` | clean | clean |
 | `mix sobelow --exit Low` | passed only with a `Config.CSP` exemption | passes without the exemption |
 | `mix hex.audit` | advisories in ash, ash_phoenix, ash_postgres, ash_sql, bandit, mint, phoenix_html, phoenix_live_view, plug_crypto, decimal | no advisories |
-| Sidecar `pytest` | 1 failure (stale OpenAPI snapshot) | 124 passed |
+| Sidecar `pytest` | 1 failure (stale OpenAPI snapshot) | 132 passed |
 | Sidecar `uv audit` | `protego` and `anyio` advisories | no advisories |
 | Sidecar `ruff`, `ruff format --check`, `pyright` | clean | clean |
 
@@ -112,6 +112,53 @@ residual risks.
 | The OpenAPI snapshot test failed after a dependency update | snapshot regenerated and reviewed; the new `internal_error` code is part of it |
 | Publisher and series pages used bracket access on new structs | converted to dot access; `get_in/2` on an `Edition` replaced with field access |
 
+## Risk decisions implemented
+
+### Sidecar trust boundary
+
+The sidecar now has a secure mode that owns provider policy. The production
+image sets `HIRAETH_SIDECAR_REQUIRE_SECURE=1`, requires
+`HIRAETH_SIDECAR_TOKEN`, and loads manifests from `/app/manifests`. In secure
+mode `provider_config/2` ignores the request configuration and returns the
+checked-in manifest for the provider, so a caller cannot widen `source_hosts`.
+Requests to data endpoints are rejected with a typed `unauthorized` error unless
+they carry a timestamp and an HMAC-SHA256 signature over the raw body, signed
+with the shared secret. The timestamp window is 300 seconds. Detail requests
+validate their URL against the vendor's server manifest.
+
+Phoenix signs every fetch, scrape, and detail request when
+`SCRAPLING_SIDECAR_TOKEN` is set, and production refuses to boot without it. The
+manifests are copied into `sidecar/manifests` by
+`scripts/catalog/sync_sidecar_manifests.sh`; a sidecar test fails when the copy
+and the governed source differ.
+
+What remains: DNS rebinding of an official hostname is still possible because
+validation does not resolve and pin the destination address. The recommendation
+deferred that until the sidecar handles user-supplied URLs, which it does not.
+The sidecar is still private by network placement as well as by signature.
+
+### Ingestion convergence
+
+`RecordCandidate` now records `applied_at`. `ApplyCandidates` marks a candidate
+applied only after the importer commits. `DiffCandidates.previous_candidate/2`
+only accepts an applied candidate as the baseline, so a candidate from a run
+that failed before apply cannot make the next run treat its records as
+unchanged. Scheduled auto-approval no longer includes `unchanged`, because
+approving a row that apply will drop only inflated counts.
+
+The migration is `20261031170000_add_record_candidate_applied_at.exs`. Existing
+candidate rows stay null, so the first run after deploy re-emits them. That is
+the safe direction: more work, no silent gap.
+
+A regression test creates a candidate from a run that never applied, then asserts
+the next diff still classifies the record `new`. After marking the first
+candidate applied, the same record becomes `unchanged`. The apply phase test
+asserts the marker is set after a successful import.
+
+What remains: `expected_record_count` is still an exact equality gate, and
+validation is still all-or-nothing. Those are the failures that create the
+pre-apply candidates in the first place. They need their own decision.
+
 ## Residual risks, not fixed
 
 These are verified defects or design limits that need a decision beyond this
@@ -119,9 +166,7 @@ change. Severity is the reviewer's assessment.
 
 | Severity | Issue | Why it matters |
 |---|---|---|
-| Critical | Sidecar host allowlist arrives in the request body, and the sidecar has no authentication | Any caller that can reach the sidecar can allowlist an internal host. The service is private by network placement, not by its own boundary. Fix: load manifests server-side, resolve and pin the host, require a shared secret. |
 | High | `expected_record_count` is an exact equality gate and validation is all-or-nothing | A publisher adding one book fails the whole provider run; one malformed record quarantines nothing and fails everything. |
-| High | "unchanged" is derived from the previous candidate row, not from applied catalog state | A run that fails before apply makes the next run classify everything unchanged and import nothing. |
 | High | Cancellation sets the job and run cancelled while the worker keeps executing to the next phase boundary | Apply can write after the operator is told the run is cancelled; the unique lock is released early. |
 | Medium | Snapshot provenance is synthesized | `source_mode` says scrape when the API fallback produced the records, and `http_metadata.status` is hardcoded to 200. |
 | Medium | Snapshot dedupe binds new candidates to an older run's snapshot | Provenance joins are ambiguous; the check is also not atomic. |
@@ -153,6 +198,14 @@ change. Severity is the reviewer's assessment.
 - `test/hiraeth_web/api/v1_catalog_api_test.exs`: every endpoint validated
   against the served schema.
 - `test/hiraeth_web/security_headers_test.exs`: the CSP survives.
+- `test/hiraeth/ingestion/applied_state_diff_test.exs`: a never-applied
+  candidate is not a diff baseline.
+- `test/hiraeth/ingestion/sidecar_auth_test.exs`: fetch and detail requests
+  carry a timestamped HMAC, and no headers are sent without a token.
+- `sidecar/tests/test_auth.py`: unsigned, stale, and valid sidecar requests;
+  secure-mode manifest precedence and unknown-provider rejection.
+- `sidecar/tests/test_manifest_sync.py`: the sidecar manifest copies match the
+  governed source byte for byte.
 - Public projection tests now assert typed publisher, series, contributor, and
   edition shapes, a huge page, malformed filter shapes, the title sort, and the
   author sort.

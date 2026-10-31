@@ -85,7 +85,7 @@ config :hiraeth, Oban,
      ]}
   ]
 
-config :hiraeth, :scrapling_sidecar, base_url: "http://localhost:8000"
+config :hiraeth, :scrapling_sidecar, base_url: "http://localhost:8000", token: nil
 
 config :hiraeth,
        :source_snapshot_retention_root,

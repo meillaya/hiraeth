@@ -13,6 +13,12 @@ RUN uv pip install --system .
 # Copy application code only (tests are not shipped in the image)
 COPY app/ ./app/
 
+# Provider policy is owned by the image, not the request. Secure mode refuses
+# to start unless HIRAETH_SIDECAR_TOKEN is set and these manifests are present.
+COPY manifests/ ./manifests/
+ENV HIRAETH_PROVIDER_MANIFESTS_DIR=/app/manifests
+ENV HIRAETH_SIDECAR_REQUIRE_SECURE=1
+
 # Run as a non-root user
 RUN useradd -m appuser
 USER appuser

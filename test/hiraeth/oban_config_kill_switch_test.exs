@@ -19,6 +19,7 @@ defmodule Hiraeth.ObanConfigKillSwitchTest do
 
   @required_prod_env %{
     "SCRAPLING_SIDECAR_URL" => "http://sidecar:8000",
+    "SCRAPLING_SIDECAR_TOKEN" => "test-sidecar-token",
     "DATABASE_URL" => "postgres://hiraeth:secret@localhost/hiraeth_prod",
     "SECRET_KEY_BASE" => String.duplicate("a", 64),
     "PHX_HOST" => "hiraeth.example.com",

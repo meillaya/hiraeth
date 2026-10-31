@@ -10,6 +10,7 @@ from app.models import (
     sidecar_http_error,
     sidecar_runtime_error,
 )
+from app.provider_manifests import provider_config
 from app.url_validation import validate_url_against_source_hosts
 
 router = APIRouter(prefix="/fetch", tags=["fetch"])
@@ -24,7 +25,8 @@ ADAPTERS = {
 
 @router.post("/", responses=ERROR_RESPONSES)
 async def fetch_catalog(request: FetchRequest) -> FetchResponse:
-    api_type = _api_type(request.config)
+    config = provider_config(request.provider, request.config)
+    api_type = _api_type(config)
     if not api_type:
         raise sidecar_http_error(
             400,
@@ -40,10 +42,10 @@ async def fetch_catalog(request: FetchRequest) -> FetchResponse:
             f"Unsupported api.type: {api_type}",
         )
 
-    _validate_api_endpoint(request.config)
+    _validate_api_endpoint(config)
 
     try:
-        records = await adapter({**request.config, "provider": request.provider})
+        records = await adapter(config)
         return FetchResponse(
             provider=request.provider,
             status="success",

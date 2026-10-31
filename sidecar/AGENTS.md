@@ -9,6 +9,9 @@ Private FastAPI + Pydantic + Scrapling service for approved provider fetch/scrap
 | `app/main.py` | FastAPI app, router registration, CORS/security posture |
 | `app/models.py` | request/response models, typed error contract |
 | `app/url_validation.py` | HTTPS, host allowlist, private-network rejection |
+| `app/provider_manifests.py` | secure-mode manifest registry and provider policy |
+| `app/auth.py` | HMAC request authentication for data endpoints |
+| `manifests/` | build-context copies of the governed provider manifests |
 | `app/routers/fetch.py` | adapter-backed `/fetch/` endpoint |
 | `app/routers/scrape.py` | spider-backed `/scrape/` and `/scrape/detail/` endpoints |
 | `app/adapters/` | Shopify/Woo/Squarespace/WordPress fetch adapters |
@@ -28,6 +31,9 @@ pytest tests/
 - CORS is env-driven by `HIRAETH_SIDECAR_CORS_ORIGINS`, exact-origin only, never wildcard.
 - URL validation rejects private, loopback, link-local, localhost/internal, userinfo, and non-HTTPS fetch URLs unless a test fixture explicitly covers rejection.
 - Routers map failures through typed errors from `models.py`; preserve error codes and snapshot contracts.
+- Secure mode owns provider policy: the manifest on disk decides hosts and adapter config, and the request only names the provider. Never restore caller-supplied `source_hosts` in secure mode.
+- Data requests require a timestamped HMAC signature when `HIRAETH_SIDECAR_TOKEN` is set. Keep `/health/` open.
+- `manifests/` is a build-context copy of `priv/catalog_sources/provider_manifests`. Change the source, run `bash scripts/catalog/sync_sidecar_manifests.sh`, and keep `tests/test_manifest_sync.py` passing.
 - Tests patch network calls with fixtures/mocks; do not require live external network for pytest.
 - Async tests use existing anyio/pytest patterns; keep fixture HTML deterministic.
 - Devenv loopback is preferred locally; the sidecar Dockerfile remains the production-boundary reference.
@@ -39,5 +45,7 @@ pytest tests/
 - Binding the sidecar publicly in local guidance.
 - Adding discovery endpoints, broad provider enumeration, wildcard CORS, or public OpenAPI docs.
 - Letting provider-specific URL checks drift into ad hoc string matching in routers.
+- Hand-editing `sidecar/manifests/*.json`; they are generated copies.
+- Disabling secure mode in the production image or accepting unsigned data requests when a token is configured.
 - Returning untyped raw exceptions or changing snapshot output without updating contract tests.
 - Downloading browsers at runtime when Nix/devenv supplies the browser executable.

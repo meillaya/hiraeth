@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Secure sidecar mode: the production image requires `HIRAETH_SIDECAR_TOKEN`, loads provider manifests from `/app/manifests`, ignores caller-supplied host policy, and rejects unsigned or stale data requests with a typed `unauthorized` error. Phoenix signs fetch, scrape, and detail bodies with an HMAC-SHA256 over the timestamp and raw body.
+- `RecordCandidate.applied_at` and the `mark_applied` action, migration `20261031170000_add_record_candidate_applied_at.exs`. `ApplyCandidates` sets the marker after the importer commits.
+- `sidecar/manifests/` build copies and `scripts/catalog/sync_sidecar_manifests.sh`; `tests/test_manifest_sync.py` fails when the copy and the governed source differ.
 - Typed public boundary: every public catalog read shape is a `Hiraeth.Catalog.PublicProjection` struct with a `t/0` type, built through strict, idempotent builders that reject unknown keys. `HiraethWeb.PublicCatalog` and `Hiraeth.Ingestion.SidecarClient` now carry `@spec` for every exported arity. `test/hiraeth/public_api_contract_test.exs` fails the fast lane when a public function or projection loses its type.
 - Versioned read-only JSON API at `/api/v1` for books, editions, publishers, series, contributors, and the served OpenAPI document. The contract is OpenAPI 3.0 generated from controller operations and schema modules, every endpoint response is validated against it in tests, and the route contract test pins the exact path list. Reference: `docs/api/v1.md`.
 - Working `title`, `author`, and `recently_added` orderings for book pages. The home page's "Recently imported" link now matches the order it requests.
@@ -24,6 +27,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- `DiffCandidates` only treats applied candidates as the baseline, so a run that fails before apply cannot make the next run classify its records `unchanged`. Scheduled auto-approval drops `unchanged` because those rows are never applied.
+- Sidecar data requests are signed and the production image refuses to start without a token and manifests. Both Phoenix and the sidecar must set `SCRAPLING_SIDECAR_TOKEN`; `.env.example` marks it required.
 - Dependencies updated to the latest stable releases within their major versions: Ash 3.37, AshPostgres 2.15, Bandit 1.14, Mint 1.11, LiveView 1.2.13, PlugCrypto 2.2.1, Decimal 3.2. `mix hex.audit` reports no advisories. Ash 3.37 requires an explicit `default_string_length_count`, set to `:codepoints` so Elixir and Postgres count the same way.
 - Provider source identity is now the bare provider slug everywhere, matching the registry backfill. The lazy registration paths in `RunState` and `CoverCandidateRun` store the checked-in manifest path instead of a source URL, and the scheduler skips a source whose manifest is not a readable local file before it can consume a dispatch slot.
 - The ingestion worker declares a 45-minute timeout and Oban runs `Oban.Lifeline` with a one-hour rescue window, so a deploy cannot leave a job executing forever behind the provider's unique key.

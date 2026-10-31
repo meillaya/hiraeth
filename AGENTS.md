@@ -94,7 +94,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Use `<.input>`, `<.icon>`, `<.link navigate|patch>`, `to_form`, and LiveView streams for collections.
 - Devenv local processes own Postgres `127.0.0.1:54320`, sidecar `127.0.0.1:8000`, Phoenix `127.0.0.1:4000`.
 - Docker sidecar image (`sidecar/Dockerfile`) is the production service-network boundary; do not claim production is fully Nix/devenv-only.
-- Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL` and `SCRAPLING_SIDECAR_URL` are required release env.
+- Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL`, `SCRAPLING_SIDECAR_URL`, and `SCRAPLING_SIDECAR_TOKEN` are required release env. The sidecar image runs in secure mode with server-side manifests and HMAC-signed requests.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Unversioned, write-capable, or undocumented HTTP surface. The only HTTP API is the read-only, schema-described `/api/v1` in `docs/api/v1.md`; new routes need a deliberate update to the route contract test and the OpenAPI document.
@@ -120,6 +120,7 @@ mix test.full
 HIRAETH_ALLOW_DEV_DB_RESET=1 make verify   # drops/reseeds dev DB; refuses non-local DATABASE_URL
 make db-backup           # scripts/ops/db_backup.sh
 make db-restore-drill    # scripts/ops/db_restore_drill.sh (separate DB only)
+bash scripts/catalog/sync_sidecar_manifests.sh   # after changing a provider manifest
 cd sidecar && uv run --extra dev pytest -q
 cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```

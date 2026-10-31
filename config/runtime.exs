@@ -24,7 +24,8 @@ config :hiraeth, HiraethWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 config :hiraeth, :scrapling_sidecar,
-  base_url: System.get_env("SCRAPLING_SIDECAR_URL") || "http://localhost:8000"
+  base_url: System.get_env("SCRAPLING_SIDECAR_URL") || "http://localhost:8000",
+  token: System.get_env("SCRAPLING_SIDECAR_TOKEN")
 
 # Autonomous ingestion kill-switch: HIRAETH_SCHEDULED_INGEST=false drops ALL
 # autonomous cron entries (scheduler tick, weekly cover refresh, weekly
@@ -59,7 +60,16 @@ if config_env() == :prod do
       For example: http://sidecar:8000
       """
 
-  config :hiraeth, :scrapling_sidecar, base_url: scrapling_sidecar_url
+  scrapling_sidecar_token =
+    System.get_env("SCRAPLING_SIDECAR_TOKEN") ||
+      raise """
+      environment variable SCRAPLING_SIDECAR_TOKEN is missing.
+      The sidecar image runs in secure mode and rejects unsigned requests.
+      """
+
+  config :hiraeth, :scrapling_sidecar,
+    base_url: scrapling_sidecar_url,
+    token: scrapling_sidecar_token
 
   database_url =
     System.get_env("DATABASE_URL") ||

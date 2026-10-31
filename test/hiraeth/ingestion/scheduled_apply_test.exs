@@ -234,9 +234,9 @@ defmodule Hiraeth.Ingestion.ScheduledApplyTest do
     rejected_candidate =
       create_candidate!(run, snapshot, "sched-rejected", "new", review_decision: "rejected")
 
-    assert {:ok, 3} = ProviderIngestionWorker.auto_approve_scheduled_candidates(run.id)
+    assert {:ok, 2} = ProviderIngestionWorker.auto_approve_scheduled_candidates(run.id)
 
-    for candidate <- [new_candidate, changed_candidate, unchanged_candidate] do
+    for candidate <- [new_candidate, changed_candidate] do
       reloaded = Ash.get!(RecordCandidate, candidate.id, authorize?: false)
       assert reloaded.review_decision == "approved"
       assert reloaded.review_status == "accepted"
@@ -251,6 +251,9 @@ defmodule Hiraeth.Ingestion.ScheduledApplyTest do
       assert reloaded.review_decision == "pending_review"
     end
 
+    reloaded_unchanged = Ash.get!(RecordCandidate, unchanged_candidate.id, authorize?: false)
+    assert reloaded_unchanged.review_decision == "pending_review"
+
     reloaded_rejected = Ash.get!(RecordCandidate, rejected_candidate.id, authorize?: false)
     assert reloaded_rejected.review_decision == "rejected"
 
@@ -261,7 +264,7 @@ defmodule Hiraeth.Ingestion.ScheduledApplyTest do
     assert {:ok, context} =
              ApplyCandidates.run(%{provider_run_id: run.id, manifest: manifest})
 
-    assert length(context.applied_candidates) == 3
+    assert length(context.applied_candidates) == 2
     assert context.tombstone_records == []
     assert tombstone_records() == []
   end

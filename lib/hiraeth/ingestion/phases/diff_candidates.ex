@@ -93,9 +93,15 @@ defmodule Hiraeth.Ingestion.Phases.DiffCandidates do
 
   defp approved_record?(record), do: get_in_map(record, [:curation, :status]) == "approved"
 
+  # Only an applied candidate is a baseline. A candidate from a run that failed
+  # before apply must not make the next run classify its records as unchanged.
   defp previous_candidate(identity, run_id) do
     RecordCandidate
-    |> Ash.Query.filter(candidate_identity == ^identity and provider_run_id != ^run_id)
+    |> Ash.Query.filter(
+      candidate_identity == ^identity and
+        provider_run_id != ^run_id and
+        not is_nil(applied_at)
+    )
     |> Ash.read!(authorize?: false)
     |> Enum.sort_by(& &1.inserted_at, {:desc, DateTime})
     |> List.first()

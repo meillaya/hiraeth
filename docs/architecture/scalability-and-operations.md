@@ -169,10 +169,17 @@ the platform is configured to use must be written down; a platform probe against
 
 Private networking keeps the sidecar off the public internet
 ([Railway private networking](https://docs.railway.com/networking/private-networking)).
-It does not authenticate requests. The sidecar's host allowlist is supplied by
-the caller, so the private network is the only boundary. A shared secret header,
-server-side manifests, or both are required before treating the sidecar as a
-trusted internal service.
+It is no longer the only boundary. The production sidecar image runs in secure
+mode: it requires `HIRAETH_SIDECAR_TOKEN`, loads provider manifests from its own
+filesystem, and rejects data requests that do not carry a timestamped HMAC over
+the raw body. Phoenix signs every data request and refuses to boot in production
+without the token. The host allowlist therefore comes from the image, not from
+the request.
+
+One gap remains. Validation still does not resolve and pin the destination
+address, so a compromised official hostname could resolve into a private range.
+That matters only if the sidecar starts handling URLs the manifest does not
+name. It does not today.
 
 ## Recommendations, ordered by return
 

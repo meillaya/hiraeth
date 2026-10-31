@@ -17,6 +17,7 @@ from app.models import (
     sidecar_http_error,
     sidecar_runtime_error,
 )
+from app.provider_manifests import load_manifest, provider_config, secure_mode
 from app.spiders.astra_house import (
     ASTRA_HOUSE_PROVIDER,
     AstraHouseCatalogUrlNotAllowedError,
@@ -30,7 +31,10 @@ from app.spiders.deep_vellum_stealthy import (
     _response_text,
 )
 from app.spiders.two_lines_detail import parse_two_lines_detail
-from app.url_validation import validate_start_urls_against_source_hosts
+from app.url_validation import (
+    validate_start_urls_against_source_hosts,
+    validate_url_against_source_hosts,
+)
 
 router = APIRouter(prefix="/scrape", tags=["scrape"])
 
@@ -71,15 +75,24 @@ _TWO_LINES_BOOK_PATH: Final = re.compile(
 )
 
 
-def _uses_deep_vellum_stealthy(request: ScrapeRequest) -> bool:
-    if request.provider not in _DEEP_VELLUM_PROVIDERS:
+def _uses_deep_vellum_stealthy(provider: str, config: JsonObject) -> bool:
+    if provider not in _DEEP_VELLUM_PROVIDERS:
         return False
-    if request.config.get("scraper") == "spider":
+    if config.get("scraper") == "spider":
         return False
-    return request.config.get("use_stealthy_scraper", True) is not False
+    return config.get("use_stealthy_scraper", True) is not False
 
 
 def _ensure_detail_request(request: DetailScrapeRequest) -> None:
+    # Secure mode owns the provider policy. The caller can name a vendor, but
+    # the host must appear in that vendor's checked-in manifest.
+    if secure_mode():
+        validate_url_against_source_hosts(
+            request.url,
+            field_name="url",
+            config=load_manifest(request.vendor),
+        )
+
     parsed = urlparse(request.url)
     if request.vendor in _DEEP_VELLUM_PROVIDERS:
         _ensure_deep_vellum_detail_url(parsed)
@@ -160,10 +173,7 @@ async def scrape_catalog(request: ScrapeRequest) -> ScrapeResponse:
     - concurrent_requests: int — max parallel requests
     - max_blocked_retries: int — retry count for blocked responses
     """
-    config = {
-        **request.config,
-        "provider": request.provider,
-    }
+    config = provider_config(request.provider, request.config)
     try:
         if request.provider in _DEEP_VELLUM_PROVIDERS:
             _ = DeepVellumStealthySpider.catalog_url(config)
@@ -175,7 +185,7 @@ async def scrape_catalog(request: ScrapeRequest) -> ScrapeResponse:
         ):
             validate_start_urls_against_source_hosts(config)
 
-        if _uses_deep_vellum_stealthy(request):
+        if _uses_deep_vellum_stealthy(request.provider, config):
             records = await DeepVellumStealthySpider().scrape_catalog(config)
         elif request.provider in _ASTRA_HOUSE_PROVIDERS:
             records = await AstraHouseSpider().scrape_catalog(config)

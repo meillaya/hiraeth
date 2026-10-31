@@ -17,6 +17,8 @@ class SidecarErrorCode(StrEnum):
     NETWORK = "network"
     PARSE_FAILED = "parse_failed"
     INTERNAL_ERROR = "internal_error"
+    UNAUTHORIZED = "unauthorized"
+    PROVIDER_UNKNOWN = "provider_unknown"
 
 
 class SidecarError(BaseModel):
@@ -28,6 +30,7 @@ class SidecarError(BaseModel):
 
 ERROR_RESPONSES: dict[int | str, dict[str, type["SidecarError"]]] = {
     400: {"model": SidecarError},
+    401: {"model": SidecarError},
     403: {"model": SidecarError},
     422: {"model": SidecarError},
     429: {"model": SidecarError},

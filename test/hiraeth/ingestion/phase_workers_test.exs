@@ -239,6 +239,17 @@ defmodule Hiraeth.Ingestion.PhaseWorkersTest do
     {:ok, validated} = Phases.ValidateCandidates.run(normalized)
     {:ok, _diffed} = Phases.DiffCandidates.run(validated)
 
+    # Replay compares against applied state, so the first candidate must reach
+    # the applied marker before the second diff can call it unchanged.
+    [candidate] =
+      RecordCandidate
+      |> Ash.Query.filter(provider_run_id == ^run.id)
+      |> Ash.read!(authorize?: false)
+
+    candidate
+    |> Ash.Changeset.for_update(:mark_applied, %{applied_at: DateTime.utc_now(:second)})
+    |> Ash.update!(actor: IngestionFixtures.catalog_writer())
+
     replay_run = IngestionFixtures.create_provider_run!(source, "phase-workers-replay")
 
     {:ok, replay_fetched} =

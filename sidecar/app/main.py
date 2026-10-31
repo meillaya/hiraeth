@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth import verify_signature
+from app.provider_manifests import validate_secure_configuration
 from app.routers import fetch, health, scrape
 
 CORS_ORIGINS_ENV: Final = "HIRAETH_SIDECAR_CORS_ORIGINS"
@@ -43,6 +45,8 @@ def _raise_if_forbidden_origin(origin: str) -> None:
 
 
 def create_app() -> FastAPI:
+    validate_secure_configuration()
+
     sidecar_app = FastAPI(
         title="Hiraeth Sidecar",
         description="Scrapling-powered ingestion sidecar for Hiraeth catalog imports",
@@ -63,6 +67,9 @@ def create_app() -> FastAPI:
             allow_methods=["POST", "GET", "OPTIONS"],
             allow_headers=["Authorization", "Content-Type"],
         )
+
+    # Signature checks run before routing. Health and CORS preflight stay open.
+    sidecar_app.middleware("http")(verify_signature)
 
     sidecar_app.include_router(health.router)
     sidecar_app.include_router(fetch.router)

@@ -5,6 +5,9 @@ defmodule Hiraeth.Ingestion.SidecarClient do
   Every call returns `{:ok, result}` or `{:error, reason}` and does not raise on
   transport failures. A missing `:hiraeth, :scrapling_sidecar` base URL is a
   deployment configuration error and raises at call time with a named message.
+
+  When a sidecar token is configured, data requests carry an HMAC over the raw
+  body and a timestamp. The sidecar rejects unsigned or stale requests.
   """
 
   @health_timeout 30_000
@@ -103,9 +106,11 @@ defmodule Hiraeth.Ingestion.SidecarClient do
   def detail(source_uri, vendor, opts \\ []) when is_binary(source_uri) and is_binary(vendor) do
     base_url = base_url()
     req_options = Keyword.get(opts, :req_options, [])
+    body = Jason.encode!(detail_request_body(source_uri, vendor, opts))
 
     default_options = [
-      json: detail_request_body(source_uri, vendor, opts),
+      body: body,
+      headers: [{"content-type", "application/json"} | signature_headers(body)],
       receive_timeout: @detail_timeout,
       retry: :transient,
       max_retries: @detail_max_retries
@@ -130,9 +135,11 @@ defmodule Hiraeth.Ingestion.SidecarClient do
   defp post_records(operation, path, provider_config, opts) do
     base_url = base_url()
     req_options = Keyword.get(opts, :req_options, [])
+    body = Jason.encode!(provider_config)
 
     default_options = [
-      json: provider_config,
+      body: body,
+      headers: [{"content-type", "application/json"} | signature_headers(body)],
       receive_timeout: @scrape_timeout,
       retry: false
     ]
@@ -150,6 +157,26 @@ defmodule Hiraeth.Ingestion.SidecarClient do
       {:error, exception} ->
         {:error, Exception.message(exception)}
     end
+  end
+
+  defp signature_headers(body) do
+    case sidecar_token() do
+      token when is_binary(token) and token != "" ->
+        timestamp = System.system_time(:second) |> Integer.to_string()
+
+        signature =
+          :crypto.mac(:hmac, :sha256, token, timestamp <> "." <> body)
+          |> Base.encode16(case: :lower)
+
+        [{"x-hiraeth-timestamp", timestamp}, {"x-hiraeth-signature", signature}]
+
+      _missing ->
+        []
+    end
+  end
+
+  defp sidecar_token do
+    Application.get_env(:hiraeth, :scrapling_sidecar, [])[:token]
   end
 
   defp base_url do

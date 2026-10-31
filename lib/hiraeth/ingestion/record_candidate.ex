@@ -70,6 +70,11 @@ defmodule Hiraeth.Ingestion.RecordCandidate do
     attribute :review_actor_email, :string, public?: true
     attribute :reviewed_at, :utc_datetime, public?: true
 
+    # Set only after the importer commits this candidate's record. The diff
+    # baseline ignores candidates that were never applied, so a run that fails
+    # before apply cannot make the next run classify its records as unchanged.
+    attribute :applied_at, :utc_datetime, public?: true
+
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end
@@ -163,6 +168,10 @@ defmodule Hiraeth.Ingestion.RecordCandidate do
       change fn changeset, _context ->
         set_fingerprint(changeset)
       end
+    end
+
+    update :mark_applied do
+      accept [:applied_at]
     end
 
     update :accept do

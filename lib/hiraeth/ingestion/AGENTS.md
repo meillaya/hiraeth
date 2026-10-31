@@ -54,10 +54,12 @@ Phase workflow boundary for provider ingestion. Parent knowledge bases govern do
 - Only the worker finish marker changes a run to `succeeded`; successful intermediate phases leave it `running`.
 - Check cancellation before each phase and finish. Cancellation is sticky and later progress can't revive the run.
 - Default removed, invalid, and destructive candidates to quarantine. Apply requires explicit approval plus clear quarantine state.
+- The diff baseline is applied state. `ApplyCandidates` sets `applied_at` after the importer commits, and `DiffCandidates` only compares against applied candidates. A candidate from a run that failed before apply is not a baseline.
+- Scheduled auto-approval covers `new` and `changed` only. `unchanged` rows are never applied, so approving them only inflates counts.
 - Removal approval records append-only tombstone provenance. It never deletes catalog rows.
 - Treat source records, snapshot rows, and retained artifacts as immutable evidence; append or replay instead of rewriting.
 - Require manifest source URLs, API endpoints, and scrape start URLs to match the normalized `source_hosts` allowlist.
-- Keep telemetry to declared event fields, counts, identifiers, statuses, phase names, and coarse error codes. Fixed events: phase.stop, scheduler.tick, scheduler.dispatch.{start,stop} (tick_at + dispatched_count), sidecar.error, queue.latency, cover.cache — sanitize allowlists live in `telemetry.ex`.
+- Keep telemetry to declared event fields, counts, identifiers, statuses, phase names, and coarse error codes. Fixed events: phase.stop, scheduler.tick, scheduler.dispatch.{start,stop} (tick_at + dispatched_count), sidecar.error, queue.latency, cover.cache. Sanitize allowlists live in `telemetry.ex`.
 - Keep lanes separate: ingestion creates candidate runs; scheduler plans cron runs; backfill reconciles provider registry; scrape/review/apply manages checked-in staged datasets.
 - Oban queues are `ingestion: 4`, `covers: 4`, `audit: 2`; `ProviderSchedulerWorker` runs on cron `*/15 * * * *`; tests use `Oban testing: :manual`.
 

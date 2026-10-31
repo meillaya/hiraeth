@@ -91,9 +91,28 @@ defmodule Hiraeth.Ingestion.Phases.ApplyCandidates do
       |> Ash.create!(actor: RunState.catalog_writer())
 
     case seed_provider(dataset, import_run) do
-      {:ok, import_summary} -> {:ok, %{source_count: length(records), import: import_summary}}
-      {:error, reason} -> {:error, reason}
+      {:ok, import_summary} ->
+        mark_applied!(candidates)
+
+        {:ok, %{source_count: length(records), import: import_summary}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  # Mark only after the importer committed. If this write fails, the run fails
+  # and the next run re-applies the same records, which the importer upserts.
+  defp mark_applied!(candidates) do
+    ids = Enum.map(candidates, & &1.id)
+    applied_at = DateTime.utc_now(:second)
+
+    RecordCandidate
+    |> Ash.Query.filter(id in ^ids)
+    |> Ash.bulk_update!(:mark_applied, %{applied_at: applied_at},
+      actor: RunState.catalog_writer(),
+      return_errors?: true
+    )
   end
 
   defp dataset_for(manifest, candidates, records) do

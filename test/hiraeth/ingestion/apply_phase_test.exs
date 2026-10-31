@@ -35,6 +35,9 @@ defmodule Hiraeth.Ingestion.ApplyPhaseTest do
     assert {:ok, applied} = Phases.ApplyCandidates.run(context(run, manifest))
     assert length(applied.applied_candidates) == 1
 
+    assert [candidate] = Ash.read!(RecordCandidate, authorize?: false)
+    assert %DateTime{} = candidate.applied_at
+
     assert [edition] = Ash.read!(Edition, authorize?: false)
     assert edition.title == "Apply Phase Book happy"
 

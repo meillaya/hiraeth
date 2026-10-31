@@ -43,16 +43,40 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 ```bash
 docker build -t hiraeth-sidecar sidecar/
-docker run -p 127.0.0.1:8000:8000 hiraeth-sidecar
+docker run -p 127.0.0.1:8000:8000 -e HIRAETH_SIDECAR_TOKEN=dev-secret hiraeth-sidecar
 ```
+
+The image runs in secure mode. It requires `HIRAETH_SIDECAR_TOKEN`, loads the
+provider manifests copied into `sidecar/manifests`, and rejects data requests
+that are not signed by Phoenix. Run `bash scripts/catalog/sync_sidecar_manifests.sh`
+after changing a manifest under `priv/catalog_sources/provider_manifests`;
+`tests/test_manifest_sync.py` fails when the copies drift.
 
 The direct `docker run` command is a loopback-only debugging fallback for the
 sidecar image; everyday local development runs through devenv. In production
 the sidecar builds from `sidecar/Dockerfile` on Railway and stays private on
-the Railway private network — no public domain, no host port — with Phoenix
+the Railway private network, with no public domain or host port, with Phoenix
 reaching it via `SCRAPLING_SIDECAR_URL=http://sidecar.railway.internal:8000`.
 
 Do not expose the sidecar directly to the public internet.
+
+## Secure mode
+
+The production image sets `HIRAETH_SIDECAR_REQUIRE_SECURE=1`,
+`HIRAETH_PROVIDER_MANIFESTS_DIR=/app/manifests`, and requires
+`HIRAETH_SIDECAR_TOKEN`. In secure mode:
+
+- the provider manifest on disk decides `source_hosts`, `cover_hosts`, and the
+  adapter configuration, and the request configuration is ignored;
+- `/fetch/`, `/scrape/`, and `/scrape/detail` require
+  `x-hiraeth-timestamp` and `x-hiraeth-signature`, an HMAC-SHA256 over
+  `<timestamp>.<raw body>` using the shared token, within 300 seconds;
+- `/health/` stays open for the platform probe;
+- a provider without a manifest is rejected with `provider_unknown`.
+
+Phoenix signs requests when `SCRAPLING_SIDECAR_TOKEN` is configured and requires
+it in production. Both services must use the same value. Local direct-debug runs
+without the token remain open, which is a development posture only.
 
 ## CORS
 
@@ -79,7 +103,7 @@ pytest tests/
 
 ## Endpoints
 
-- `GET /health/` — liveness probe
-- `POST /fetch/` — allowlisted provider API fetch. API endpoints must be HTTPS, must not include userinfo, must have a public host, and must match `config.source_hosts`.
-- `POST /scrape/` — Scrapling catalog scrape. Provider-specific spiders retain their own allowlists; generic/unknown-provider scraping requires non-empty `config.start_urls` whose HTTPS public hosts exactly match explicit `config.source_hosts`.
-- `POST /scrape/detail` — allowlisted publisher detail enrichment.
+- `GET /health/`: liveness probe
+- `POST /fetch/`: allowlisted provider API fetch. In secure mode the server manifest decides the endpoint. Outside secure mode the request config must supply an HTTPS endpoint on a public host listed in `config.source_hosts`.
+- `POST /scrape/`: Scrapling catalog scrape. Provider-specific spiders retain their own allowlists. In secure mode the server manifest supplies the start URLs and hosts; otherwise generic scraping requires non-empty `config.start_urls` whose HTTPS public hosts match explicit `config.source_hosts`.
+- `POST /scrape/detail`: allowlisted publisher detail enrichment.
