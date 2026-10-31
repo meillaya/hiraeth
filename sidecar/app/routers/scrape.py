@@ -4,7 +4,7 @@ from typing import Final, Protocol
 from urllib.parse import ParseResult, urlparse
 
 from anyio import to_thread
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.models import (
     ERROR_RESPONSES,
@@ -217,7 +217,9 @@ async def scrape_catalog(request: ScrapeRequest) -> ScrapeResponse:
             SidecarErrorCode.NETWORK,
             "sidecar scrape network failure",
         ) from error
-    except (RuntimeError, ValueError) as error:
+    except HTTPException:
+        raise
+    except Exception as error:
         raise sidecar_runtime_error("scrape", error) from error
 
 

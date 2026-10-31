@@ -25,7 +25,7 @@ defmodule Hiraeth.MixAliasContractTest do
   @ci_audit_gate "cmd mix hex.audit"
   @ci_static_gates [
     "cmd mix credo --strict",
-    "cmd mix sobelow --config .sobelow-conf --exit Low",
+    "cmd mix sobelow --exit Low",
     @ci_audit_gate
   ]
 

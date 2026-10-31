@@ -13,7 +13,8 @@ lib/hiraeth/             # Ash domains, catalog, ingestion, provenance, covers
 lib/hiraeth/catalog      # canonical work/edition graph + Ash actions/policies
 lib/hiraeth/ingestion    # provider runs, sidecar client, normalizers, replay
 lib/hiraeth/real_catalog # deterministic corpus: dataset, policy gates, validator, importer
-lib/hiraeth_web/         # Phoenix router, LiveViews, components, public UI
+lib/hiraeth_web/         # Phoenix router, LiveViews, components, public UI, versioned JSON API
+lib/hiraeth_web/api      # OpenAPI document, v1 controller, schemas, serializer
 lib/mix/tasks/           # operator Mix tasks: ingest, scrape, covers, audits
 test/                    # ExUnit, LiveView, fixture, and contract suites
 test/support             # data_case, factories, contract fixtures
@@ -28,6 +29,7 @@ priv/catalog_sources     # approved provider manifests, source registry
 priv/catalog_sources/provider_manifests  # per-provider source allowlists
 priv/resource_snapshots  # governed snapshot/replay evidence (incl. repo)
 priv/static/covers       # hashed local cover cache (sandboxed writes only)
+docs/                    # API reference, typed boundary design, scalability research, audit
 artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 ```
 
@@ -37,6 +39,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | Catalog business rules | `lib/hiraeth/catalog`, `lib/hiraeth/*.ex` | Ash domains/actions first |
 | Ingestion/provenance | `lib/hiraeth/ingestion`, `lib/hiraeth/sources`, `lib/hiraeth/real_catalog` | preserve snapshots + ledgers |
 | Public browser UI | `lib/hiraeth_web/live`, `lib/hiraeth_web/public_catalog.ex` | LiveView only |
+| Public JSON API | `lib/hiraeth_web/api`, `docs/api/v1.md` | read-only `/api/v1`, schema-tested |
 | Operator Mix tasks | `lib/mix/tasks` | ingest, scrape, covers, audits |
 | External fetch/scrape | `sidecar/app`, `sidecar/tests` | private sidecar, Scrapling only |
 | Dev/test orchestration | `scripts/dev/ensure_postgres.sh`, `devenv.nix`, `Makefile` | standalone postgres + nix-profile toolchain (devenv dormant) |
@@ -56,7 +59,12 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.Application` | OTP app | `lib/hiraeth/application.ex` | starts Repo, PubSub, Oban, Endpoint |
 | `HiraethWeb.Router` | router | `lib/hiraeth_web/router.ex` | public route boundary; hard CSP + `:ops` probe pipeline |
 | `HiraethWeb.HealthController` | controller | `lib/hiraeth_web/controllers/health_controller.ex` | `/health` + `/ready` (DB + optional sidecar check) |
-| `HiraethWeb.PublicCatalog` | query facade | `lib/hiraeth_web/public_catalog.ex` | public catalog projection/filtering |
+| `HiraethWeb.PublicCatalog` | query facade | `lib/hiraeth_web/public_catalog.ex` | typed public catalog projection/filtering |
+| `Hiraeth.Catalog.PublicProjection` | typed boundary | `lib/hiraeth/catalog/public_projection.ex` | projection structs + strict builders |
+| `HiraethWeb.Api.Spec` | OpenAPI document | `lib/hiraeth_web/api/spec.ex` | served at `/api/v1/openapi.json` |
+| `HiraethWeb.Api.V1.CatalogController` | controller | `lib/hiraeth_web/api/v1/catalog_controller.ex` | versioned read endpoints |
+| `HiraethWeb.Api.V1.Schemas` | wire schemas | `lib/hiraeth_web/api/v1/schemas.ex` | OpenAPI components |
+| `HiraethWeb.Api.V1.Serializer` | serializer | `lib/hiraeth_web/api/v1/serializer.ex` | projection to JSON |
 | `Hiraeth.Catalog` | Ash domain | `lib/hiraeth/catalog.ex` | canonical work/edition graph |
 | `Hiraeth.Ingestion` | Ash domain | `lib/hiraeth/ingestion.ex` | provider runs, snapshots, candidates |
 | `Hiraeth.Ingestion.SidecarClient` | HTTP client | `lib/hiraeth/ingestion/sidecar_client.ex` | typed boundary to private FastAPI sidecar |
@@ -89,7 +97,8 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL` and `SCRAPLING_SIDECAR_URL` are required release env.
 
 ## ANTI-PATTERNS (THIS PROJECT)
-- Broad `/api` catalog surface, public JSON API, checkout/cart/account/social/reviews features in v1.
+- Unversioned, write-capable, or undocumented HTTP surface. The only HTTP API is the read-only, schema-described `/api/v1` in `docs/api/v1.md`; new routes need a deliberate update to the route contract test and the OpenAPI document.
+- Checkout/cart/account/social/reviews features in v1.
 - Custom crawlers or scraping frameworks beyond Scrapling; random/Faker catalog metadata tests.
 - Removing provider manifests, real-publisher datasets, source snapshots, or source-authority records without explicit publisher-removal authorization.
 - Treating publisher permission as a reason to weaken official-source/provenance rules; sourced purchase links are preserved when present in the provider manifest, but missing links remain explicit gaps and must never be fabricated.
@@ -108,7 +117,7 @@ nix run nixpkgs#devenv -- shell -- mix ci
 mix gate                 # Layer 0 blocking gate (compile warnings-as-errors + format check + credo --strict + test.fast)
 mix test.fast
 mix test.full
-make verify
+HIRAETH_ALLOW_DEV_DB_RESET=1 make verify   # drops/reseeds dev DB; refuses non-local DATABASE_URL
 make db-backup           # scripts/ops/db_backup.sh
 make db-restore-drill    # scripts/ops/db_restore_drill.sh (separate DB only)
 cd sidecar && uv run --extra dev pytest -q
@@ -116,11 +125,12 @@ cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```
 
 ## NOTES
-- `mix gate` checks compile with warnings-as-errors, unused deps, formatting (checks it, does not rewrite), strict Credo, and the fast test lane; sobelow/hex.audit are network-dependent and run only in `mix ci`.
+- `mix gate` checks compile with warnings-as-errors, unused deps, formatting (checks it, does not rewrite), strict Credo, and the fast test lane; sobelow/hex.audit/dialyzer are slower or network-dependent and run only in `mix ci`.
+- Public API changes require updating `docs/api/v1.md`, the schema modules, and the two API contract tests together. The route contract test pins the exact `/api/v1` path list.
 - `mix test.fast` excludes `slow`, `full_catalog`, `integration`, `performance`, `browser`, `public_catalog_full`. `mix test.full` is the complete suite; bare `mix test` runs the same default set.
 - Verification is local-only (`mix gate`, `mix ci`, `make verify`): GitHub Actions workflows were removed in August 2026 and `test/hiraeth/dev_environment_ci_contract_test.exs` pins their absence. Frontend correctness is verified by the LiveView/route logic tests in `test/hiraeth_web/live` and `test/hiraeth_web`, which run inside the ExUnit lanes; there is no browser-QA lane.
 - devenv is dormant local-dev groundwork: local dev runs the nix-profile toolchain on bare PATH plus a standalone postgres via `scripts/dev/ensure_postgres.sh` (127.0.0.1:54320); CI lanes do not invoke devenv.
 - `.omx`, `.omo`, `.omc`, `_build`, `deps`, `.devenv`, `.direnv`, caches, and artifacts are workspace/tool state unless a task explicitly targets them.
 - Custom Mix aliases (`gate`, `ci`, `test.fast`, `test.full`) auto-run under `MIX_ENV=test` via `preferred_envs`; `mix test` auto-creates and migrates the DB first.
-- `priv/repo/structure.sql` is a gitignored, untracked local pg_dump artifact — neither governed nor referenced; do not commit it without explicit intent.
+- `priv/repo/structure.sql` is a gitignored, untracked local pg_dump artifact; neither governed nor referenced. Do not commit it without explicit intent.
 - Root `Dockerfile` builds the multi-stage release image (covers/cache symlinked to a volume mount); Docker remains the production-boundary reference while Railway runs the deployed catalog.

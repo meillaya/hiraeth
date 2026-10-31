@@ -1,5 +1,9 @@
 import Config
 
+# Rebuild the OpenAPI document on each request in development so schema edits
+# show up without a restart.
+config :open_api_spex, :cache_adapter, OpenApiSpex.Plug.NoneCache
+
 # Configure your database. DATABASE_URL wins when set so `railway run -- mix ...`
 # on a developer machine reaches the Railway Postgres without each call having to
 # override DATABASE_HOST/PORT/USER/PASSWORD individually. The standalone localhost

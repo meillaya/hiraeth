@@ -6,11 +6,11 @@ defmodule Hiraeth.Ingestion.ProviderRecordNormalizer do
 
   require Logger
 
-  @detail_enrichment_providers MapSet.new([
-                                 "deep_vellum",
-                                 "deep_vellum_official_store",
-                                 "two_lines_press_official_store"
-                               ])
+  @detail_enrichment_providers [
+    "deep_vellum",
+    "deep_vellum_official_store",
+    "two_lines_press_official_store"
+  ]
 
   def normalize(records, manifest, client) do
     {records, enriched_count} = enrich_detail_records(records, manifest, client)
@@ -149,7 +149,7 @@ defmodule Hiraeth.Ingestion.ProviderRecordNormalizer do
 
   defp detail_enrichment_provider?(provider, opts) do
     Keyword.get(opts, :enabled, false) or
-      MapSet.member?(@detail_enrichment_providers, to_string(provider))
+      to_string(provider) in @detail_enrichment_providers
   end
 
   defp put_missing(map, key, value) do

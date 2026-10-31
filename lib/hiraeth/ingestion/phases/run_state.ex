@@ -91,27 +91,33 @@ defmodule Hiraeth.Ingestion.Phases.RunState do
     })
   end
 
+  # Provider identity is the bare provider slug, the same key the registry
+  # backfill uses. Legacy `publisher:<slug>:<mode>` rows are still matched so
+  # existing runs keep their source link.
   defp ensure_provider_source!(manifest) do
-    stable_source_key = stable_source_key(manifest)
-
-    existing =
-      ProviderSource
-      |> Ash.Query.filter(stable_source_key == ^stable_source_key)
-      |> Ash.read!(authorize?: false)
-      |> List.first()
-
-    existing || create_provider_source!(manifest, stable_source_key)
+    find_provider_source(manifest.provider) || create_provider_source!(manifest)
   end
 
-  defp create_provider_source!(manifest, stable_source_key) do
+  defp find_provider_source(provider) do
+    legacy_prefix = "publisher:#{provider}:"
+
+    ProviderSource
+    |> Ash.read!(authorize?: false)
+    |> Enum.find(fn source ->
+      source.stable_source_key == provider or
+        String.starts_with?(source.stable_source_key, legacy_prefix)
+    end)
+  end
+
+  defp create_provider_source!(manifest) do
     ProviderSource
     |> Ash.Changeset.for_create(:create, %{
-      stable_source_key: stable_source_key,
+      stable_source_key: manifest.provider,
       provider_name: manifest.name || manifest.provider,
       source_kind: "publisher",
       ingestion_mode: source_mode(manifest),
       base_uri: List.first(manifest.source_urls || []),
-      manifest_uri: List.first(manifest.source_urls || []),
+      manifest_uri: ProviderManifest.manifest_path(manifest),
       allowed_hosts: manifest.source_hosts || [],
       rate_limit_per_minute: rate_limit_per_minute(manifest),
       max_bytes: get_in(manifest.rate_limit || %{}, [:max_bytes]),
@@ -121,8 +127,6 @@ defmodule Hiraeth.Ingestion.Phases.RunState do
     })
     |> Ash.create!(actor: @catalog_writer)
   end
-
-  defp stable_source_key(manifest), do: "publisher:#{manifest.provider}:#{source_mode(manifest)}"
 
   defp source_mode(manifest) do
     case ProviderManifest.effective_source_mode(manifest) do

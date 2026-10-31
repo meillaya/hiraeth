@@ -57,7 +57,11 @@ defmodule HiraethWeb.HealthController do
     timeout = Keyword.get(readiness_config(), :sidecar_timeout, @default_sidecar_timeout)
     base_url = sidecar_base_url()
 
-    case Req.get("#{base_url}/health/", receive_timeout: timeout, retry: false) do
+    case Req.get("#{base_url}/health/",
+           receive_timeout: timeout,
+           connect_options: [timeout: timeout],
+           retry: false
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       _other -> :unavailable
     end

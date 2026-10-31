@@ -2,6 +2,7 @@ defmodule Hiraeth.Ingestion.CoverCandidateRun do
   @moduledoc false
 
   alias Hiraeth.Ingestion.{
+    ProviderManifest,
     ProviderRun,
     ProviderSource,
     RecordCandidate,
@@ -102,41 +103,40 @@ defmodule Hiraeth.Ingestion.CoverCandidateRun do
   end
 
   defp ensure_provider_source!(manifest) do
-    stable_source_key = "publisher:#{manifest.provider}:manifest"
-
-    case provider_source_by_stable_key(stable_source_key) do
-      nil -> create_provider_source!(manifest, stable_source_key)
-      source -> source
-    end
+    find_provider_source(manifest.provider) || create_provider_source!(manifest)
   end
 
-  defp create_provider_source!(manifest, stable_source_key) do
+  defp find_provider_source(provider) do
+    legacy_prefix = "publisher:#{provider}:"
+
     ProviderSource
-    |> Ash.Changeset.for_create(:create, provider_source_attrs(manifest, stable_source_key))
+    |> Ash.read!(authorize?: false)
+    |> Enum.find(fn source ->
+      source.stable_source_key == provider or
+        String.starts_with?(source.stable_source_key, legacy_prefix)
+    end)
+  end
+
+  defp create_provider_source!(manifest) do
+    ProviderSource
+    |> Ash.Changeset.for_create(:create, provider_source_attrs(manifest))
     |> Ash.create!(actor: @catalog_writer)
   end
 
-  defp provider_source_attrs(manifest, stable_source_key) do
+  defp provider_source_attrs(manifest) do
     %{
-      stable_source_key: stable_source_key,
+      stable_source_key: manifest.provider,
       provider_name: manifest.name || manifest.provider,
       source_kind: "publisher",
       ingestion_mode: manifest.source_mode || "manifest",
       base_uri: List.first(manifest.source_urls || []),
-      manifest_uri: List.first(manifest.source_urls || []),
+      manifest_uri: ProviderManifest.manifest_path(manifest),
       allowed_hosts: manifest.source_hosts || [],
       rate_limit_per_minute: rate_limit_per_minute(manifest),
       max_bytes: manifest.rate_limit[:max_bytes] || 10_485_760,
       license_note: manifest.permission_basis || "provider manifest ingestion",
       enabled?: true
     }
-  end
-
-  defp provider_source_by_stable_key(stable_source_key) do
-    ProviderSource
-    |> Ash.Query.filter(stable_source_key == ^stable_source_key)
-    |> Ash.read!(authorize?: false)
-    |> List.first()
   end
 
   defp create_cover_provider_run!(provider_source, dataset, manifest) do

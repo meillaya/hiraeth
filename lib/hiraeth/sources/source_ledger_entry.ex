@@ -38,15 +38,12 @@ defmodule Hiraeth.Sources.SourceLedgerEntry do
   end
 
   actions do
-    defaults [:read, :destroy]
+    # The ledger is evidence. It accepts appends and reads, never edits.
+    defaults [:read]
 
     create :create do
       primary? true
       accept [:event_type, :message, :occurred_at, :source_record_id]
-    end
-
-    update :update do
-      accept [:message]
     end
   end
 
@@ -56,8 +53,8 @@ defmodule Hiraeth.Sources.SourceLedgerEntry do
       authorize_if always()
     end
 
-    policy action_type([:create, :update, :destroy]) do
-      description "Only trusted catalog write actors can write source ledger entries."
+    policy action_type(:create) do
+      description "Only trusted catalog write actors can append source ledger entries."
       authorize_if actor_attribute_equals(:catalog_write?, true)
     end
   end

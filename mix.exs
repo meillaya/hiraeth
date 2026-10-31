@@ -80,6 +80,7 @@ defmodule Hiraeth.MixProject do
        compile: false,
        depth: 1},
       {:req, "~> 0.5"},
+      {:open_api_spex, "~> 3.22"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
@@ -135,10 +136,11 @@ defmodule Hiraeth.MixProject do
         # hex.audit: Mix purges archive tasks once `compile` runs in the
         # same VM, so a bare hex.audit step is lost in-chain).
         "cmd mix credo --strict",
-        "cmd mix sobelow --config .sobelow-conf --exit Low",
+        "cmd mix sobelow --exit Low",
         "cmd mix hex.audit",
         "assets.setup",
         "assets.build",
+        "dialyzer",
         "test.full"
       ]
     ]

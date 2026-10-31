@@ -49,9 +49,13 @@ defmodule HiraethWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # Every route is a GET or a LiveView socket, so no request body is consumed.
+  # Parsing urlencoded and JSON keeps LiveView params working; multipart is
+  # dropped and the body cap is small to deny unauthenticated temp-file writes.
   plug Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
+    parsers: [:urlencoded, :json],
     pass: ["*/*"],
+    length: 100_000,
     json_decoder: Phoenix.json_library()
 
   plug Plug.MethodOverride

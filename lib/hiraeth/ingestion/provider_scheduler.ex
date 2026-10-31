@@ -122,6 +122,11 @@ defmodule Hiraeth.Ingestion.ProviderScheduler do
         manual_provider?(source) ->
           {[skip(source, :manual_provider) | skipped], due}
 
+        # A URL or missing manifest path can never be read by the worker. Skip
+        # it before the dispatch cap so phantom rows cannot starve real ones.
+        not dispatchable_source?(source) ->
+          {[skip(source, :manifest_missing) | skipped], due}
+
         true ->
           classify_source(source, now, last_succeeded, skipped, due)
       end
@@ -148,6 +153,10 @@ defmodule Hiraeth.Ingestion.ProviderScheduler do
           {[skip(source, :not_due) | skipped], due}
         end
     end
+  end
+
+  defp dispatchable_source?(source) do
+    is_binary(source.manifest_uri) and File.regular?(source.manifest_uri)
   end
 
   defp manual_provider?(source) do

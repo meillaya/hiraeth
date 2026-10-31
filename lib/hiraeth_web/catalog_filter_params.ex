@@ -8,7 +8,11 @@ defmodule HiraethWeb.CatalogFilterParams do
   end
 
   def from_request(params) do
-    filters = Map.take(params, @filter_params)
+    filters =
+      params
+      |> Map.take(@filter_params)
+      |> Map.filter(fn {_key, value} -> scalar?(value) end)
+
     query = Map.get(filters, "q", "")
 
     %{
@@ -23,7 +27,7 @@ defmodule HiraethWeb.CatalogFilterParams do
     params =
       params
       |> Map.take(@filter_params)
-      |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
+      |> Enum.filter(fn {_key, value} -> scalar?(value) and value not in [nil, ""] end)
       |> Map.new()
 
     case params do
@@ -31,4 +35,8 @@ defmodule HiraethWeb.CatalogFilterParams do
       map -> base_path <> "?" <> URI.encode_query(map)
     end
   end
+
+  # Query params arrive as strings for normal requests and as maps or lists for
+  # bracketed shapes such as `?q[a]=b`. Only scalars can be filtered or re-encoded.
+  defp scalar?(value), do: is_binary(value) or is_number(value)
 end

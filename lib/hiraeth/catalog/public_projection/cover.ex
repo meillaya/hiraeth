@@ -17,10 +17,27 @@ defmodule Hiraeth.Catalog.PublicProjection.Cover do
     :thumbnail_url
   ]
 
+  @type t :: %__MODULE__{
+          source_url: String.t() | nil,
+          public_url: String.t() | nil,
+          provider: String.t() | nil,
+          rights_basis: String.t() | nil,
+          attribution_text: String.t() | nil,
+          attribution_url: String.t() | nil,
+          cache_policy: String.t() | nil,
+          takedown_state: String.t() | nil,
+          cached_file_path: String.t() | nil,
+          thumbnail_file_path: String.t() | nil,
+          thumbnail_url: String.t() | nil
+        }
+
+  @spec fetch(t(), term()) :: {:ok, term()} | :error
   defdelegate fetch(projection, key), to: Hiraeth.Catalog.PublicProjection.Access
 
+  @spec get_and_update(t(), term(), (term() -> {term(), term()})) :: {term(), term()}
   defdelegate get_and_update(projection, key, function),
     to: Hiraeth.Catalog.PublicProjection.Access
 
+  @spec pop(t(), term()) :: {term(), t()}
   defdelegate pop(projection, key), to: Hiraeth.Catalog.PublicProjection.Access
 end

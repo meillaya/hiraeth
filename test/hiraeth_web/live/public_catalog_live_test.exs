@@ -403,7 +403,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     assert %{groupings: groupings, editions: editions} = publisher
     assert editions != []
 
-    assert Enum.all?(Map.values(groupings), &(length(&1) <= 8))
+    assert Enum.all?(Map.from_struct(groupings), fn {_group, values} -> length(values) <= 8 end)
     assert Enum.any?(groupings.formats, &(&1.label == "Paperback" and &1.count > 0))
     assert Enum.any?(groupings.contributor_roles, &(&1.label == "translator" and &1.count > 0))
 

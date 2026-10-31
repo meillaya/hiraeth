@@ -226,7 +226,13 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
     assert book.source.field_sources["page_count"]["provider"] == "deep_vellum_official_store"
 
     assert [%{language_code: "eng", page_count: 321, dimensions: dimensions}] = book.formats
-    assert dimensions == %{height_mm: 203, width_mm: 127, depth_mm: 24}
+
+    assert %Hiraeth.Catalog.PublicProjection.Dimensions{
+             height_mm: 203,
+             width_mm: 127,
+             depth_mm: 24
+           } = dimensions
+
     assert measurement.query_count <= @detail_query_budget
     assert measurement.elapsed_microseconds <= @warm_elapsed_budget_microseconds
   end
@@ -257,7 +263,11 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
 
     assert Enum.any?(publisher_index.result, &(&1.slug == "deep-vellum"))
     assert %{slug: "deep-vellum", groupings: publisher_groupings} = publisher_detail.result
-    assert Enum.all?(Map.values(publisher_groupings), &(length(&1) <= 8))
+
+    assert Enum.all?(Map.from_struct(publisher_groupings), fn {_group, values} ->
+             length(values) <= 8
+           end)
+
     assert Enum.any?(publisher_groupings.formats, &(&1.label == "Paperback"))
     assert is_list(series_index.result)
 

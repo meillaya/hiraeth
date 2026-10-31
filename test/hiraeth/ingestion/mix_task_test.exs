@@ -229,9 +229,12 @@ defmodule Hiraeth.Ingestion.MixTaskTest do
     ProviderRun
     |> Ash.Query.load(:provider_source)
     |> Ash.read!(authorize?: false)
-    |> Enum.filter(
-      &(&1.provider_source && &1.provider_source.stable_source_key =~ "publisher:#{provider}:")
-    )
+    |> Enum.filter(fn run ->
+      source_key = run.provider_source && run.provider_source.stable_source_key
+
+      source_key in [provider, nil] or
+        String.starts_with?(source_key || "", "publisher:#{provider}:")
+    end)
   end
 
   defp create_source_for!(provider) do

@@ -106,9 +106,80 @@ defmodule Hiraeth.Catalog.PublicProjectionContractTest do
   end
 
   test "paged public catalog entries use the same projection boundary" do
-    assert %{entries: [%PublicProjection.Book{} | _], page: 1, total_count: total_count} =
-             PublicCatalog.book_page(nil, 1)
+    assert %PublicProjection.Page{
+             entries: [%PublicProjection.Book{} | _],
+             page: 1,
+             total_count: total_count
+           } = PublicCatalog.book_page(nil, 1)
 
     assert total_count > 0
+  end
+
+  test "detail pages and index rows use typed structs instead of bare maps" do
+    book = PublicCatalog.book("deep-vellum-immigrant")
+
+    assert %PublicProjection.Publisher{} =
+             publisher = PublicCatalog.publisher(book.publisher_slug)
+
+    assert %PublicProjection.Groupings{} = publisher.groupings
+    assert publisher.editions_count == length(publisher.editions)
+    assert Enum.all?(publisher.editions, &match?(%PublicProjection.Book{}, &1))
+
+    assert Enum.all?(
+             publisher.groupings.formats ++ publisher.groupings.languages,
+             &match?(%PublicProjection.Grouping{}, &1)
+           )
+
+    assert is_nil(publisher.cover_sample) or
+             match?(%PublicProjection.CoverSample{}, publisher.cover_sample)
+
+    assert %PublicProjection.Edition{} =
+             edition = PublicCatalog.edition(hd(book.formats).edition_slug)
+
+    assert is_nil(edition.cover) or match?(%PublicProjection.Cover{}, edition.cover)
+    assert is_nil(edition.source) or match?(%PublicProjection.Source{}, edition.source)
+
+    assert is_nil(edition.dimensions) or
+             match?(%PublicProjection.Dimensions{}, edition.dimensions)
+
+    assert Enum.all?(edition.authors, &match?(%PublicProjection.Contributor{}, &1))
+
+    assert Enum.all?(PublicCatalog.series(), &match?(%PublicProjection.Series{}, &1))
+
+    assert Enum.all?(
+             PublicCatalog.contributors(),
+             &match?(%PublicProjection.ContributorSummary{}, &1)
+           )
+
+    case PublicCatalog.series() do
+      [%PublicProjection.Series{} = series | _] ->
+        assert %PublicProjection.Series{} = detail = PublicCatalog.series_by_slug(series.slug)
+        assert Enum.all?(detail.editions, &match?(%PublicProjection.Book{}, &1))
+        assert detail.memberships == []
+
+      [] ->
+        :ok
+    end
+  end
+
+  test "malformed filter shapes and enormous page numbers do not crash" do
+    assert %PublicProjection.Page{} = PublicCatalog.book_page(%{"q" => %{"nested" => "value"}}, 1)
+    assert %PublicProjection.Page{} = PublicCatalog.book_page(%{"q" => ["a", "b"]}, 1)
+
+    assert %PublicProjection.Page{} = page = PublicCatalog.book_page(nil, 10 ** 30)
+    assert page.page <= page.total_pages
+  end
+
+  test "the author sort returns a page without a grouping error" do
+    assert %PublicProjection.Page{entries: [_ | _]} =
+             PublicCatalog.book_page(%{"sort" => "author"}, 1, 5)
+  end
+
+  test "the title sort orders the page by work title" do
+    titles =
+      PublicCatalog.book_page(%{"sort" => "title"}, 1, 10).entries
+      |> Enum.map(& &1.title)
+
+    assert titles == Enum.sort_by(titles, &String.downcase/1)
   end
 end

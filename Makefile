@@ -50,6 +50,14 @@ audit-provenance:
 	@mkdir -p $(QA_DIR)/provenance
 	@{ \
 		echo "metadata provenance audit"; \
+		if [ "$${HIRAETH_ALLOW_DEV_DB_RESET:-}" != "1" ]; then \
+			echo "refusing to drop and reseed the dev database; set HIRAETH_ALLOW_DEV_DB_RESET=1" >&2; \
+			exit 1; \
+		fi; \
+		case "$${DATABASE_URL:-}" in \
+			""|*@localhost*|*@127.0.0.1*) ;; \
+			*) echo "refusing destructive audit against a non-local DATABASE_URL" >&2; exit 1 ;; \
+		esac; \
 		$(POSTGRES_READY); \
 		mix ecto.drop --force || true; \
 		mix ecto.create; \
@@ -61,6 +69,7 @@ audit-provenance:
 		grep -q '"missing_provenance": \[\]' $(QA_DIR)/provenance/audit-provenance.json; \
 		grep -q '"source_ledger_missing": \[\]' $(QA_DIR)/provenance/audit-provenance.json; \
 		grep -q '"invalid_public_covers": \[\]' $(QA_DIR)/provenance/audit-provenance.json; \
+		grep -q '"source_records": [1-9]' $(QA_DIR)/provenance/audit-provenance.json; \
 		echo "audit_provenance=pass"; \
 	} | tee $(QA_DIR)/provenance/audit-provenance.txt
 

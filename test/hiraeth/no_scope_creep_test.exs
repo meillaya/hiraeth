@@ -15,22 +15,38 @@ defmodule Hiraeth.NoScopeCreepTest do
     refute File.dir?(Path.join(@root, "assets/app"))
   end
 
-  test "router exposes LiveView browser routes but no broad JSON API surface" do
-    paths = HiraethWeb.Router.__routes__() |> Enum.map(& &1.path)
+  # The public HTTP surface is versioned, read-only, and fixed. New routes have
+  # to be added here deliberately, which keeps scope creep visible in review.
+  @versioned_api_paths [
+    "/api/v1/books",
+    "/api/v1/books/:slug",
+    "/api/v1/contributors",
+    "/api/v1/contributors/:slug",
+    "/api/v1/editions/:slug",
+    "/api/v1/openapi.json",
+    "/api/v1/publishers",
+    "/api/v1/publishers/:slug",
+    "/api/v1/series",
+    "/api/v1/series/:slug"
+  ]
+
+  test "router exposes LiveView browser routes and only the versioned read-only JSON API" do
+    routes = HiraethWeb.Router.__routes__()
+    paths = Enum.map(routes, & &1.path)
 
     assert "/browse" in paths
     assert "/search" in paths
     assert "/publishers" in paths
     assert "/series" in paths
 
-    documented_narrow_api_paths = []
+    api_routes = Enum.filter(routes, &String.starts_with?(&1.path, "/api"))
 
-    broad_api_paths =
-      paths
-      |> Enum.filter(&String.starts_with?(&1, "/api"))
-      |> Kernel.--(documented_narrow_api_paths)
+    assert api_routes |> Enum.map(& &1.path) |> Enum.uniq() |> Enum.sort() ==
+             Enum.sort(@versioned_api_paths)
 
-    assert broad_api_paths == []
+    assert Enum.all?(api_routes, &(&1.verb == :get)),
+           "the public API stays read-only in v1"
+
     refute Enum.any?(paths, &String.contains?(&1, "/register"))
     refute Enum.any?(paths, &String.contains?(&1, "/profile"))
     refute Enum.any?(paths, &String.contains?(&1, "/users"))

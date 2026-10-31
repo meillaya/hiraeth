@@ -36,7 +36,7 @@ defmodule HiraethWeb.SeriesLive.Components do
           class="grid gap-8 py-10 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start"
         >
           <div class="space-y-4">
-            <p :if={ser[:publisher]} class="qi-kicker text-[var(--hiraeth-thread)]">
+            <p :if={ser.publisher} class="qi-kicker text-[var(--hiraeth-thread)]">
               {ser.publisher}
             </p>
             <h2 class="font-serif text-4xl font-light leading-tight tracking-tight text-[var(--hiraeth-ink)]">
@@ -57,7 +57,7 @@ defmodule HiraethWeb.SeriesLive.Components do
           </div>
           <div class="grid grid-cols-2 gap-5 sm:grid-cols-4">
             <CatalogComponents.edition_card
-              :for={edition <- ser[:preview_editions] || []}
+              :for={edition <- ser.preview_editions}
               edition={edition}
               id_prefix={"series-preview-#{ser.slug}"}
             />
@@ -82,7 +82,7 @@ defmodule HiraethWeb.SeriesLive.Components do
           >← Series</.link>
           <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
             <div class="space-y-3">
-              <p :if={@series[:publisher]} class="qi-kicker text-[var(--hiraeth-thread)]">
+              <p :if={@series.publisher} class="qi-kicker text-[var(--hiraeth-thread)]">
                 {@series.publisher}
               </p>
               <h1

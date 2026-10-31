@@ -9,9 +9,13 @@ cd "${ROOT}"
 # DATABASE_PORT unset or 54320 means the local standalone postgres is expected
 # and is managed here. Any other DATABASE_PORT (an externally provisioned
 # database) is provided externally and must never be touched locally.
-PGDATA="${HIRAETH_PGDATA:-$HOME/.local/share/hiraeth/pgdata}"
-PGLOG="${HIRAETH_PGLOG:-$HOME/.local/share/hiraeth/postgres.log}"
-SOCKET_DIR="$HOME/.local/share/hiraeth"
+#
+# Cluster, log, and unix socket live under the gitignored <repo>/tmp tree, so a
+# checkout on an external volume keeps database writes off the system disk.
+# HIRAETH_PGDATA, HIRAETH_PGLOG, and HIRAETH_PG_SOCKET_DIR still override them.
+PGDATA="${HIRAETH_PGDATA:-$ROOT/tmp/pgdata}"
+PGLOG="${HIRAETH_PGLOG:-$ROOT/tmp/postgres.log}"
+SOCKET_DIR="${HIRAETH_PG_SOCKET_DIR:-$ROOT/tmp}"
 READY_ATTEMPTS="${HIRAETH_POSTGRES_READY_ATTEMPTS:-60}"
 READY_SLEEP="${HIRAETH_POSTGRES_READY_SLEEP:-1}"
 

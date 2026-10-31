@@ -73,12 +73,16 @@ defmodule HiraethWeb.HealthControllerTest do
     refute inspect(body) =~ "stack"
   end
 
-  test "router keeps health endpoints narrow and does not expose broad api routes" do
+  test "router keeps health endpoints narrow and exposes only the versioned catalog API" do
     paths = HiraethWeb.Router.__routes__() |> Enum.map(& &1.path)
 
     assert "/health" in paths
     assert "/ready" in paths
-    refute Enum.any?(paths, &String.starts_with?(&1, "/api"))
+
+    api_paths = Enum.filter(paths, &String.starts_with?(&1, "/api"))
+
+    assert api_paths != []
+    assert Enum.all?(api_paths, &String.starts_with?(&1, "/api/v1"))
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:hiraeth, key)

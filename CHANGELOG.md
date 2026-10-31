@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Typed public boundary: every public catalog read shape is a `Hiraeth.Catalog.PublicProjection` struct with a `t/0` type, built through strict, idempotent builders that reject unknown keys. `HiraethWeb.PublicCatalog` and `Hiraeth.Ingestion.SidecarClient` now carry `@spec` for every exported arity. `test/hiraeth/public_api_contract_test.exs` fails the fast lane when a public function or projection loses its type.
+- Versioned read-only JSON API at `/api/v1` for books, editions, publishers, series, contributors, and the served OpenAPI document. The contract is OpenAPI 3.0 generated from controller operations and schema modules, every endpoint response is validated against it in tests, and the route contract test pins the exact path list. Reference: `docs/api/v1.md`.
+- Working `title`, `author`, and `recently_added` orderings for book pages. The home page's "Recently imported" link now matches the order it requests.
+- `docs/` tree with the API reference, the typed boundary design note, the scalability and operations research, and this audit's findings.
 - `mix hiraeth.real_catalog.seed_provider --provider <slug>` as the per-provider recovery path. Loads `priv/catalog_sources/real_publishers/<slug>.json`, validates against the provider manifest when one is checked in, creates an `ImportRun`, and delegates to `Hiraeth.RealCatalog.Importer.seed_provider!/3`. Each provider runs in its own `Ash.transact`, so a single failure does not poison the rest of the corpus. Use this when the whole-corpus `priv/repo/seeds.exs` aborts midway through one provider.
 - `config/dev.exs` now honors `DATABASE_URL` when set, so `railway run -- mix ...` from a developer machine reaches the Railway Postgres without needing to override `DATABASE_HOST`/`DATABASE_PORT`/`DATABASE_USER`/`DATABASE_PASSWORD` individually. Standalone localhost defaults are preserved when `DATABASE_URL` is unset.
 - `priv/test_lanes.exs` is the single source of truth for the slow/full_catalog/integration/performance/browser/public_catalog_full cost-tag list. `mix test.fast`, `mix test.full`, and `mix ci` all derive their `--exclude` / `--include` flags from this file. Contract test: `test/hiraeth/mix_alias_contract_test.exs`.
@@ -20,6 +24,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Dependencies updated to the latest stable releases within their major versions: Ash 3.37, AshPostgres 2.15, Bandit 1.14, Mint 1.11, LiveView 1.2.13, PlugCrypto 2.2.1, Decimal 3.2. `mix hex.audit` reports no advisories. Ash 3.37 requires an explicit `default_string_length_count`, set to `:codepoints` so Elixir and Postgres count the same way.
+- Provider source identity is now the bare provider slug everywhere, matching the registry backfill. The lazy registration paths in `RunState` and `CoverCandidateRun` store the checked-in manifest path instead of a source URL, and the scheduler skips a source whose manifest is not a readable local file before it can consume a dispatch slot.
+- The ingestion worker declares a 45-minute timeout and Oban runs `Oban.Lifeline` with a one-hour rescue window, so a deploy cannot leave a job executing forever behind the provider's unique key.
+- The post-ingestion audit phase no longer fails an already-applied run. Audit findings and write errors are recorded on the run, and the catalog work stands.
+- The local standalone Postgres cluster, log, and socket live under the gitignored `tmp/` tree, so a checkout on an external volume keeps database writes off the system disk. `HIRAETH_PGDATA` still overrides the path.
+- The sidecar maps transport failures by exception type, returns a typed `internal_error` for unexpected failures instead of a bare 500, and regenerates its reviewed OpenAPI snapshot.
 - The real-corpus importer (`Hiraeth.RealCatalog.Importer`) was rewritten from per-record `Ash.create!` round-trips to a two-phase bulk pipeline: per-dataset row precompute keyed by natural identity (first-wins dedupe, no precomputed ids), then per-table `Ash.bulk_create` upserts (per-resource `upsert_identity` + minimal `upsert_fields {:replace, identity_keys}`, never `:replace_all`) inside one transaction per dataset, with per-row `Ash.update!`/`destroy!` only for actual sync/prune diffs. Measured post-bulk: per-seed full-corpus seed ~50-160s locally (102.7s + 50.2s per dataset pass, down from multi-minute per-record seeds), 162.3s end-to-end, well under a 300s envelope.
 - Mix aliases collapsed to `gate` (single fast blocking gate), `ci` (full lane), `test.fast`, and `test.full`; the Makefile `verify` chain slimmed to `audit-provenance verify-summary qa-pack`.
 - Frontend correctness is verified by the LiveView and route logic test suites under `test/hiraeth_web/`; the browser-QA lane was removed.
@@ -27,13 +37,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Sidecar `base_url` config de-duplicated: the default lives in `config/config.exs`, dev/test inherit it, and `config/runtime.exs` reads `SCRAPLING_SIDECAR_URL`.
 - `.gitattributes` language classification refreshed: the language bar now reflects app code; governed corpora, resource snapshots, fixture data, lockfiles, and vendored JS are excluded via linguist attributes.
 
+### Fixed
+
+- Nested query parameter shapes such as `?q[a]=b` no longer raise inside the catalog LiveViews; only scalar filter values are accepted.
+- A page number beyond the database integer range no longer raises `DBConnection.EncodeError`; the page is capped before the SQL offset is built.
+- The publisher and contributor cache no longer stores negative lookups, so arbitrary slugs cannot grow `:persistent_term` without bound.
+- `/ready` bounds its connect timeout as well as its receive timeout.
+- `Plug.Parsers` no longer accepts multipart bodies and caps request bodies at 100 KB.
+- `SourceLedgerEntry` is append-only again: the `:update` and `:destroy` actions are gone.
+- `SidecarClient` returns a typed error for a non-object success body and raises a named error when the sidecar base URL is missing.
+- The CSP is no longer exempted from Sobelow, and `test/hiraeth_web/security_headers_test.exs` asserts the header.
+
 ### Removed
 
 - Unrouted page scaffold, Swoosh/Mailer, and the dev-only mailbox route.
 - `Hiraeth.Search` domain, the Imports CSV workflow (including its tables via a drop migration), and the never-enqueued `SourceSnapshotReplayWorker`.
 - `compose.yaml` and every Compose reference; devenv owns local, Dockerfiles own production.
 - The dead `scripts-tests` CI lane (`deep.yml`) and the root `pyproject.toml` that drove it; the catalog-generator pytest suite under `tests/scripts` is retired.
-- The `docs/` directory and every dangling `docs/*.md` reference (tests, Makefile, README, AGENTS.md, CI comments, covers guide); the deleted dev/qa/ops scripts are recreated from scratch as part of the devenv-end-to-end restore.
+- The original `docs/` directory and every dangling `docs/*.md` reference (tests, Makefile, README, AGENTS.md, CI comments, covers guide). A new `docs/` tree now holds the API reference, architecture notes, and audit; the dev/qa/ops scripts are recreated from scratch as part of the devenv-end-to-end restore.
 - GitHub Actions: deleted `.github/workflows/ci.yml` and `.github/workflows/deep.yml` and disabled Actions on the repository; verification is local-only (`mix gate`, `mix ci`, `make verify`) until a replacement is designed.
 - ExCoveralls and the 86.1 coverage floor: `coveralls.json`, the `excoveralls` dependency, the `test_coverage` project config, the Makefile `coverage` target, and the coveralls gate in `scripts/qa/perf/measure_gates.sh`.
 - The opt-in `:nightly` test lane: `nightly_tags` in `priv/test_lanes.exs`, the `test_helper.exs` default exclusion, the nightly contract assertions in `mix_alias_contract_test.exs`, and the three full-corpus `@tag :nightly` tests.
@@ -65,7 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- `RealCatalogSourceManifestTest` made environment-robust (empty snapshot dir on clean checkouts no longer fails).
+- `RealCatalogSourceManifestTest` made tolerant of environment differences (empty snapshot dir on clean checkouts no longer fails).
 - Remaining Dialyzer `pattern_match` findings in the scrape Mix tasks.
 - Makefile `.PHONY` colon escaping for the `gates:measure` target.
 

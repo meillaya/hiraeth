@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.adapters import shopify, squarespace, woocommerce, wordpress
 from app.models import (
@@ -61,6 +61,8 @@ async def fetch_catalog(request: FetchRequest) -> FetchResponse:
             SidecarErrorCode.NETWORK,
             "sidecar fetch network failure",
         ) from error
+    except HTTPException:
+        raise
     except Exception as error:
         raise sidecar_runtime_error("fetch", error) from error
 

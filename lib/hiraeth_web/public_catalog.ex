@@ -10,24 +10,35 @@ defmodule HiraethWeb.PublicCatalog do
   alias Hiraeth.RealCatalog.SourcePolicy
 
   @page_size 24
+  @max_page 10_000
   @publisher_group_limit 8
   @cache_missing :__hiraeth_public_catalog_cache_missing__
   @default_cache_ttl_ms :timer.seconds(30)
   @undated_sort_value Date.to_gregorian_days(~D[0001-01-01])
 
+  @type book_query :: map() | String.t() | nil
+  @type page_param :: pos_integer() | String.t()
+
+  @spec page_size() :: pos_integer()
   def page_size, do: @page_size
 
+  @spec books() :: [PublicProjection.Book.t()]
   def books do
     book_page(nil, 1).entries
   end
 
+  @spec search_books(book_query()) :: [PublicProjection.Book.t()]
   def search_books(query) do
     book_page(query, 1).entries
   end
 
+  @spec book_page(book_query(), page_param()) ::
+          PublicProjection.Page.t(PublicProjection.Book.t())
+  @spec book_page(book_query(), page_param(), pos_integer()) ::
+          PublicProjection.Page.t(PublicProjection.Book.t())
   def book_page(query, page, page_size \\ @page_size) do
     filters = normalize_book_filters(query)
-    requested_page = page |> parse_page() |> max(1)
+    requested_page = page |> parse_page() |> max(1) |> min(@max_page)
     requested_offset = (requested_page - 1) * page_size
     {total_count, work_ids} = work_page_for_filters(filters, page_size, requested_offset)
 
@@ -51,15 +62,16 @@ defmodule HiraethWeb.PublicCatalog do
         work_ids
       end
 
-    %{
+    PublicProjection.page!(%{
       entries: books_for_work_ids(work_ids),
       page: current_page,
       page_size: page_size,
       total_count: total_count,
       total_pages: total_pages
-    }
+    })
   end
 
+  @spec book(String.t()) :: PublicProjection.Book.t() | nil
   def book(slug) do
     case work_id_for_slug(slug) do
       nil ->
@@ -224,7 +236,7 @@ defmodule HiraethWeb.PublicCatalog do
             lower(w.title) as title_sort,
             min(e.slug) as slug_sort,
             max(e.published_on) as newest_sort,
-            max(sr.imported_at) as imported_sort
+            max(sr.imported_at) as imported_sort#{work_page_author_sort_sql(filters.sort)}
           from editions e
           join works w on w.id = e.work_id
           join source_records sr on sr.edition_id = e.id
@@ -440,7 +452,25 @@ defmodule HiraethWeb.PublicCatalog do
     end
   end
 
+  defp work_page_order_sql("title"), do: "title_sort asc nulls last, slug_sort"
+  defp work_page_order_sql("author"), do: "author_sort asc nulls last, title_sort, slug_sort"
+
+  defp work_page_order_sql("recently_added"),
+    do: "imported_sort desc nulls last, title_sort, slug_sort"
+
   defp work_page_order_sql(_sort), do: publication_date_order_sql()
+
+  defp work_page_author_sort_sql("author") do
+    """
+    ,
+        min((select min(lower(ct.display_name))
+         from contributions c
+         join contributors ct on ct.id = c.contributor_id
+         where c.work_id = e.work_id or c.edition_id = e.id)) as author_sort
+    """
+  end
+
+  defp work_page_author_sort_sql(_sort), do: ""
 
   defp publication_date_order_sql, do: "newest_sort desc nulls last, title_sort, slug_sort"
 
@@ -477,6 +507,8 @@ defmodule HiraethWeb.PublicCatalog do
       is_binary(value) -> String.trim(value)
       is_atom(value) -> value |> Atom.to_string() |> String.trim()
       is_integer(value) -> Integer.to_string(value)
+      is_map(value) -> nil
+      is_list(value) -> nil
       true -> value |> to_string() |> String.trim()
     end
   end
@@ -495,31 +527,37 @@ defmodule HiraethWeb.PublicCatalog do
 
   defp blank_filter_value?(value), do: value in [nil, ""]
 
+  @spec editions() :: [PublicProjection.Edition.t()]
   def editions do
     edition_rows("", [])
     |> Enum.map(&edition_projection_from_row/1)
     |> Enum.sort_by(&publication_date_sort_key/1)
   end
 
+  @spec search_editions(book_query()) :: [PublicProjection.Edition.t()]
   def search_editions(query) do
     editions()
     |> Enum.filter(&matches?(&1, query))
   end
 
+  @spec paginate([entry], page_param()) :: PublicProjection.Page.t(entry) when entry: term()
+  @spec paginate([entry], page_param(), pos_integer()) :: PublicProjection.Page.t(entry)
+        when entry: term()
   def paginate(items, page, page_size \\ @page_size) do
     total_count = length(items)
     total_pages = max(ceil_div(max(total_count, 1), page_size), 1)
-    current_page = page |> parse_page() |> min(total_pages) |> max(1)
+    current_page = page |> parse_page() |> max(1) |> min(@max_page) |> min(total_pages) |> max(1)
 
-    %{
+    PublicProjection.page!(%{
       entries: Enum.slice(items, (current_page - 1) * page_size, page_size),
       page: current_page,
       page_size: page_size,
       total_count: total_count,
       total_pages: total_pages
-    }
+    })
   end
 
+  @spec publishers() :: [PublicProjection.Publisher.t()]
   def publishers do
     cached({:publishers}, fn ->
       publisher_summary_rows()
@@ -528,6 +566,7 @@ defmodule HiraethWeb.PublicCatalog do
     end)
   end
 
+  @spec publisher(String.t()) :: PublicProjection.Publisher.t() | nil
   def publisher(slug) do
     cached({:publisher, slug}, fn ->
       case publisher_summary_for_slug(slug) do
@@ -537,10 +576,12 @@ defmodule HiraethWeb.PublicCatalog do
         publisher ->
           books = books_for_publisher_id(publisher.id)
 
-          publisher
-          |> Map.put(:editions, books)
-          |> Map.put(:editions_count, length(books))
-          |> Map.put(:groupings, publisher_groupings(books))
+          %{
+            publisher
+            | editions: books,
+              editions_count: length(books),
+              groupings: publisher_groupings(books)
+          }
       end
     end)
   end
@@ -553,6 +594,7 @@ defmodule HiraethWeb.PublicCatalog do
     end
   end
 
+  @spec clear_cache() :: :ok
   def clear_cache do
     __MODULE__
     |> cache_registry_key()
@@ -565,25 +607,39 @@ defmodule HiraethWeb.PublicCatalog do
 
   defp cached(key, fun) do
     if public_catalog_cache?() do
-      cache_key = cache_key(key)
-      now_ms = System.monotonic_time(:millisecond)
-
-      case :persistent_term.get(cache_key, @cache_missing) do
-        %{expires_at: expires_at, value: value} when expires_at == :infinity ->
-          value
-
-        %{expires_at: expires_at, value: value}
-        when is_integer(expires_at) and expires_at > now_ms ->
-          value
-
-        _expired_missing_or_legacy_cache ->
-          value = fun.()
-          :persistent_term.put(cache_key, %{expires_at: cache_expires_at(), value: value})
-          remember_cache_key(cache_key)
-          value
-      end
+      cached_value(cache_key(key), fun)
     else
       fun.()
+    end
+  end
+
+  defp cached_value(cache_key, fun) do
+    now_ms = System.monotonic_time(:millisecond)
+
+    case :persistent_term.get(cache_key, @cache_missing) do
+      %{expires_at: expires_at, value: value} when expires_at == :infinity ->
+        value
+
+      %{expires_at: expires_at, value: value}
+      when is_integer(expires_at) and expires_at > now_ms ->
+        value
+
+      _expired_missing_or_legacy_cache ->
+        compute_and_cache(cache_key, fun)
+    end
+  end
+
+  defp compute_and_cache(cache_key, fun) do
+    value = fun.()
+
+    # Misses are not cached: an attacker-chosen slug would otherwise add a
+    # permanent :persistent_term key for every request.
+    if is_nil(value) do
+      value
+    else
+      :persistent_term.put(cache_key, %{expires_at: cache_expires_at(), value: value})
+      remember_cache_key(cache_key)
+      value
     end
   end
 
@@ -622,6 +678,8 @@ defmodule HiraethWeb.PublicCatalog do
     end
   end
 
+  @spec contributors() :: [PublicProjection.ContributorSummary.t()]
+  @spec contributors(String.t() | nil) :: [PublicProjection.ContributorSummary.t()]
   def contributors(role \\ nil) do
     role
     |> contributor_summary_rows()
@@ -629,6 +687,7 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.sort_by(&String.downcase(&1.name))
   end
 
+  @spec contributor(String.t()) :: PublicProjection.ContributorSummary.t() | nil
   def contributor(slug) do
     case contributor_summary_by_slug(slug) do
       nil ->
@@ -640,18 +699,19 @@ defmodule HiraethWeb.PublicCatalog do
           |> contributor_work_ids()
           |> books_for_work_ids()
 
-        contributor
-        |> Map.put(:books, books)
-        |> Map.put(:books_count, length(books))
+        %{contributor | books: books, books_count: length(books)}
     end
   end
 
+  @spec series() :: [PublicProjection.Series.t()]
   def series do
     series_summary_rows()
     |> Enum.map(&series_summary_from_row/1)
     |> Enum.sort_by(&String.downcase(&1.title))
   end
 
+  @spec series_with_preview_editions() :: [PublicProjection.Series.t()]
+  @spec series_with_preview_editions(pos_integer()) :: [PublicProjection.Series.t()]
   def series_with_preview_editions(limit \\ 4) do
     series = series()
     preview_work_ids_by_slug = series_preview_work_ids_by_slug(limit)
@@ -672,10 +732,11 @@ defmodule HiraethWeb.PublicCatalog do
         |> Enum.map(&Map.get(preview_books_by_work_id, &1))
         |> Enum.reject(&is_nil/1)
 
-      Map.put(series_summary, :preview_editions, preview_editions)
+      %{series_summary | preview_editions: preview_editions}
     end)
   end
 
+  @spec series_by_slug(String.t()) :: PublicProjection.Series.t() | nil
   def series_by_slug(slug) do
     case series_summary_by_slug(slug) do
       nil ->
@@ -690,13 +751,11 @@ defmodule HiraethWeb.PublicCatalog do
           |> books_for_work_ids()
           |> Enum.sort_by(&publication_date_sort_key/1)
 
-        series
-        |> Map.delete(:memberships)
-        |> Map.put(:editions, books)
-        |> Map.put(:editions_count, length(books))
+        %{series | memberships: [], editions: books, editions_count: length(books)}
     end
   end
 
+  @spec edition(String.t()) :: PublicProjection.Edition.t() | nil
   def edition(slug) do
     case work_id_for_slug(slug) do
       nil ->
@@ -814,7 +873,7 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp publisher_summary_from_row([id, name, slug, description, editions_count, cover_sample]) do
-    %{
+    PublicProjection.publisher!(%{
       id: uuid_text(id),
       name: name,
       slug: slug,
@@ -823,38 +882,38 @@ defmodule HiraethWeb.PublicCatalog do
       editions_count: editions_count,
       cover_sample: publisher_cover_sample_from_data(cover_sample),
       groupings: empty_publisher_groupings()
-    }
+    })
   end
 
   defp publisher_cover_sample_from_data(%{"title" => title, "cover" => cover}) do
     case cover_projection_from_data(cover) do
       nil -> nil
-      cover -> %{title: title, cover: cover}
+      cover -> PublicProjection.cover_sample!(%{title: title, cover: cover})
     end
   end
 
   defp publisher_cover_sample_from_data(_cover_sample), do: nil
 
   defp empty_publisher_groupings do
-    %{
+    PublicProjection.groupings!(%{
       formats: [],
       languages: [],
       original_languages: [],
       series: [],
       translations: [],
       contributor_roles: []
-    }
+    })
   end
 
   defp publisher_groupings(books) do
-    %{
+    PublicProjection.groupings!(%{
       formats: publisher_format_groupings(books),
       languages: publisher_language_groupings(books),
       original_languages: edition_count_group(books, & &1.original_language_code),
       series: publisher_series_groupings(books),
       translations: publisher_translation_groupings(books),
       contributor_roles: publisher_contributor_role_groupings(books)
-    }
+    })
   end
 
   defp publisher_format_groupings(books) do
@@ -907,7 +966,11 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp series_group_summary({{title, slug}, work_ids}) do
-    %{label: title, slug: slug, count: work_ids |> Enum.uniq() |> length()}
+    PublicProjection.grouping!(%{
+      label: title,
+      slug: slug,
+      count: work_ids |> Enum.uniq() |> length()
+    })
   end
 
   defp publisher_translation_groupings(editions) do
@@ -976,13 +1039,15 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp contributor_role_summary({role, contributor_keys}) do
-    %{label: role, count: contributor_keys |> Enum.uniq() |> length()}
+    PublicProjection.grouping!(%{label: role, count: contributor_keys |> Enum.uniq() |> length()})
   end
 
   defp bounded_count_group(values) do
     values
     |> Enum.group_by(& &1)
-    |> Enum.map(fn {value, entries} -> %{label: value, count: length(entries)} end)
+    |> Enum.map(fn {value, entries} ->
+      PublicProjection.grouping!(%{label: value, count: length(entries)})
+    end)
     |> sort_and_bound_groups()
   end
 
@@ -1077,7 +1142,7 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp contributor_summary_from_row([id, display_name, slug, roles, books_count]) do
-    %{
+    PublicProjection.contributor_summary!(%{
       id: uuid_text(id),
       name: display_name,
       display_name: display_name,
@@ -1085,7 +1150,7 @@ defmodule HiraethWeb.PublicCatalog do
       roles: Enum.sort(roles || []),
       books: [],
       books_count: books_count
-    }
+    })
   end
 
   defp series_summary_rows do
@@ -1211,7 +1276,7 @@ defmodule HiraethWeb.PublicCatalog do
          editions_count,
          unknown_order?
        ]) do
-    %{
+    PublicProjection.series!(%{
       id: uuid_text(id),
       title: title,
       name: title,
@@ -1221,20 +1286,20 @@ defmodule HiraethWeb.PublicCatalog do
       editions: [],
       editions_count: editions_count,
       unknown_order?: unknown_order?
-    }
+    })
   end
 
   defp series_summary_from_row(row) do
     memberships = List.last(row)
 
-    row
-    |> Enum.take(7)
-    |> series_summary_from_row()
-    |> Map.put(:memberships, Enum.map(memberships || [], &membership_from_data/1))
+    %{
+      series_summary_from_row(Enum.take(row, 7))
+      | memberships: Enum.map(memberships || [], &membership_from_data/1)
+    }
   end
 
   defp membership_from_data(%{"work_id" => work_id, "position" => position}) do
-    %{work_id: uuid_text(work_id), position: position}
+    PublicProjection.series_membership!(%{work_id: uuid_text(work_id), position: position})
   end
 
   defp edition_rows(where_sql, params) do
@@ -1389,7 +1454,7 @@ defmodule HiraethWeb.PublicCatalog do
     series = series || []
     cover = covers |> public_cover_data() |> cover_projection_from_data()
 
-    %{
+    PublicProjection.edition!(%{
       id: uuid_text(id),
       work_id: uuid_text(work_id),
       title: title,
@@ -1426,7 +1491,7 @@ defmodule HiraethWeb.PublicCatalog do
       source_uri: source && source["source_uri"],
       review_links: source_review_links(source),
       missing_fields: source_missing_fields(source)
-    }
+    })
   end
 
   defp book_projection(editions) do
@@ -1484,14 +1549,14 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp format_projection(edition) do
-    %{
+    PublicProjection.format!(%{
       edition_slug: edition.slug,
       format: edition.format,
       format_label: format_label(edition.format),
       identifiers: edition.identifiers,
       source_identity:
         if(edition.identifiers == [],
-          do: get_in(edition, [:source, :source_identity]) || edition.slug,
+          do: (edition.source && edition.source.source_identity) || edition.slug,
           else: nil
         ),
       published_on: edition.published_on,
@@ -1501,17 +1566,17 @@ defmodule HiraethWeb.PublicCatalog do
       width_mm: edition.width_mm,
       depth_mm: edition.depth_mm,
       dimensions: edition.dimensions
-    }
+    })
   end
 
   defp dimensions_projection(nil, nil, nil), do: nil
 
   defp dimensions_projection(height_mm, width_mm, depth_mm) do
-    %{
+    PublicProjection.dimensions!(%{
       height_mm: height_mm,
       width_mm: width_mm,
       depth_mm: depth_mm
-    }
+    })
   end
 
   defp source_review_links(source) when is_map(source), do: source["review_links"] || []
@@ -1559,7 +1624,7 @@ defmodule HiraethWeb.PublicCatalog do
   defp cover_projection_from_data(nil), do: nil
 
   defp cover_projection_from_data(asset) do
-    %{
+    PublicProjection.cover!(%{
       source_url: asset["source_url"],
       public_url: cover_public_url_from_data(asset),
       provider: asset["provider"],
@@ -1571,7 +1636,7 @@ defmodule HiraethWeb.PublicCatalog do
       cached_file_path: asset["cached_file_path"],
       thumbnail_file_path: asset["thumbnail_file_path"],
       thumbnail_url: thumbnail_url_from_data(asset["thumbnail_file_path"])
-    }
+    })
   end
 
   defp cover_public_url_from_data(%{
@@ -1647,13 +1712,14 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.reduce(%{}, fn contributor, grouped ->
       role = contributor["role"] || "contributor"
 
-      entry = %{
-        id: uuid_text(contributor["id"]),
-        name: contributor["name"],
-        slug: contributor["slug"],
-        role: role,
-        position: contributor["position"]
-      }
+      entry =
+        PublicProjection.contributor!(%{
+          id: uuid_text(contributor["id"]),
+          name: contributor["name"],
+          slug: contributor["slug"],
+          role: role,
+          position: contributor["position"]
+        })
 
       Map.update(grouped, role, [entry], &(&1 ++ [entry]))
     end)
@@ -1733,7 +1799,7 @@ defmodule HiraethWeb.PublicCatalog do
   defp atomize_source(nil), do: nil
 
   defp atomize_source(source) do
-    %{
+    PublicProjection.source!(%{
       id: uuid_text(source["id"]),
       source_record_id: uuid_text(source["source_record_id"]),
       provider: source["provider"],
@@ -1745,7 +1811,7 @@ defmodule HiraethWeb.PublicCatalog do
       imported_at: parse_imported_at(source["imported_at"]),
       field_sources: source["field_sources"] || %{},
       provider_permissions: source["provider_permissions"] || %{}
-    }
+    })
   end
 
   defp parse_imported_at(%DateTime{} = value), do: value

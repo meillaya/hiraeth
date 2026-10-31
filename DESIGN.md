@@ -68,6 +68,6 @@ Keep interaction quiet and GPU-friendly: opacity, color, border-color, box-shado
 
 ## 7. Constraints and verification
 
-- No React, Vite SPA, JSON API, Oban, inline scripts, external fonts/scripts/styles, scraping, or remote rendered image dependencies.
+- No React, Vite SPA, inline scripts, external fonts/scripts/styles, scraping, or remote rendered image dependencies. The versioned `/api/v1` surface is a separate read-only contract; it does not render the UI. Oban runs in the service but exposes no browser surface.
 - Cover permission/draft metadata is non-blocking for display decisions, but allowlisted official hosts, local cache safety, provenance, attribution, takedown/removal, and auditability remain mandatory.
 - Browser QA must capture desktop/tablet/mobile screenshots and DOM; no remote `<img>`, CSS image, font, script, stylesheet, or browser resource/network dependency is allowed on public pages.

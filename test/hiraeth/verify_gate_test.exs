@@ -20,7 +20,7 @@ defmodule Hiraeth.VerifyGateTest do
 
     for gate <- [
           "no_react",
-          "no_broad_json_api",
+          "versioned_api_only",
           "oban_allowed",
           "ash_domains",
           "liveview_routes",

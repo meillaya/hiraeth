@@ -20,6 +20,11 @@ config :hiraeth, :ash_domains, [
   Hiraeth.Audit
 ]
 
+# Ash 3.37 requires an explicit string length unit. Codepoints match what
+# Postgres counts, so Elixir-side and atomic validation agree and a max_length
+# bounds the stored value.
+config :ash, default_string_length_count: :codepoints
+
 # Configure the endpoint
 config :hiraeth, HiraethWeb.Endpoint,
   url: [host: "localhost"],
@@ -69,6 +74,7 @@ config :phoenix, :json_library, Jason
 config :hiraeth, Oban,
   repo: Hiraeth.Repo,
   queues: [ingestion: 4, covers: 4, audit: 2],
+  lifeline: [rescue_after: {1, :hour}],
   plugins: [
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,

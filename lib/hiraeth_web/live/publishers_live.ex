@@ -73,7 +73,7 @@ defmodule HiraethWeb.PublishersLive do
                 </.link>
               </h2>
               <p
-                :if={pub[:description]}
+                :if={pub.description}
                 class="max-w-2xl font-serif text-base italic leading-relaxed text-[var(--hiraeth-muted)]"
               >
                 {pub.description}
@@ -140,7 +140,7 @@ defmodule HiraethWeb.PublishersLive do
                   {@publisher.name}
                 </h1>
                 <p
-                  :if={@publisher[:description]}
+                  :if={@publisher.description}
                   class="max-w-3xl font-serif text-lg italic leading-relaxed text-[var(--hiraeth-muted)]"
                 >
                   {@publisher.description}
@@ -196,13 +196,13 @@ defmodule HiraethWeb.PublishersLive do
 
   defp sample_cover_src(nil), do: nil
 
-  defp sample_cover_src(edition) do
-    case edition[:cover] do
+  defp sample_cover_src(%Hiraeth.Catalog.PublicProjection.CoverSample{} = sample) do
+    case sample.cover do
       nil ->
         nil
 
       cover ->
-        local_cover_url(cover[:thumbnail_url]) || local_cover_url(cover[:public_url])
+        local_cover_url(cover.thumbnail_url) || local_cover_url(cover.public_url)
     end
   end
 

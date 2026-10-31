@@ -31,6 +31,13 @@ defmodule Hiraeth.Oban.ProviderIngestionWorker do
       period: :infinity
     ]
 
+  # A hard ceiling keeps an orphaned job from holding the provider's unique lock
+  # forever. Lifeline rescues a job left executing by a deploy after an hour.
+  @job_timeout :timer.minutes(45)
+
+  @impl Oban.Worker
+  def timeout(_job), do: @job_timeout
+
   alias Hiraeth.Ingestion.{
     CoverCandidateRun,
     CoverPipeline,

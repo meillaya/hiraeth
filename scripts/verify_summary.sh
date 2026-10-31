@@ -54,13 +54,14 @@ root_vite = list(root.glob("vite.config.*"))
 summary = {
     "gates": {
         "no_react": not root_package.exists() and not root_vite and not (root / "assets/app").exists() and not exact_bad_deps.search(mix_text),
-        "no_broad_json_api": not re.search(r'scope\s+"/api|forward\s+"/api|/api/', router_text),
+        "versioned_api_only": bool(re.findall(r'scope\s+"(/api[^"]*)"', router_text)) and all(scope == "/api/v1" for scope in re.findall(r'scope\s+"(/api[^"]*)"', router_text)) and not re.search(r'forward\s+"/api', router_text),
         "oban_allowed": True,
         "ash_domains": all((root / f"lib/hiraeth/{domain.lower()}.ex").exists() and f"defmodule Hiraeth.{domain}" in (root / f"lib/hiraeth/{domain.lower()}.ex").read_text() for domain in required_domains),
         "liveview_routes": all(route in router_text for route in required_routes),
         "provenance": (
             source_ledger.exists()
             and provenance_json.exists()
+            and provenance_data.get("source_records", 0) > 0
             and provenance_data.get("missing_provenance") == []
             and provenance_data.get("source_ledger_missing") == []
             and provenance_data.get("invalid_public_covers") == []

@@ -5,7 +5,7 @@ defmodule Hiraeth.RealCatalog.SourcePolicy do
 
   alias Hiraeth.Ingestion.ProviderManifest
 
-  @allowed_formats MapSet.new(~w(paperback hardcover ebook audiobook))
+  @allowed_formats ~w(paperback hardcover ebook audiobook)
   @expansion_provider_slugs [
     "new_directions_official_site",
     "transit_books_official_site"
@@ -209,7 +209,7 @@ defmodule Hiraeth.RealCatalog.SourcePolicy do
     }
   }
 
-  def allowed_format?(format), do: MapSet.member?(@allowed_formats, to_string(format))
+  def allowed_format?(format), do: to_string(format) in @allowed_formats
 
   def expansion_provider_slugs, do: @expansion_provider_slugs
 

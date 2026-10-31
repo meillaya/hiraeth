@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import ClassVar, TypeAlias
 
+import httpx
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
@@ -15,6 +16,7 @@ class SidecarErrorCode(StrEnum):
     INVALID_HOST = "invalid_host"
     NETWORK = "network"
     PARSE_FAILED = "parse_failed"
+    INTERNAL_ERROR = "internal_error"
 
 
 class SidecarError(BaseModel):
@@ -29,6 +31,7 @@ ERROR_RESPONSES: dict[int | str, dict[str, type["SidecarError"]]] = {
     403: {"model": SidecarError},
     422: {"model": SidecarError},
     429: {"model": SidecarError},
+    500: {"model": SidecarError},
     502: {"model": SidecarError},
 }
 
@@ -45,6 +48,32 @@ def sidecar_http_error(
 
 
 def sidecar_runtime_error(operation: str, error: Exception) -> HTTPException:
+    # Classify by exception type before falling back to message inspection.
+    # Scrapling and httpx raise types that a string match cannot distinguish.
+    if isinstance(error, httpx.TimeoutException):
+        return sidecar_http_error(
+            502,
+            SidecarErrorCode.NETWORK,
+            f"sidecar {operation} timed out",
+        )
+
+    if isinstance(error, httpx.HTTPStatusError):
+        status = error.response.status_code
+
+        if status == 429:
+            return sidecar_http_error(
+                429,
+                SidecarErrorCode.RATE_LIMITED,
+                f"sidecar {operation} was rate limited",
+            )
+
+        if status in (401, 403):
+            return sidecar_http_error(
+                403,
+                SidecarErrorCode.BLOCKED,
+                f"sidecar {operation} was blocked",
+            )
+
     message = str(error).lower()
 
     if "429" in message:
@@ -68,10 +97,17 @@ def sidecar_runtime_error(operation: str, error: Exception) -> HTTPException:
             f"sidecar {operation} returned an empty response",
         )
 
+    if isinstance(error, (RuntimeError, ValueError)) or "parse" in message:
+        return sidecar_http_error(
+            422,
+            SidecarErrorCode.PARSE_FAILED,
+            f"sidecar {operation} failed to parse the response",
+        )
+
     return sidecar_http_error(
-        422,
-        SidecarErrorCode.PARSE_FAILED,
-        f"sidecar {operation} failed to parse the response",
+        500,
+        SidecarErrorCode.INTERNAL_ERROR,
+        f"sidecar {operation} failed unexpectedly",
     )
 
 

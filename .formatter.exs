@@ -5,6 +5,7 @@
     :ash,
     :ecto,
     :ecto_sql,
+    :open_api_spex,
     :phoenix
   ],
   subdirectories: ["priv/*/migrations"],

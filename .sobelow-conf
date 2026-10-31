@@ -92,15 +92,8 @@
     "lib/hiraeth_web/public_catalog.ex"
   ],
 
-  # Module-level skip: only justified because the CSP header is added in
-  # TODO 22 of the production-readiness plan (Wave 4 web hardening) with a
-  # precise put_secure_browser_headers override on the `:browser` pipeline.
-  # Until TODO 22 lands, the single Config.CSP finding (router.ex:10) is a
-  # known-tracked issue. The full TODO 22 commit
-  # (`security(prod-ready): add content-security-policy`) will remove this
-  # skip entry.
-  ignore: ["Config.CSP"],
-
+  # CSP is set explicitly on the browser pipeline and asserted by
+  # test/hiraeth_web/security_headers_test.exs, so Config.CSP is not skipped.
   # Honor `# sobelow_skip ["Module"]` comments in source code.
   skip: true,
 

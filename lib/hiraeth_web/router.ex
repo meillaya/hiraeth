@@ -21,6 +21,31 @@ defmodule HiraethWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :api do
+    plug :accepts, ["json"]
+    plug OpenApiSpex.Plug.PutApiSpec, module: HiraethWeb.Api.Spec
+  end
+
+  scope "/api/v1" do
+    pipe_through :api
+
+    get "/openapi.json", OpenApiSpex.Plug.RenderSpec, []
+  end
+
+  scope "/api/v1", HiraethWeb.Api.V1 do
+    pipe_through :api
+
+    get "/books", CatalogController, :books
+    get "/books/:slug", CatalogController, :book
+    get "/editions/:slug", CatalogController, :edition
+    get "/publishers", CatalogController, :publishers
+    get "/publishers/:slug", CatalogController, :publisher
+    get "/series", CatalogController, :series
+    get "/series/:slug", CatalogController, :series_show
+    get "/contributors", CatalogController, :contributors
+    get "/contributors/:slug", CatalogController, :contributor
+  end
+
   scope "/", HiraethWeb do
     pipe_through :ops
 

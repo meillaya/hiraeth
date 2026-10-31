@@ -23,6 +23,7 @@ defmodule Hiraeth.Ingestion.ProviderManifest do
     :excluded_content,
     :cover_cache_policy,
     :not_legal_advice,
+    :manifest_path,
     cadence_hours: 24
   ]
 
@@ -51,12 +52,26 @@ defmodule Hiraeth.Ingestion.ProviderManifest do
 
     case ManifestValidator.validate(atomized) do
       {:ok, _manifest} ->
-        struct!(__MODULE__, atomized)
+        struct!(__MODULE__, Map.put(atomized, :manifest_path, file_path))
 
       {:error, findings} ->
         reasons = Enum.map_join(findings, "\n", &"  - #{&1.reason}")
         raise "manifest validation failed for #{file_path}:\n#{reasons}"
     end
+  end
+
+  @doc """
+  Returns the checked-in manifest path for a loaded manifest.
+
+  The path is stored on the struct at load time. A manifest built in memory
+  falls back to the canonical filename under `default_dir/0`.
+  """
+  def manifest_path(%__MODULE__{manifest_path: path}) when is_binary(path) and path != "" do
+    path
+  end
+
+  def manifest_path(%__MODULE__{provider: provider}) do
+    Path.join(["priv", "catalog_sources", "provider_manifests", "#{provider}.json"])
   end
 
   @doc """

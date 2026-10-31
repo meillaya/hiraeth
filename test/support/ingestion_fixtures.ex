@@ -35,7 +35,7 @@ defmodule Hiraeth.TestSupport.IngestionFixtures do
       source_kind: "publisher",
       ingestion_mode: "manifest",
       base_uri: "https://www.deepvellum.org/",
-      manifest_uri: "https://www.deepvellum.org/catalog-#{suffix}.json",
+      manifest_uri: "priv/catalog_sources/provider_manifests/deep_vellum_official_store.json",
       allowed_hosts: ["www.deepvellum.org"],
       rate_limit_per_minute: 30,
       max_bytes: 1_048_576,

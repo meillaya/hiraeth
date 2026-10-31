@@ -49,7 +49,7 @@ oban_plugins =
       []
     end
 
-config :hiraeth, Oban, plugins: oban_plugins
+config :hiraeth, Oban, plugins: oban_plugins, lifeline: [rescue_after: {1, :hour}]
 
 if config_env() == :prod do
   scrapling_sidecar_url =

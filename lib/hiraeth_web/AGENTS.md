@@ -6,10 +6,11 @@ Phoenix LiveView browser boundary for public discovery pages.
 ## STRUCTURE
 | Area | Owns |
 |---|---|
-| `router.ex` | browser scope with hard CSP (self-contained pages), `:ops` JSON pipeline (/health, /ready), `live_session` boundaries |
+| `router.ex` | browser scope with hard CSP (self-contained pages), `:ops` JSON pipeline (/health, /ready), read-only `:api` pipeline for `/api/v1` |
 | `live/` | public LiveViews: home, browse, search, book, edition, publishers, series, contributors (role filter) |
 | `components/` | layouts, core components, catalog UI components |
-| `public_catalog.ex` | public read facade: raw `Repo.query` SQL projected into PublicProjection structs + `:persistent_term` TTL cache (`clear_cache/0`, `:public_catalog_cache_ttl_ms`) |
+| `public_catalog.ex` | public read facade: raw `Repo.query` SQL projected into typed PublicProjection structs, every public function with a `@spec`, `:persistent_term` TTL cache (`clear_cache/0`, `:public_catalog_cache_ttl_ms`) |
+| `api/` | OpenAPI document, `/api/v1` controller, wire schemas, serializer |
 | `controllers/` | health probe |
 
 ## WHERE TO LOOK
@@ -19,6 +20,7 @@ Phoenix LiveView browser boundary for public discovery pages.
 | Catalog data for UI | `HiraethWeb.PublicCatalog`, not raw resources in templates |
 | Query params/filtering | `catalog_filter_params.ex` (web root) |
 | Shared public UI | `components/catalog_components.ex` |
+| Public JSON API | `api/spec.ex`, `api/v1/*`, `docs/api/v1.md` |
 | Layout/current scope | `components/layouts.ex` and router sessions |
 
 ## CONVENTIONS
