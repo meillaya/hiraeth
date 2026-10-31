@@ -1,0 +1,11 @@
+{
+  "home": "/",
+  "browse": "/browse",
+  "book": "/books/deep-vellum-carcasse",
+  "publishers": "/publishers",
+  "press": "/publishers/coffee-house-press",
+  "collections": "/series",
+  "collection": "/series/dalkey-archive-essentials",
+  "contributors": "/contributors",
+  "search": "/search?q=the"
+}

@@ -14,9 +14,19 @@ FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 
 | Browse the catalog | Book detail |
 | --- | --- |
-| [![Browse page](docs/screenshots/browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-theodoros) |
+| [![Browse page](docs/screenshots/browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-carcasse) |
 
-[![Publishers page](docs/screenshots/publishers.png)](https://web-production-a31e0.up.railway.app/publishers)
+| Publishers | Press dossier |
+| --- | --- |
+| [![Publishers page](docs/screenshots/publishers.png)](https://web-production-a31e0.up.railway.app/publishers) | [![Coffee House Press page](docs/screenshots/press.png)](https://web-production-a31e0.up.railway.app/publishers/coffee-house-press) |
+
+| Collections | Collection shelf |
+| --- | --- |
+| [![Collections page](docs/screenshots/collections.png)](https://web-production-a31e0.up.railway.app/series) | [![Dalkey Archive Essentials collection](docs/screenshots/collection.png)](https://web-production-a31e0.up.railway.app/series/dalkey-archive-essentials) |
+
+| Contributors | Search |
+| --- | --- |
+| [![Contributors page](docs/screenshots/contributors.png)](https://web-production-a31e0.up.railway.app/contributors) | [![Search page](docs/screenshots/search.png)](https://web-production-a31e0.up.railway.app/search?q=the) |
 
 ## What is in the app
 
@@ -156,7 +166,7 @@ MIX_ENV=dev DATABASE_URL=postgresql://... mix run priv/repo/seeds.exs
 railway tcp-proxy delete <proxy-id> --yes
 ```
 
-The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the images in this README after a visible change.
+The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the README images and `docs/screenshots/routes.json` after a visible change. The script captures the home, browse, book, publishers, press, collections, collection, contributors, and search surfaces at 1440×1000.
 
 Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only. Thumbnails require ImageMagick; the Docker runtime installs it, and local bare-toolchain users can run `nix profile add nixpkgs#imagemagick`. The five publisher pages that previously had no covers (Astra House, Pushkin Press, Seven Stories Press, Tilted Axis Press, Wakefield Press) are covered by `mix hiraeth.covers.sync`; see [docs/covers.md](docs/covers.md).
 
