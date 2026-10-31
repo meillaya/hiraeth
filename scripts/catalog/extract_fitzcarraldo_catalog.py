@@ -5,6 +5,7 @@
 """Extract Fitzcarraldo Editions catalog records with Scrapling."""
 from __future__ import annotations
 
+import argparse
 import html
 import json
 import re
@@ -222,7 +223,13 @@ def unique_books(books: Iterable[ListedBook]) -> list[ListedBook]:
     return list(result.values())
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out-dir", help="Write the dataset to this directory.")
+    args = parser.parse_args(argv)
+    out = Path(args.out_dir) / OUT.name if args.out_dir else OUT
+    out.parent.mkdir(parents=True, exist_ok=True)
+
     listed = []
     for category in CATEGORIES:
         listed.extend(listing_books(*category))
@@ -240,8 +247,8 @@ def main() -> int:
             print(f"fitzcarraldo {index} books / {len(records)} records", file=sys.stderr)
         time.sleep(0.05)
     records = remove_duplicate_isbns(records)
-    OUT.write_text(json.dumps(dataset(records), indent=2, ensure_ascii=False) + "\n")
-    print(f"wrote {OUT} with {len(records)} records from {len(unique_books(listed))} books")
+    out.write_text(json.dumps(dataset(records), indent=2, ensure_ascii=False) + "\n")
+    print(f"wrote {out} with {len(records)} records from {len(unique_books(listed))} books")
     return 0
 
 

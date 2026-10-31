@@ -41,6 +41,8 @@ defmodule HiraethWeb.CoverControllerTest do
     assert conn.status == 200
     assert conn.resp_body == @jpeg
     assert get_resp_header(conn, "content-type") == ["image/jpeg"]
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=86400"]
+    assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
     assert File.read!(asset.cached_file_path) == @jpeg
   end
 

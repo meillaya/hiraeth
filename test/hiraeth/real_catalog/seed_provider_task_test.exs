@@ -15,7 +15,7 @@ defmodule Hiraeth.RealCatalog.SeedProviderTaskTest do
                   "test/fixtures/provider_seed/valid_provider.json"
                 ])
 
-  @test_provider "real_catalog_seed_provider_task_test"
+  @test_provider "test_provider_official_site"
 
   setup do
     clear_catalog!()

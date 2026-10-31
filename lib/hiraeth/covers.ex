@@ -214,6 +214,8 @@ defmodule Hiraeth.Covers do
     thumbnail_timeout = Keyword.get(opts, :thumbnail_timeout, @thumbnail_timeout)
     strict? = Keyword.get(opts, :strict?, false)
     source_urls = Keyword.get(opts, :source_urls, :all)
+    provider = Keyword.get(opts, :provider)
+    prefer_store? = Keyword.get(opts, :prefer_store?, true)
 
     File.mkdir_p!(cache_root)
     verify_safe_cache_root!(cache_root)
@@ -221,80 +223,143 @@ defmodule Hiraeth.Covers do
     CoverAsset
     |> Ash.read!(authorize?: false)
     |> filter_source_urls(source_urls)
+    |> filter_provider(provider)
     |> Enum.filter(&cache_candidate?/1)
     |> Task.async_stream(
-      &cover_cache_plan(&1, cache_root, force?, fetch, req_options, max_body_size),
+      &cover_cache_plan(
+        &1,
+        cache_root,
+        force?,
+        fetch,
+        req_options,
+        max_body_size,
+        prefer_store?
+      ),
       max_concurrency: max_concurrency,
       timeout: timeout,
       on_timeout: :kill_task
     )
-    |> Enum.reduce(%{cached: 0, skipped: 0, failed: 0, failures: [], assets: []}, fn
-      {:ok, {:skip, _asset}}, summary ->
-        %{summary | skipped: summary.skipped + 1}
+    |> Enum.reduce(
+      %{cached: 0, thumbnails: 0, skipped: 0, failed: 0, failures: [], assets: []},
+      fn
+        {:ok, {:skip, _asset}}, summary ->
+          %{summary | skipped: summary.skipped + 1}
 
-      {:ok, {:thumbnail, asset, cache_path, thumbnail_path}}, summary ->
-        thumbnail_file_path =
-          maybe_generate_thumbnail(cache_path, thumbnail_path, thumbnailer, thumbnail_timeout)
+        {:ok, {:thumbnail, asset, cache_path, thumbnail_path}}, summary ->
+          thumbnail_file_path =
+            maybe_generate_thumbnail(cache_path, thumbnail_path, thumbnailer, thumbnail_timeout)
 
-        cached_asset =
-          asset
-          |> Ash.Changeset.for_update(:update, %{thumbnail_file_path: thumbnail_file_path})
-          |> Ash.update!(authorize?: false)
+          cached_asset =
+            asset
+            |> Ash.Changeset.for_update(:update, %{thumbnail_file_path: thumbnail_file_path})
+            |> Ash.update!(authorize?: false)
 
-        upload_cached_paths([asset.cached_file_path, thumbnail_file_path])
+          upload_cached_paths([asset.cached_file_path, thumbnail_file_path])
 
-        %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
+          count_cached(summary, cached_asset, thumbnail_file_path)
 
-      {:ok, {:adopt, asset, cache_path, thumbnail_path}}, summary ->
-        cached_asset =
-          asset
-          |> Ash.Changeset.for_update(:update, %{
-            cache_policy: "cache_allowed",
-            cached_file_path: cache_path,
-            thumbnail_file_path: thumbnail_path,
-            cached_at: DateTime.utc_now(:second)
-          })
-          |> Ash.update!(authorize?: false)
+        {:ok, {:adopt, asset, cache_path, thumbnail_path}}, summary ->
+          cached_asset =
+            asset
+            |> Ash.Changeset.for_update(:update, %{
+              cache_policy: "cache_allowed",
+              cached_file_path: cache_path,
+              thumbnail_file_path: thumbnail_path,
+              cached_at: DateTime.utc_now(:second)
+            })
+            |> Ash.update!(authorize?: false)
 
-        upload_cached_paths([cache_path, thumbnail_path])
+          upload_cached_paths([cache_path, thumbnail_path])
 
-        %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
+          count_cached(summary, cached_asset, thumbnail_path)
 
-      {:ok, {:cache, asset, cache_path, body}}, summary ->
-        ensure_safe_cache_write_path!(cache_path, cache_root)
-        File.write!(cache_path, body)
+        {:ok, {:cache, asset, cache_path, body}}, summary ->
+          ensure_safe_cache_write_path!(cache_path, cache_root)
+          File.write!(cache_path, body)
 
-        thumbnail_file_path =
-          maybe_generate_thumbnail(
-            cache_path,
-            thumbnail_path(asset, cache_root),
-            thumbnailer,
-            thumbnail_timeout
-          )
+          thumbnail_file_path =
+            maybe_generate_thumbnail(
+              cache_path,
+              thumbnail_path(asset, cache_root),
+              thumbnailer,
+              thumbnail_timeout
+            )
 
-        cached_asset =
-          asset
-          |> Ash.Changeset.for_update(:update, %{
-            cache_policy: "cache_allowed",
-            cached_file_path: cache_path,
-            thumbnail_file_path: thumbnail_file_path,
-            cached_at: DateTime.utc_now(:second)
-          })
-          |> Ash.update!(authorize?: false)
+          cached_asset =
+            asset
+            |> Ash.Changeset.for_update(:update, %{
+              cache_policy: "cache_allowed",
+              cached_file_path: cache_path,
+              thumbnail_file_path: thumbnail_file_path,
+              cached_at: DateTime.utc_now(:second)
+            })
+            |> Ash.update!(authorize?: false)
 
-        upload_cached_paths([cache_path, thumbnail_file_path])
+          upload_cached_paths([cache_path, thumbnail_file_path])
 
-        %{summary | cached: summary.cached + 1, assets: [cached_asset | summary.assets]}
+          count_cached(summary, cached_asset, thumbnail_file_path)
 
-      {:ok, {:error, asset, reason}}, summary ->
-        handle_cache_failure(summary, asset.source_url, reason, strict?)
+        {:ok, {:error, asset, reason}}, summary ->
+          handle_cache_failure(summary, asset.source_url, reason, strict?)
 
-      {:exit, reason}, summary ->
-        handle_cache_failure(summary, nil, inspect(reason), strict?)
-    end)
+        {:exit, reason}, summary ->
+          handle_cache_failure(summary, nil, inspect(reason), strict?)
+      end
+    )
     |> Map.update!(:assets, &Enum.reverse/1)
     |> Map.update!(:failures, &Enum.reverse/1)
     |> tap(fn _summary -> CachePruner.prune!(cache_root: cache_root) end)
+  end
+
+  @doc """
+  Returns cover-cache coverage grouped by provider.
+
+  `cached` counts eligible assets whose original cache file exists; `thumbnails`
+  counts eligible assets with both the original and thumbnail present.
+  """
+  @spec audit_cache(keyword()) :: [map()]
+  def audit_cache(opts \\ []) do
+    provider = Keyword.get(opts, :provider)
+
+    CoverAsset
+    |> Ash.read!(authorize?: false)
+    |> filter_provider(provider)
+    |> Enum.group_by(& &1.provider)
+    |> Enum.map(fn {provider, assets} -> coverage_for_provider(provider, assets) end)
+    |> Enum.sort_by(& &1.provider)
+  end
+
+  @doc "Returns true when an asset is eligible for public caching."
+  @spec cache_eligible?(term()) :: boolean()
+  def cache_eligible?(%CoverAsset{} = asset), do: cache_candidate?(asset)
+  def cache_eligible?(_asset), do: false
+
+  @doc "Returns true when the stored cache path exists and is safe to serve."
+  @spec cached_file_available?(String.t() | nil) :: boolean()
+  def cached_file_available?(path), do: cached_file_present?(path)
+
+  defp coverage_for_provider(provider, assets) do
+    eligible = Enum.filter(assets, &cache_eligible?/1)
+
+    cached =
+      Enum.count(eligible, &cached_file_available?(&1.cached_file_path))
+
+    thumbnails =
+      Enum.count(eligible, fn asset ->
+        cached_file_available?(asset.cached_file_path) and
+          cached_file_available?(asset.thumbnail_file_path)
+      end)
+
+    %{
+      provider: provider,
+      assets: length(assets),
+      eligible: length(eligible),
+      cached: cached,
+      thumbnails: thumbnails,
+      missing_cache: length(eligible) - cached,
+      missing_thumbnails: cached - thumbnails,
+      non_public: length(assets) - length(eligible)
+    }
   end
 
   defp filter_source_urls(assets, :all), do: assets
@@ -304,13 +369,37 @@ defmodule Hiraeth.Covers do
     Enum.filter(assets, &MapSet.member?(allowed, &1.source_url))
   end
 
+  defp filter_provider(assets, nil), do: assets
+
+  defp filter_provider(assets, provider) when is_binary(provider) do
+    Enum.filter(assets, &(&1.provider == provider))
+  end
+
+  defp count_cached(summary, asset, thumbnail_path) do
+    summary
+    |> Map.update!(:cached, &(&1 + 1))
+    |> Map.update!(:assets, &[asset | &1])
+    |> count_thumbnail(thumbnail_path)
+  end
+
+  defp count_thumbnail(summary, path) when is_binary(path) do
+    if File.regular?(path) do
+      %{summary | thumbnails: summary.thumbnails + 1}
+    else
+      summary
+    end
+  end
+
+  defp count_thumbnail(summary, _path), do: summary
+
   defp cover_cache_plan(
          %CoverAsset{} = asset,
          cache_root,
          force?,
          fetch,
          req_options,
-         max_body_size
+         max_body_size,
+         prefer_store?
        ) do
     cache_path = cache_path(asset, cache_root)
     thumbnail_path = thumbnail_path(asset, cache_root)
@@ -326,7 +415,14 @@ defmodule Hiraeth.Covers do
         {:adopt, asset, cache_path, thumbnail_path}
 
       true ->
-        fetch_into_cache(asset, cache_path, fetch, req_options, max_body_size)
+        fetch_into_cache(
+          asset,
+          cache_path,
+          fetch,
+          req_options,
+          max_body_size,
+          prefer_store?
+        )
     end
   end
 
@@ -343,10 +439,23 @@ defmodule Hiraeth.Covers do
     not force? and cached_file_present?(cache_path) and cached_file_present?(thumbnail_path)
   end
 
-  defp fetch_into_cache(asset, cache_path, fetch, req_options, max_body_size) do
+  defp fetch_into_cache(
+         asset,
+         cache_path,
+         fetch,
+         req_options,
+         max_body_size,
+         prefer_store?
+       ) do
     body =
-      fetch_cover_body(asset, fetch, req_options, max_body_size)
-      |> validate_fetched_cover!(asset.source_url, max_body_size)
+      case stored_cover_body(cache_path, prefer_store?) do
+        {:ok, stored_body} ->
+          validate_fetched_cover!(stored_body, asset.source_url, max_body_size)
+
+        :missing ->
+          fetch_cover_body(asset, fetch, req_options, max_body_size)
+          |> validate_fetched_cover!(asset.source_url, max_body_size)
+      end
 
     {:cache, asset, cache_path, body}
   rescue
@@ -354,6 +463,24 @@ defmodule Hiraeth.Covers do
   catch
     kind, reason -> {:error, asset, "#{kind}: #{inspect(reason)}"}
   end
+
+  # A cold container can refill its working set from the durable copy without
+  # re-fetching every publisher URL. Only a missing object falls through to the
+  # source; a store error is treated as a miss so the source remains a recovery
+  # path.
+  defp stored_cover_body(cache_path, true) do
+    if Store.configured?() do
+      case Store.get(object_key(cache_path)) do
+        {:ok, body, _content_type} -> {:ok, body}
+        :missing -> :missing
+        {:error, _reason} -> :missing
+      end
+    else
+      :missing
+    end
+  end
+
+  defp stored_cover_body(_cache_path, _prefer_store?), do: :missing
 
   defp fetch_cover_body(%CoverAsset{} = asset, nil, req_options, max_body_size) do
     asset.source_url
@@ -434,13 +561,24 @@ defmodule Hiraeth.Covers do
   def cache_file_path_safe?(_path), do: false
 
   @doc """
-  Uploads every locally cached cover and thumbnail to the configured store.
+  Uploads locally cached covers and thumbnails to the configured store.
+
+  Pass `source_urls:` or `provider:` to scope the upload; without options every
+  cover asset is considered.
   """
-  @spec upload_cached_covers!() :: %{uploaded: non_neg_integer(), failed: non_neg_integer()}
-  def upload_cached_covers! do
+  @spec upload_cached_covers!(keyword()) :: %{
+          uploaded: non_neg_integer(),
+          failed: non_neg_integer()
+        }
+  def upload_cached_covers!(opts \\ []) do
     if Store.configured?() do
+      source_urls = Keyword.get(opts, :source_urls, :all)
+      provider = Keyword.get(opts, :provider)
+
       CoverAsset
       |> Ash.read!(authorize?: false)
+      |> filter_source_urls(source_urls)
+      |> filter_provider(provider)
       |> Enum.reduce(%{uploaded: 0, failed: 0}, &upload_asset/2)
     else
       %{uploaded: 0, failed: 0}
@@ -579,16 +717,30 @@ defmodule Hiraeth.Covers do
 
   defp run_thumbnailer(_thumbnailer, _source_path, _thumbnail_path, _timeout), do: :error
 
+  @thumbnail_programs ["magick", "convert"]
+
+  # ImageMagick 7 installs `magick`; Debian's ImageMagick 6 package installs
+  # `convert`. Both accept the same resize invocation.
+  @doc false
+  def thumbnail_command do
+    Enum.find_value(@thumbnail_programs, fn program ->
+      case System.find_executable(program) do
+        nil -> nil
+        path -> {program, path}
+      end
+    end)
+  end
+
   @doc false
   def generate_thumbnail(source_path, thumbnail_path) do
-    with magick when is_binary(magick) <- System.find_executable("magick"),
+    with {_program, command} when is_binary(command) <- thumbnail_command(),
          timeout when is_binary(timeout) <- System.find_executable("timeout"),
          {_, 0} <-
            System.cmd(
              timeout,
              [
                @thumbnail_command_timeout,
-               magick,
+               command,
                source_path,
                "-auto-orient",
                "-thumbnail",

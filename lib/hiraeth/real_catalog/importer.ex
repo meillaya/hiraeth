@@ -1342,6 +1342,7 @@ defmodule Hiraeth.RealCatalog.Importer do
       "displayed_fields" => record.displayed_fields,
       "publisher" => record.publisher,
       "imprint" => record.imprint,
+      "slug_scope" => Map.get(record, :slug_scope),
       "provider_permissions" => Map.get(dataset, :provider_permissions),
       "ingestion_candidate" => ingestion_candidate_payload(dataset, record),
       "field_sources" => Map.get(record, :field_sources),
@@ -1518,14 +1519,27 @@ defmodule Hiraeth.RealCatalog.Importer do
   defp parse_date(nil), do: nil
   defp parse_date(value), do: Date.from_iso8601!(value)
 
-  defp work_slug(record, publisher_slug),
-    do: "#{publisher_slug}-#{Slug.slugify(display_title(record, :work))}"
+  defp work_slug(record, _publisher_slug),
+    do: "#{slug_scope(record)}-#{Slug.slugify(display_title(record, :work))}"
 
   defp edition_slug(record) do
     identity = normalized_isbn(record) || "source-#{Slug.slugify(record.source_product_id)}"
 
     title_slug = record |> display_title(:edition) |> Slug.slugify()
-    "#{Slug.slugify(record.publisher)}-#{title_slug}-#{record.edition.format}-#{identity}"
+    "#{slug_scope(record)}-#{title_slug}-#{record.edition.format}-#{identity}"
+  end
+
+  # `slug_scope` preserves the historical URL prefix when a source imprint is
+  # folded under a parent publisher. Without it, a publisher rename would
+  # change every work/edition slug and orphan the existing catalog rows.
+  defp slug_scope(record) do
+    value = Map.get(record, :slug_scope) || Map.get(record, "slug_scope")
+
+    if present?(value) do
+      Slug.slugify(value)
+    else
+      Slug.slugify(record.publisher)
+    end
   end
 
   defp edition_source_uri(record) do

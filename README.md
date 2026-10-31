@@ -20,15 +20,15 @@ FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 
 ## What is in the app
 
-- Curated catalog for the approved indie publisher corpus, currently 8,776 deterministic source records across providers such as New Directions, Deep Vellum, Pushkin Press, and more.
+- Curated catalog for the approved indie publisher corpus, currently 9,415 deterministic source records across providers such as New Directions, Deep Vellum, Pushkin Press, and more. Fum d'Estampa, Phoneme Media, La Reunion, and A Strange Object are catalogued as Deep Vellum imprints while retaining their original provider provenance.
 - Provenance-aware imports, cover attribution, source artifact reports, and gap states instead of fabricated metadata.
-- R2-backed public cover display served same-origin from `/covers/cache/...`; unsafe or missing covers render typographic fallbacks.
+- R2-backed public cover display served same-origin from `/covers/cache/...`; cards and book heroes use generated thumbnails, and unsafe or missing covers render typographic fallbacks.
 - Ash-backed ingestion control plane for provider sources, provider runs, source snapshots, record candidates, diffs, quarantine, replay, and ingestion events.
 - Oban-backed autonomous ingestion phases: plan, fetch, normalize, validate, diff, cover-cache, apply, audit, quarantine, replay, and retention cleanup.
 - Private-by-default Python sidecar with strict CORS, typed errors, contract snapshots, and URL validation for fetch/scrape adapters.
 - Typed public boundary: projection structs with `@type`/`@spec`, a spec-coverage contract test, Dialyzer in `mix ci`, and an OpenAPI 3.0 document generated from the controller operations.
 - Versioned read-only JSON API at `/api/v1` for books, editions, publishers, series, and contributors; every response is validated against the served schema in tests.
-- Documentation under `docs/`: API reference, typed boundary design, scalability and operations research, and the repository audit.
+- Documentation under `docs/`: API reference, typed boundary design, scalability and operations research, cover sourcing, and the repository audit.
 
 ## Catalog API
 
@@ -76,11 +76,22 @@ Open <http://localhost:4000>. Postgres data lives in the gitignored `tmp/pgdata`
 mix hiraeth.providers.backfill
 mix hiraeth.ingest --provider deep_vellum_official_store --dry-run --json
 mix hiraeth.ingest --provider deep_vellum_official_store --wait
+mix hiraeth.catalog.refresh --all --dry-run --json
+mix hiraeth.catalog.refresh --provider astra_house_official_store --apply --json
+mix hiraeth.covers.sync --all --missing --json
+mix hiraeth.covers.audit --json
 mix hiraeth.cache_covers
+mix hiraeth.real_catalog.sync --check
 mix hiraeth.audit_provenance --seed
 mix hiraeth.real_catalog.source_artifacts
 mix hiraeth.real_catalog.coverage_report
 ```
+
+`mix hiraeth.covers.sync` fills missing originals and thumbnails from the
+recorded official cover URLs. `mix hiraeth.catalog.refresh` fetches current
+records from the per-provider script or sidecar profile, merges them additively,
+regenerates the source-authority/artifact/coverage evidence, imports them, and
+caches covers. See [docs/covers.md](docs/covers.md) for the full pipeline.
 
 Autonomous scheduled ingestion runs on its own per-provider cadence; see the "Autonomous catalog updates" runbook section for what runs when, the `HIRAETH_SCHEDULED_INGEST` kill-switch (off by default locally via devenv), and rollout order.
 
@@ -145,9 +156,9 @@ MIX_ENV=dev DATABASE_URL=postgresql://... mix run priv/repo/seeds.exs
 railway tcp-proxy delete <proxy-id> --yes
 ```
 
-The seed loads 8,776 editions. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the images in this README after a visible change.
+The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the images in this README after a visible change.
 
-Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only.
+Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only. Thumbnails require ImageMagick; the Docker runtime installs it, and local bare-toolchain users can run `nix profile add nixpkgs#imagemagick`. The five publisher pages that previously had no covers (Astra House, Pushkin Press, Seven Stories Press, Tilted Axis Press, Wakefield Press) are covered by `mix hiraeth.covers.sync`; see [docs/covers.md](docs/covers.md).
 
 Both services must share `SCRAPLING_SIDECAR_TOKEN`. The sidecar image runs in secure mode, refuses to start without the token and its manifests, and rejects unsigned data requests. Phoenix refuses to boot in production without the token and signs every sidecar request. When a provider manifest changes, run `bash scripts/catalog/sync_sidecar_manifests.sh` before building the sidecar; a sidecar test fails if the image copies drift from `priv/catalog_sources/provider_manifests`.
 

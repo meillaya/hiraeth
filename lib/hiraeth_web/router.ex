@@ -71,6 +71,10 @@ defmodule HiraethWeb.Router do
     live "/contributors", ContributorsLive, :index
     live "/contributors/:slug", ContributorsLive, :show
     live "/publishers", PublishersLive, :index
+    get "/publishers/a-strange-object", RedirectController, :publisher_group
+    get "/publishers/fum-destampa", RedirectController, :publisher_group
+    get "/publishers/la-reunion", RedirectController, :publisher_group
+    get "/publishers/phoneme-media", RedirectController, :publisher_group
     live "/publishers/:slug", PublishersLive, :show
     live "/series", SeriesLive, :index
     live "/series/:slug", SeriesLive, :show

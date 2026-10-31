@@ -28,12 +28,13 @@ defmodule Hiraeth.RealCatalog.Validator do
     end
   end
 
-  def validate_datasets(datasets, manifest \\ nil) do
+  def validate_datasets(datasets, manifest \\ nil, opts \\ []) do
     manifest = manifest || source_authority_manifest_for_datasets(datasets)
 
     findings =
       datasets
-      |> Enum.flat_map(&dataset_findings(&1, manifest))
+      |> Enum.flat_map(&dataset_findings(&1, manifest, opts))
+      |> Kernel.++(duplicate_provider_findings(datasets))
       |> Kernel.++(duplicate_findings(datasets))
 
     if findings == [] do
@@ -43,14 +44,14 @@ defmodule Hiraeth.RealCatalog.Validator do
     end
   end
 
-  defp dataset_findings(dataset, manifest) do
+  defp dataset_findings(dataset, manifest, opts) do
     records = Map.get(dataset, :records, []) || []
 
     []
     |> add_blank(dataset, nil, dataset[:provider], "provider is required")
     |> add_if(records == [], dataset, nil, "dataset has no records")
     |> add_manifest_provider_finding(dataset, manifest)
-    |> add_record_count_finding(dataset, records, manifest)
+    |> add_record_count_finding(dataset, records, manifest, opts)
     |> Kernel.++(provider_permission_findings(dataset))
     |> Kernel.++(Enum.flat_map(records, &record_findings(dataset, &1)))
   end
@@ -74,6 +75,7 @@ defmodule Hiraeth.RealCatalog.Validator do
     |> add_format_finding(dataset, record)
     |> add_supporter_sku_finding(dataset, record)
     |> add_curation_finding(dataset, record)
+    |> add_slug_scope_finding(dataset, record)
     |> Kernel.++(cover_findings(dataset, record))
     |> Kernel.++(displayed_field_findings(dataset, record))
     |> Kernel.++(field_source_findings(dataset, record))
@@ -118,19 +120,23 @@ defmodule Hiraeth.RealCatalog.Validator do
     end
   end
 
-  defp add_record_count_finding(findings, dataset, records, manifest) do
-    case expected_record_count(manifest, dataset) do
-      expected_count when is_integer(expected_count) ->
-        add_if(
-          findings,
-          length(records) != expected_count,
-          dataset,
-          nil,
-          "dataset must contain #{expected_count} approved records per source authority manifest"
-        )
+  defp add_record_count_finding(findings, dataset, records, manifest, opts) do
+    if Keyword.get(opts, :record_count, :enforce) == :skip do
+      findings
+    else
+      case expected_record_count(manifest, dataset) do
+        expected_count when is_integer(expected_count) ->
+          add_if(
+            findings,
+            length(records) != expected_count,
+            dataset,
+            nil,
+            "dataset must contain #{expected_count} approved records per source authority manifest"
+          )
 
-      _ ->
-        findings
+        _ ->
+          findings
+      end
     end
   end
 
@@ -311,6 +317,25 @@ defmodule Hiraeth.RealCatalog.Validator do
       record,
       "supporter-only SKU is not allowed"
     )
+  end
+
+  defp add_slug_scope_finding(findings, dataset, record) do
+    case Map.get(record, :slug_scope) do
+      nil ->
+        findings
+
+      value when is_binary(value) and value != "" ->
+        add_if(
+          findings,
+          not String.match?(value, ~r/^[a-z0-9][a-z0-9-]*$/),
+          dataset,
+          record,
+          "slug_scope must be a lowercase hyphenated slug"
+        )
+
+      _value ->
+        add_if(findings, true, dataset, record, "slug_scope must be a string")
+    end
   end
 
   defp add_curation_finding(findings, dataset, record) do
@@ -659,6 +684,20 @@ defmodule Hiraeth.RealCatalog.Validator do
     if cover_provider in [nil, provider],
       do: [],
       else: [finding(dataset, record, "cover provider must match dataset provider")]
+  end
+
+  defp duplicate_provider_findings(datasets) do
+    datasets
+    |> Enum.group_by(& &1.provider)
+    |> Enum.flat_map(fn
+      {_provider, [_single]} ->
+        []
+
+      {_provider, duplicates} ->
+        Enum.map(duplicates, fn dataset ->
+          finding(dataset, nil, "dataset provider is declared by more than one file")
+        end)
+    end)
   end
 
   defp duplicate_findings(datasets) do

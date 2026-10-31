@@ -171,7 +171,7 @@ defmodule Hiraeth.Ingestion.MixTaskDryRunTest do
                    ])
         end)
 
-      assert output =~ "expected_record_count 2 does not match fetched record count 1"
+      assert output =~ "fetched record count 1 is below the expected_record_count floor 2"
       assert output =~ "Dry-run completed with validation issues"
     after
       cleanup_temp_manifests()

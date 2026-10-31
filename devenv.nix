@@ -19,6 +19,7 @@ in
     pkgs.nodejs_22
     pkgs.python312
     pkgs.uv
+    pkgs.imagemagick
   ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
     pkgs.chromium
   ];

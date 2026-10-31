@@ -11,9 +11,9 @@ The public workload is read-only and small in row count by database standards.
 
 | Quantity | Value | Source |
 |---|---|---|
-| Source records / editions | 8,776 | `priv/repo/seeds.exs` output |
-| Works (book pages) | 7,011 | measured in the seeded test database |
-| Publishers | 23 | measured in the seeded test database |
+| Source records / editions | 9,415 | `priv/repo/seeds.exs` output |
+| Works (book pages) | 7,582 | measured in the seeded test database |
+| Publisher pages (23 source providers) | 20 | measured in the seeded test database |
 | Provider manifests | 11 enabled, 28 registry rows | `priv/catalog_sources/provider_manifests`, `provider_backfill_test.exs` |
 | Records declared by enabled manifests | 2,462 | sum of `expected_record_count` |
 | Oban queues | ingestion 4, covers 4, audit 2 | `config/config.exs` |
@@ -28,7 +28,7 @@ same database and the same BEAM node.
 
 ## Measured read cost
 
-Measured on 31 October 2026 against 8,776 editions in the local PostgreSQL 16
+Measured on 31 October 2026 against 9,415 source records in the local PostgreSQL 16
 instance, single process, warm filesystem cache, `:persistent_term` cache cleared
 where marked cold. Values are wall-clock milliseconds for the Elixir function
 call only, without HTTP or JSON encoding.
@@ -57,7 +57,7 @@ correlates a contributor subquery per edition row. It is inside the 175 ms warm
 budget asserted by `test/hiraeth_web/public_catalog_performance_test.exs`, but it
 is the first query to watch if the corpus grows.
 
-Every list query does a windowed count over the same join. At 7,011 works the
+Every list query does a windowed count over the same join. At 7,582 works the
 cost is tens of milliseconds; at ten times the corpus it is the first read path
 that needs a materialized count or a denormalized sort table.
 
@@ -81,15 +81,19 @@ The proxy refills a local miss at the existing `/covers/cache/...` path, so the
 volume can be removed, the service can run replicas, and redeploys no longer
 need to detach a volume. R2 charges $0.015 per GB-month with free egress and a
 10 GB free tier ([R2 pricing](https://developers.cloudflare.com/r2/pricing/)).
-At roughly 7,000 covers and 1.2 to 3.0 GB with thumbnails, storage is a few
-cents per month. The first view after a cold start pays one bucket GET.
+At roughly 8,800 covers and a few GB with thumbnails, storage is a few cents per
+month. Cards and book heroes use generated 400×600 thumbnails (tens of KB rather
+than the multi-megabyte originals), and cover responses carry a one-day browser
+cache. The first view after a cold start pays one bucket GET; the operator cover
+sync and the proxy both read the durable store before falling back to a
+publisher URL.
 
-The third failure is ingestion convergence. Exact `expected_record_count`
-equality, all-or-nothing validation, and an unchanged-classification that reads
-candidate rows rather than applied rows mean a transient failure can keep the
-catalog stale while every scheduled run reports a result. This is a correctness
-failure that presents as a capacity problem: retries amplify write load without
-changing the data.
+The third failure is ingestion convergence. `expected_record_count` is now a
+floor rather than exact equality, so new titles pass while a record-count drop is
+still blocked; the checked-in authority/artifact/coverage evidence is regenerated
+by `mix hiraeth.real_catalog.sync --write` and checked by `--check`. The remaining
+risk is an unchanged-classification that reads candidate rows rather than applied
+rows, which can keep the catalog stale while every scheduled run reports a result.
 
 The fourth is unauthenticated API traffic. There is no rate limit, no response
 cache header, and each request can cost 40 ms of database time. A crawler on

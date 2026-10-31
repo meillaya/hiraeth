@@ -1,0 +1,38 @@
+{
+  "provider": "tilted_axis_press_official_site",
+  "name": "Tilted Axis Press",
+  "source_mode": "api",
+  "source_urls": [
+    "https://www.tiltedaxispress.com/shop"
+  ],
+  "source_hosts": [
+    "www.tiltedaxispress.com"
+  ],
+  "cover_hosts": [
+    "images.squarespace-cdn.com",
+    "static1.squarespace.com",
+    "covers.openlibrary.org"
+  ],
+  "api": {
+    "type": "squarespace",
+    "endpoint": "https://www.tiltedaxispress.com/shop",
+    "auth": null
+  },
+  "rate_limit": {
+    "max_concurrency": 1,
+    "min_delay_ms": 500,
+    "max_bytes": 10485760
+  },
+  "expected_record_count": 109,
+  "permission_basis": "Operator-authorized public catalog refresh from official publisher pages/APIs; factual bibliographic metadata, official product descriptions, official cover URLs, purchase links, and source provenance preserved for each field.",
+  "takedown_contact": "https://www.tiltedaxispress.com/contact",
+  "excluded_content": [
+    "cart_checkout_account",
+    "inventory_state",
+    "prices",
+    "user_reviews",
+    "raw_html_without_sanitization"
+  ],
+  "cover_cache_policy": "cache_allowed",
+  "not_legal_advice": "Operator-authorized ingestion policy and provenance metadata; not legal advice."
+}

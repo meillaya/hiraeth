@@ -18,11 +18,22 @@ defmodule Hiraeth.RealCatalogSourceArtifactsTest do
       |> File.read!()
       |> Jason.decode!()
 
+    authority =
+      @dataset_dir
+      |> Path.join("source_authority_manifest.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    expected_total =
+      authority["providers"]
+      |> Enum.map(&get_in(&1, ["coverage", "expected_record_count"]))
+      |> Enum.sum()
+
     assert checked_in == built
     assert built["generated_from"] == "checked_in_real_publisher_fixtures"
     assert built["completeness_boundary"] == "approved_source_corpus"
-    assert built["total_records"] == 8776
-    assert length(built["artifacts"]) == 23
+    assert built["total_records"] == expected_total
+    assert length(built["artifacts"]) == length(authority["providers"])
 
     for artifact <- built["artifacts"] do
       assert artifact["record_count"] == artifact["expected_record_count"]

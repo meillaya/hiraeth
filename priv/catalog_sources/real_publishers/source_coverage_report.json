@@ -3,27 +3,27 @@
   "generated_from": "checked_in_approved_source_corpus",
   "providers": [
     {
-      "approved_source_records": 35,
-      "attempted_records": 35,
+      "approved_source_records": 38,
+      "attempted_records": 38,
       "checksums": {
-        "dataset_sha256": "efd89aa09165a307f572ea2053768d504b01ca9a13884e74369657bab0472360"
+        "dataset_sha256": "9415c63c56cd3f0fa3e6075772b1671dbdab66ad773a1ade24df52a063f3071f"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "a_strange_object.json",
       "expansion_state": null,
-      "expected_record_count": 35,
+      "expected_record_count": 38,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 35,
+        "missing_review_links": 38,
         "structured_missing_fields": 0
       },
       "gap_policy": "import_with_gaps",
       "provider": "a_strange_object_official_store",
       "skipped_source_records": 0,
       "source_blocked": false,
-      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata",
+      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata Catalog grouping: Deep Vellum imprint.",
       "source_expansion_blocked": false,
       "source_status": "approved_machine_readable_source_available"
     },
@@ -53,20 +53,20 @@
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 497,
-      "attempted_records": 497,
+      "approved_source_records": 512,
+      "attempted_records": 512,
       "checksums": {
-        "dataset_sha256": "95a010043e2d04ede3c666fd25ac39ccc63de5391510c14693c226c5a2cd821f"
+        "dataset_sha256": "d498980439569ffbf3e693aa3aca38568564d177deb3aecd98e471e72069c40c"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "archipelago_books.json",
       "expansion_state": null,
-      "expected_record_count": 497,
+      "expected_record_count": 512,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 497,
+        "missing_review_links": 512,
         "structured_missing_fields": 38
       },
       "gap_policy": "import_with_gaps",
@@ -103,20 +103,20 @@
       "source_status": "approved_official_html_source_available"
     },
     {
-      "approved_source_records": 181,
-      "attempted_records": 181,
+      "approved_source_records": 182,
+      "attempted_records": 182,
       "checksums": {
-        "dataset_sha256": "9e2fa29c85bfaedec3dc7404d6dad31eec2103575395760f52a8f59b72164eeb"
+        "dataset_sha256": "53a1859a64a4b24b7b1dd9b1aa55544d60dce2c8b3e747eeff9143cf53af20e9"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "coffee_house_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 181,
+      "expected_record_count": 182,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 181,
+        "missing_review_links": 182,
         "structured_missing_fields": 0
       },
       "gap_policy": "import_with_gaps",
@@ -128,20 +128,20 @@
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 944,
-      "attempted_records": 944,
+      "approved_source_records": 972,
+      "attempted_records": 972,
       "checksums": {
-        "dataset_sha256": "05d501d75564ec40c38a33c33b31ad76f59051e3388601642345aa990a84a770"
+        "dataset_sha256": "6d75c3dfc88cbb6998e20f1d763bf612360be56861b34ef68533693aae4de1b7"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "dalkey_archive.json",
       "expansion_state": null,
-      "expected_record_count": 944,
+      "expected_record_count": 972,
       "gap_counts": {
         "missing_cover": 3,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 944,
+        "missing_review_links": 972,
         "structured_missing_fields": 11
       },
       "gap_policy": "import_with_gaps",
@@ -153,20 +153,20 @@
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 352,
-      "attempted_records": 352,
+      "approved_source_records": 366,
+      "attempted_records": 366,
       "checksums": {
-        "dataset_sha256": "6221c2b02601678a0ef0ac40fce3724c16be1ae7b899ad5c58714ac0c9ffafc2"
+        "dataset_sha256": "1c84056b93fa0f637837c9022e17e472b25815a52b89a642d9c5be8c4a8c0391"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "deep_vellum.json",
       "expansion_state": null,
-      "expected_record_count": 352,
+      "expected_record_count": 366,
       "gap_counts": {
         "missing_cover": 1,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 352,
+        "missing_review_links": 366,
         "structured_missing_fields": 1
       },
       "gap_policy": "import_with_gaps",
@@ -178,21 +178,21 @@
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 392,
-      "attempted_records": 392,
+      "approved_source_records": 421,
+      "attempted_records": 421,
       "checksums": {
-        "dataset_sha256": "37d977db06839ff4df6e64f09dc85236c23ef2654bd853406fb9c57857ee11ef"
+        "dataset_sha256": "9f3eb3dbf46a64088a7f972afb7c948d92398eddb68c9147f02e05805cca4a68"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "fitzcarraldo_editions.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 392,
+      "expected_record_count": 421,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 200,
+        "missing_isbn": 214,
         "missing_purchase_link": 0,
-        "missing_review_links": 392,
-        "structured_missing_fields": 200
+        "missing_review_links": 421,
+        "structured_missing_fields": 214
       },
       "gap_policy": "import_with_gaps",
       "provider": "fitzcarraldo_editions_official_site",
@@ -206,7 +206,7 @@
       "approved_source_records": 2,
       "attempted_records": 2,
       "checksums": {
-        "dataset_sha256": "225545bd4d6106c57785a9effa350e7749689e38dda90f7b80aa35eb4a1a536a"
+        "dataset_sha256": "bc44e1ef8a62dc27e97185f24da3905af67e68d17619a8a140bd620a3f533cf6"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "fum_destampa.json",
@@ -223,26 +223,26 @@
       "provider": "fum_destampa_official_store",
       "skipped_source_records": 0,
       "source_blocked": false,
-      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata",
+      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata Catalog grouping: Deep Vellum imprint.",
       "source_expansion_blocked": false,
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 384,
-      "attempted_records": 384,
+      "approved_source_records": 403,
+      "attempted_records": 403,
       "checksums": {
-        "dataset_sha256": "2cfaa2dcd8d76465ae7286381bf9b507691d23e2a0f6eb70af2c7ffc06616da1"
+        "dataset_sha256": "ff78b05092aa69134f28b5cd64f5350c44a81df3be742f37ad7fcb15f162d0bf"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "historical_materialism.json",
       "expansion_state": null,
-      "expected_record_count": 384,
+      "expected_record_count": 403,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 384,
+        "missing_isbn": 403,
         "missing_purchase_link": 0,
-        "missing_review_links": 384,
-        "structured_missing_fields": 384
+        "missing_review_links": 403,
+        "structured_missing_fields": 403
       },
       "gap_policy": "import_with_gaps",
       "provider": "historical_materialism_official_site",
@@ -253,46 +253,46 @@
       "source_status": "approved_official_html_source_available"
     },
     {
-      "approved_source_records": 32,
-      "attempted_records": 32,
+      "approved_source_records": 34,
+      "attempted_records": 34,
       "checksums": {
-        "dataset_sha256": "642512c53999c28b9876e32da18d7438e9f65ce387d9595aac47edbacf16fe46"
+        "dataset_sha256": "63b605a06d377201dad2b2c102885bc5026185299ea4e551ba2eadc4973c66b4"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "la_reunion.json",
       "expansion_state": null,
-      "expected_record_count": 32,
+      "expected_record_count": 34,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 32,
+        "missing_review_links": 34,
         "structured_missing_fields": 0
       },
       "gap_policy": "import_with_gaps",
       "provider": "la_reunion_official_store",
       "skipped_source_records": 0,
       "source_blocked": false,
-      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata",
+      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata Catalog grouping: Deep Vellum imprint.",
       "source_expansion_blocked": false,
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 66,
-      "attempted_records": 66,
+      "approved_source_records": 67,
+      "attempted_records": 67,
       "checksums": {
-        "dataset_sha256": "1f0a189d4b6a330c0feb8a112f7eaaa5dfebc278720dccec66bfe55dbbca8345"
+        "dataset_sha256": "a766572b30d8c5130acae844131ee3dddcade689ccdd13c067a7c4eb33f02377"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "mcnally_editions.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 66,
+      "expected_record_count": 67,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 1,
+        "missing_isbn": 2,
         "missing_purchase_link": 0,
-        "missing_review_links": 66,
-        "structured_missing_fields": 1
+        "missing_review_links": 67,
+        "structured_missing_fields": 2
       },
       "gap_policy": "import_with_gaps",
       "provider": "mcnally_editions_official_site",
@@ -303,20 +303,20 @@
       "source_status": "available_checked_in_source_corpus"
     },
     {
-      "approved_source_records": 2389,
-      "attempted_records": 2389,
+      "approved_source_records": 2420,
+      "attempted_records": 2420,
       "checksums": {
-        "dataset_sha256": "6418d9d5c77aef87f0e96fa70800d1b370427fe3ba208a82db39849ffe797d9d"
+        "dataset_sha256": "4310f0c14b46645f01773c39b72daae7ea675aeef96abbc4c7980b253ef81e94"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "new_directions.json",
       "expansion_state": null,
-      "expected_record_count": 2389,
+      "expected_record_count": 2420,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 2389,
+        "missing_review_links": 2420,
         "structured_missing_fields": 0
       },
       "gap_policy": "import_with_gaps",
@@ -328,20 +328,20 @@
       "source_status": "approved_official_html_source_available"
     },
     {
-      "approved_source_records": 859,
-      "attempted_records": 859,
+      "approved_source_records": 883,
+      "attempted_records": 883,
       "checksums": {
-        "dataset_sha256": "fa66d440428efa7049a6e1e50b54b93e31b211a0b45f6eb2bd890bd705c31e35"
+        "dataset_sha256": "624370fec845c7e4d6653b8e11554e519c1ed47691ba79c296ef715af7a02109"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "nyrb.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 859,
+      "expected_record_count": 883,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 859,
+        "missing_review_links": 883,
         "structured_missing_fields": 0
       },
       "gap_policy": "import_with_gaps",
@@ -356,7 +356,7 @@
       "approved_source_records": 78,
       "attempted_records": 78,
       "checksums": {
-        "dataset_sha256": "b20c7587c5a05fb1d97aba6aba4afbb5f8136a76779868eb8b03a78e79099247"
+        "dataset_sha256": "e9c03ef576b2a590930fb3477eb61acea959f4ed57ebd01e0dd36a9850f66eed"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "phoneme_media.json",
@@ -373,25 +373,25 @@
       "provider": "phoneme_media_official_store",
       "skipped_source_records": 0,
       "source_blocked": false,
-      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata",
+      "source_corpus_boundary": "official public APIs, official sitemaps, official publisher pages, and checked-in generated fixtures; no fabricated metadata Catalog grouping: Deep Vellum imprint.",
       "source_expansion_blocked": false,
       "source_status": "approved_machine_readable_source_available"
     },
     {
-      "approved_source_records": 74,
-      "attempted_records": 74,
+      "approved_source_records": 84,
+      "attempted_records": 84,
       "checksums": {
-        "dataset_sha256": "8cb97fdb224fb38bb7b7cccb52e11e2b1d682d7bfc36d7d57b8e9b0ec453b5df"
+        "dataset_sha256": "f8823ecb195deb74e4abc71c447d8a096f27d0254c45ce7256b0535eae58db87"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "pushkin_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 74,
+      "expected_record_count": 84,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 4,
         "missing_purchase_link": 0,
-        "missing_review_links": 74,
+        "missing_review_links": 84,
         "structured_missing_fields": 4
       },
       "gap_policy": "import_with_gaps",
@@ -403,20 +403,20 @@
       "source_status": "available_checked_in_source_corpus"
     },
     {
-      "approved_source_records": 842,
-      "attempted_records": 842,
+      "approved_source_records": 858,
+      "attempted_records": 858,
       "checksums": {
-        "dataset_sha256": "daf21425aa987506a50da001a32ca0831c43e710d7ad17f9b403773faf326587"
+        "dataset_sha256": "ef0ea95f7db5d97a4203f8e44bc6115fa57eb2833b0bae565e28036d99875b1c"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "seagull_books.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 842,
+      "expected_record_count": 858,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 2,
         "missing_purchase_link": 0,
-        "missing_review_links": 842,
+        "missing_review_links": 858,
         "structured_missing_fields": 2
       },
       "gap_policy": "import_with_gaps",
@@ -431,7 +431,7 @@
       "approved_source_records": 265,
       "attempted_records": 265,
       "checksums": {
-        "dataset_sha256": "916274b24ee0d6b45515587a19652ad1e65753a1d7de06c6205533da63e0cc8d"
+        "dataset_sha256": "560e5070dbabd0067caa2aec3e320dd45f469a908b0f90544119db9086966268"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "semiotexte.json",
@@ -453,21 +453,21 @@
       "source_status": "approved_official_html_source_available"
     },
     {
-      "approved_source_records": 703,
-      "attempted_records": 703,
+      "approved_source_records": 1137,
+      "attempted_records": 1137,
       "checksums": {
-        "dataset_sha256": "741dd949491476af7230c934085c0f8c84682c0e4ff3c8a8032858632a207f35"
+        "dataset_sha256": "07702bd6813929fa75583d5213d6bd46e446397d3c2e932e21cfc1319226fd2f"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "seven_stories_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 703,
+      "expected_record_count": 1137,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 703,
         "missing_purchase_link": 0,
-        "missing_review_links": 703,
-        "structured_missing_fields": 703
+        "missing_review_links": 1137,
+        "structured_missing_fields": 1026
       },
       "gap_policy": "import_with_gaps",
       "provider": "seven_stories_press_official_site",
@@ -478,21 +478,21 @@
       "source_status": "available_checked_in_source_corpus"
     },
     {
-      "approved_source_records": 109,
-      "attempted_records": 109,
+      "approved_source_records": 110,
+      "attempted_records": 110,
       "checksums": {
-        "dataset_sha256": "d7ed19545f2b2014d04dbf9de438ae57f75e7e5c7a6c65b63e88b0cc111b8dff"
+        "dataset_sha256": "48d94814f6bf93c14389bb4853005044c7dc618481305fe06cb48a31ea470214"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "tilted_axis_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 109,
+      "expected_record_count": 110,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 64,
+        "missing_isbn": 65,
         "missing_purchase_link": 0,
-        "missing_review_links": 109,
-        "structured_missing_fields": 64
+        "missing_review_links": 110,
+        "structured_missing_fields": 65
       },
       "gap_policy": "import_with_gaps",
       "provider": "tilted_axis_press_official_site",
@@ -503,21 +503,21 @@
       "source_status": "available_checked_in_source_corpus"
     },
     {
-      "approved_source_records": 66,
-      "attempted_records": 66,
+      "approved_source_records": 70,
+      "attempted_records": 70,
       "checksums": {
-        "dataset_sha256": "603a8563a687ddb582599914d32d44e45fa3dea268c24e5ed0d248a5fc20c191"
+        "dataset_sha256": "02ff4b3550617292a6c58ee7b3371d8521e37e2563af38af41bce6f54857be2a"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "transit_books.json",
       "expansion_state": null,
-      "expected_record_count": 66,
+      "expected_record_count": 70,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 0,
         "missing_purchase_link": 0,
-        "missing_review_links": 66,
-        "structured_missing_fields": 50
+        "missing_review_links": 70,
+        "structured_missing_fields": 51
       },
       "gap_policy": "import_with_gaps",
       "provider": "transit_books_official_site",
@@ -528,21 +528,21 @@
       "source_status": "approved_official_html_source_available"
     },
     {
-      "approved_source_records": 159,
-      "attempted_records": 159,
+      "approved_source_records": 164,
+      "attempted_records": 164,
       "checksums": {
-        "dataset_sha256": "27605dedc670321c5b32604616a944b53988bce0ea6e2b3516338f782aec236c"
+        "dataset_sha256": "8049ba77275d79d111cd600018f12a07ae26f54635e5f37006f66f1890dc2988"
       },
       "coverage_state": "approved_source_corpus",
       "dataset_file": "unnamed_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 159,
+      "expected_record_count": 164,
       "gap_counts": {
         "missing_cover": 0,
-        "missing_isbn": 3,
+        "missing_isbn": 4,
         "missing_purchase_link": 0,
-        "missing_review_links": 108,
-        "structured_missing_fields": 3
+        "missing_review_links": 113,
+        "structured_missing_fields": 4
       },
       "gap_policy": "import_with_gaps",
       "provider": "unnamed_press_official_site",
@@ -553,20 +553,20 @@
       "source_status": "available_checked_in_source_corpus"
     },
     {
-      "approved_source_records": 104,
-      "attempted_records": 104,
+      "approved_source_records": 106,
+      "attempted_records": 106,
       "checksums": {
-        "dataset_sha256": "07d35b4af32cfabf2e39fc17c9db915de02e92c8b9beddece27f883a41b7ea32"
+        "dataset_sha256": "1d24fb7e52079678da1886443a2b57901852b2cf0cfea1f8aef2a9faa91e307f"
       },
       "coverage_state": "operator_authorized_full_public_catalog_refresh",
       "dataset_file": "wakefield_press.json",
       "expansion_state": "complete_checked_in_source_corpus",
-      "expected_record_count": 104,
+      "expected_record_count": 106,
       "gap_counts": {
         "missing_cover": 0,
         "missing_isbn": 6,
         "missing_purchase_link": 0,
-        "missing_review_links": 104,
+        "missing_review_links": 106,
         "structured_missing_fields": 6
       },
       "gap_policy": "import_with_gaps",
@@ -579,8 +579,8 @@
     }
   ],
   "totals": {
-    "approved_source_records": 8776,
-    "attempted_records": 8776,
+    "approved_source_records": 9415,
+    "attempted_records": 9415,
     "providers": 23,
     "skipped_source_records": 0
   },

@@ -703,7 +703,7 @@ defmodule Hiraeth.Oban.ProviderIngestionWorkerTest do
       job = build_job(manifest_path, "test_publisher_api")
 
       assert {:error, reason} = ProviderIngestionWorker.perform(job)
-      assert reason == "expected_record_count 2 does not match fetched record count 1"
+      assert reason == "fetched record count 1 is below the expected_record_count floor 2"
     after
       cleanup_temp_manifests()
     end

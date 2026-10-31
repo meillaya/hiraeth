@@ -26,7 +26,8 @@ defmodule Hiraeth.MixAliasContractTest do
   @ci_static_gates [
     "cmd mix credo --strict",
     "cmd mix sobelow --exit Low",
-    @ci_audit_gate
+    @ci_audit_gate,
+    "cmd mix hiraeth.real_catalog.sync --check"
   ]
 
   defp aliases do

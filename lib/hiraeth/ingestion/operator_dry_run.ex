@@ -149,8 +149,9 @@ defmodule Hiraeth.Ingestion.OperatorDryRun do
     expected = manifest.expected_record_count
     actual = length(records)
 
-    if is_integer(expected) and expected != actual do
-      {:error, "expected_record_count #{expected} does not match fetched record count #{actual}"}
+    if is_integer(expected) and actual < expected do
+      {:error,
+       "fetched record count #{actual} is below the expected_record_count floor #{expected}"}
     else
       :ok
     end

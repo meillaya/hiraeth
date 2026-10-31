@@ -40,10 +40,12 @@ defmodule Hiraeth.CoversStoreTest do
   end
 
   test "uploads cached originals and thumbnails", %{
+    asset: asset,
     original_path: original_path,
     thumbnail_path: thumbnail_path
   } do
-    assert %{uploaded: 2, failed: 0} = Covers.upload_cached_covers!()
+    assert %{uploaded: 2, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
 
     assert {:ok, @original, "image/jpeg"} =
              CoverStoreFake.get(Covers.object_key(original_path))
@@ -87,7 +89,8 @@ defmodule Hiraeth.CoversStoreTest do
     original_path: original_path,
     thumbnail_path: thumbnail_path
   } do
-    assert %{uploaded: 2, failed: 0} = Covers.upload_cached_covers!()
+    assert %{uploaded: 2, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
 
     purged = Covers.purge_cached_cover!(asset)
 

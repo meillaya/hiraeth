@@ -139,6 +139,7 @@ defmodule Hiraeth.MixProject do
         "cmd mix credo --strict",
         "cmd mix sobelow --exit Low",
         "cmd mix hex.audit",
+        "cmd mix hiraeth.real_catalog.sync --check",
         "assets.setup",
         "assets.build",
         "dialyzer",

@@ -101,52 +101,52 @@ defmodule Mix.Tasks.Hiraeth.Scrape do
       config: build_sidecar_config(manifest)
     }
 
-    case client.scrape(provider_config) do
-      {:ok, %{records: records}} when is_list(records) ->
-        {:ok, Dataset.normalize(records)}
+    case ProviderManifest.effective_source_mode(manifest) do
+      source_mode when is_binary(source_mode) ->
+        result =
+          case source_mode do
+            "api" -> client.fetch(provider_config)
+            "scrape" -> client.scrape(provider_config)
+          end
 
-      {:error, reason} when is_binary(reason) ->
-        {:error, "sidecar scrape failed: #{reason}"}
+        case result do
+          {:ok, %{records: records}} when is_list(records) ->
+            {:ok, Dataset.normalize(records)}
+
+          {:error, reason} when is_binary(reason) ->
+            {:error, "sidecar #{source_mode} failed: #{reason}"}
+
+          {:error, reason} ->
+            {:error, "sidecar #{source_mode} failed: #{inspect(reason)}"}
+        end
 
       {:error, reason} ->
-        {:error, "sidecar scrape failed: #{inspect(reason)}"}
+        {:error, "invalid provider source_mode: #{inspect(reason)}"}
     end
   end
 
   defp build_sidecar_config(manifest) do
-    config = %{}
+    config =
+      %{}
+      |> Map.put(:source_hosts, manifest.source_hosts)
+      |> Map.put(:publisher_name, manifest.name)
 
     config =
       if is_map(manifest.api) and manifest.api != %{} do
-        config
-        |> Map.put(:source_hosts, manifest.source_hosts)
-        |> Map.put(:publisher_name, manifest.name)
-        |> Map.put(:api, %{
-          type: manifest.api[:type],
-          endpoint: manifest.api[:endpoint],
-          auth: manifest.api[:auth]
-        })
+        Map.put(config, :api, manifest.api)
       else
         config
       end
 
     config =
       if is_map(manifest.spider) and manifest.spider != %{} do
-        Map.put(config, :spider, %{
-          module: manifest.spider[:module],
-          start_urls: manifest.spider[:start_urls],
-          selectors: manifest.spider[:selectors]
-        })
+        Map.put(config, :spider, manifest.spider)
       else
         config
       end
 
     if is_map(manifest.rate_limit) do
-      Map.put(config, :rate_limit, %{
-        max_concurrency: manifest.rate_limit[:max_concurrency],
-        min_delay_ms: manifest.rate_limit[:min_delay_ms],
-        max_bytes: manifest.rate_limit[:max_bytes]
-      })
+      Map.put(config, :rate_limit, manifest.rate_limit)
     else
       config
     end
@@ -167,7 +167,7 @@ defmodule Mix.Tasks.Hiraeth.Scrape do
         permission_basis: manifest.permission_basis,
         cover_cache_policy: manifest.cover_cache_policy,
         takedown_contact: manifest.takedown_contact,
-        not_legal_advice: manifest.not_legal_advice,
+        not_legal_advice: not_legal_advice(manifest.not_legal_advice),
         source_urls: manifest.source_urls,
         source_hosts: manifest.source_hosts,
         cover_hosts: manifest.cover_hosts,
@@ -243,6 +243,11 @@ defmodule Mix.Tasks.Hiraeth.Scrape do
   defp format_finding(finding), do: inspect(finding)
 
   defp format_error_message(message) when is_binary(message), do: message
+
+  defp not_legal_advice(value) when is_binary(value), do: value
+
+  defp not_legal_advice(_value),
+    do: "Operator-authorized ingestion policy and provenance metadata; not legal advice."
 
   defp sidecar_client do
     Application.get_env(:hiraeth, :sidecar_client, SidecarClient)

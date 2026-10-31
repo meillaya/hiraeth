@@ -81,8 +81,10 @@ RUN mix release
 FROM ${RUNNER_IMAGE} AS final
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates curl \
+  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates curl imagemagick \
   && rm -rf /var/lib/apt/lists/*
+# ImageMagick is a runtime dependency for cover thumbnails. Debian's IM6
+# package installs `convert`; the app also accepts ImageMagick 7's `magick`.
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \

@@ -1,7 +1,7 @@
 # OPERATOR MIX TASKS KNOWLEDGE BASE
 
 ## OVERVIEW
-Nine `Mix.Tasks` modules under `lib/mix/tasks/` that wrap Ash domains and the Scrapling sidecar for operator-driven catalog work. Tasks are thin CLI shells: parsing, app boot, sidecar health, JSON/dry-run plumbing, and exit codes. No domain logic lives here; every behavior delegates to `lib/hiraeth/*` or `sidecar/app`. Inherits repo-wide rules from `../../AGENTS.md` and domain rules from `../hiraeth/AGENTS.md`; do not duplicate them.
+Fourteen `Mix.Tasks` modules under `lib/mix/tasks/` that wrap Ash domains and the Scrapling sidecar for operator-driven catalog work. Tasks are thin CLI shells: parsing, app boot, sidecar health, JSON/dry-run plumbing, and exit codes. No domain logic lives here; every behavior delegates to `lib/hiraeth/*` or `sidecar/app`. Inherits repo-wide rules from `../../AGENTS.md` and domain rules from `../hiraeth/AGENTS.md`; do not duplicate them.
 
 ## STRUCTURE
 | Task | Module | Primary domain target |
@@ -9,11 +9,15 @@ Nine `Mix.Tasks` modules under `lib/mix/tasks/` that wrap Ash domains and the Sc
 | `mix hiraeth.apply_scrape` | `Mix.Tasks.Hiraeth.ApplyScrape` | `Hiraeth.Ingestion` + `Hiraeth.RealCatalog.Importer` (apply staged dataset) |
 | `mix hiraeth.audit_provenance` | `Mix.Tasks.Hiraeth.AuditProvenance` | `Hiraeth.ProvenanceAudit` (seed/run/export) |
 | `mix hiraeth.cache_covers` | `Mix.Tasks.Hiraeth.CacheCovers` | `Hiraeth.Covers.cache_public_covers!/1` |
+| `mix hiraeth.catalog.refresh` | `Mix.Tasks.Hiraeth.Catalog.Refresh` | `Hiraeth.RealCatalog.{Refresh,RefreshProfiles}` (fetch/merge/apply datasets) |
+| `mix hiraeth.covers.audit` | `Mix.Tasks.Hiraeth.Covers.Audit` | `Hiraeth.Covers.audit_cache/1` |
+| `mix hiraeth.covers.sync` | `Mix.Tasks.Hiraeth.Covers.Sync` | `Hiraeth.Covers.cache_public_covers!/1` + `audit_cache/1` |
 | `mix hiraeth.ingest` | `Mix.Tasks.Hiraeth.Ingest` | delegates `do_run/1` to `Hiraeth.Ingestion.OperatorCLI.run_args/1` |
 | `mix hiraeth.providers.backfill` | `Mix.Tasks.Hiraeth.Providers.Backfill` | `Hiraeth.Sources` (provider plan + record backfill) |
 | `mix hiraeth.real_catalog.coverage_report` | `Mix.Tasks.Hiraeth.RealCatalog.CoverageReport` | `Hiraeth.RealCatalog` coverage/cap report |
 | `mix hiraeth.real_catalog.seed_provider` | `Mix.Tasks.Hiraeth.RealCatalog.SeedProvider` | `Hiraeth.RealCatalog.Importer.seed_provider!` (per-provider recovery path) |
 | `mix hiraeth.real_catalog.source_artifacts` | `Mix.Tasks.Hiraeth.RealCatalog.SourceArtifacts` | `Hiraeth.RealCatalog.SourceArtifacts` (artifact audit/export) |
+| `mix hiraeth.real_catalog.sync` | `Mix.Tasks.Hiraeth.RealCatalog.Sync` | `Hiraeth.RealCatalog.SourceAuthority` (evidence write/check) |
 | `mix hiraeth.review_scrape` | `Mix.Tasks.Hiraeth.ReviewScrape` | `Hiraeth.Ingestion` (review/approve staged dataset) |
 | `mix hiraeth.scrape` | `Mix.Tasks.Hiraeth.Scrape` | `Hiraeth.Ingestion.ProviderManifest`, `SidecarClient`, `RealCatalog.{Dataset,SourcePolicy,Validator}` |
 

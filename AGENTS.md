@@ -72,6 +72,9 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.RealCatalog.SourcePolicy` | policy | `lib/hiraeth/real_catalog/source_policy.ex` | source/caching allowlists |
 | `Hiraeth.RealCatalog.Importer` | trusted writer | `lib/hiraeth/real_catalog/importer.ex` | idempotent corpus seed into Catalog (validator-gated) |
 | `Hiraeth.RealCatalog.Validator` | policy gate | `lib/hiraeth/real_catalog/validator.ex` | pre-seed findings gate; any finding blocks import |
+| `Hiraeth.RealCatalog.SourceAuthority` | evidence generator | `lib/hiraeth/real_catalog/source_authority.ex` | regenerates/checks authority, artifact, and coverage manifests |
+| `Hiraeth.RealCatalog.Refresh` | refresh orchestrator | `lib/hiraeth/real_catalog/refresh.ex` | fetch/merge/apply publisher datasets by refresh profile |
+| `Hiraeth.RealCatalog.RefreshProfiles` | refresh policy | `lib/hiraeth/real_catalog/refresh_profiles.ex` | validates script/sidecar strategy coverage |
 | `Hiraeth.ProvenanceAudit` | audit exporter | `lib/hiraeth/provenance_audit.ex` | source-ledger/takedown/cover-cache evidence exports |
 | `Hiraeth.Ingestion.ManifestValidator` | manifest gate | `lib/hiraeth/ingestion/manifest_validator.ex` | validates provider manifests before ingestion accepts them |
 | `Hiraeth.Covers` | domain facade | `lib/hiraeth/covers.ex` | cover cache safety + provenance |
@@ -95,7 +98,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Devenv local processes own Postgres `127.0.0.1:54320`, sidecar `127.0.0.1:8000`, Phoenix `127.0.0.1:4000`.
 - Docker sidecar image (`sidecar/Dockerfile`) is the production service-network boundary; do not claim production is fully Nix/devenv-only.
 - Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL`, `SCRAPLING_SIDECAR_URL`, and `SCRAPLING_SIDECAR_TOKEN` are required release env. The sidecar image runs in secure mode with server-side manifests and HMAC-signed requests.
-- Public covers use a bounded local cache plus Cloudflare R2 when `HIRAETH_COVER_STORE=s3`; `/covers/cache/...` is same-origin and the proxy refills local misses from R2. Purge deletes both copies.
+- Public covers use a bounded local cache plus Cloudflare R2 when `HIRAETH_COVER_STORE=s3`; `/covers/cache/...` is same-origin and the proxy refills local misses from R2. Cards and heroes use generated thumbnails (ImageMagick `magick`/`convert`) and static/proxy responses carry a one-day browser cache. Purge deletes both copies.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Unversioned, write-capable, or undocumented HTTP surface. The only HTTP API is the read-only, schema-described `/api/v1` in `docs/api/v1.md`; new routes need a deliberate update to the route contract test and the OpenAPI document.
@@ -123,6 +126,10 @@ make db-backup           # scripts/ops/db_backup.sh
 make db-restore-drill    # scripts/ops/db_restore_drill.sh (separate DB only)
 bash scripts/catalog/sync_sidecar_manifests.sh   # after changing a provider manifest
 mix hiraeth.covers.upload                         # backfill R2 from the local cover cache
+mix hiraeth.covers.sync --all --missing --json    # fill missing originals + thumbnails
+mix hiraeth.covers.audit --json                   # cover coverage report
+mix hiraeth.real_catalog.sync --check             # authority/artifact/coverage drift gate
+mix hiraeth.catalog.refresh --all --dry-run --json
 cd sidecar && uv run --extra dev pytest -q
 cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```

@@ -129,34 +129,35 @@ def test_fetch_shopify_basic():
 def test_fetch_shopify_pagination():
     page1 = [
         {
-            "id": 1,
-            "handle": "book-1",
-            "title": "Book 1",
+            "id": index,
+            "handle": f"book-{index}",
+            "title": f"Book {index}",
             "vendor": "P",
             "published_at": "2024-01-01T00:00:00Z",
             "tags": [],
             "body_html": "",
             "images": [],
-            "variants": [{"id": 1, "sku": "", "title": ""}],
+            "variants": [{"id": index, "sku": "", "title": ""}],
         }
+        for index in range(1, 251)
     ]
     page2 = [
         {
-            "id": 2,
-            "handle": "book-2",
-            "title": "Book 2",
+            "id": 251,
+            "handle": "book-251",
+            "title": "Book 251",
             "vendor": "P",
             "published_at": "2024-01-02T00:00:00Z",
             "tags": [],
             "body_html": "",
             "images": [],
-            "variants": [{"id": 2, "sku": "", "title": ""}],
+            "variants": [{"id": 251, "sku": "", "title": ""}],
         }
     ]
 
     mock = _mock_httpx_client(
         [
-            (200, {"products": page1 * 250}, {}),
+            (200, {"products": page1}, {}),
             (200, {"products": page2}, {}),
         ]
     )
@@ -177,6 +178,55 @@ def test_fetch_shopify_pagination():
     assert response.status_code == 200
     data = response.json()
     assert len(data["records"]) == 251
+
+
+def test_fetch_shopify_collection_paths_merge_multiple_collections():
+    products = [
+        {
+            "id": index,
+            "handle": f"book-{index}",
+            "title": f"Book {index}",
+            "vendor": "P",
+            "published_at": "2024-01-01T00:00:00Z",
+            "tags": [],
+            "body_html": "",
+            "images": [],
+            "variants": [{"id": index, "sku": "", "title": ""}],
+        }
+        for index in (1, 2)
+    ]
+
+    mock = _mock_httpx_client(
+        [
+            (200, {"products": [products[0]]}, {}),
+            (200, {"products": [products[1]]}, {}),
+        ]
+    )
+
+    with mock:
+        response = client.post(
+            "/fetch/",
+            json={
+                "provider": "p",
+                "config": {
+                    "api": {
+                        "type": "shopify",
+                        "endpoint": "https://store.example.com",
+                        "collection_paths": ["collections/classics", "collections/poets"],
+                    },
+                    "source_hosts": ["store.example.com"],
+                    "rate_limit": {"min_delay_ms": 0, "max_bytes": 10_000_000},
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    records = response.json()["records"]
+    assert len(records) == 2
+    assert {record["source_uri"] for record in records} == {
+        "https://store.example.com/products/book-1",
+        "https://store.example.com/products/book-2",
+    }
 
 
 def test_fetch_shopify_no_variants():

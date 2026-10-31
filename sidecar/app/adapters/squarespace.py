@@ -9,7 +9,10 @@ from app.adapters.squarespace_images import absolute_url, listing_cover_urls, us
 _EXCLUDED_CATEGORIES = {"bundles", "gift cards", "gift card", "merch", "sideline"}
 _EXCLUDED_KEYWORDS = ("bundle", "subscription", "subscriber", "gift card")
 _HEADERS = {"user-agent": "Mozilla/5.0 HiraethSidecar/1.0"}
-_EBOOK_TITLE_SUFFIX = re.compile(r"\s*\((?:e-?book)\)\s*$", re.IGNORECASE)
+_EBOOK_TITLE_SUFFIX = re.compile(
+    r"\s*(?:\((?:e-?book)\)|(?:[-–—]\s*)?e-?book(?:\s*\([^)]*\))?)\s*$",
+    re.IGNORECASE,
+)
 
 
 def _build_field_sources(provider: str, source_uri: str) -> dict[str, Any]:
@@ -96,6 +99,19 @@ def _first_isbn_from_variants(item: dict[str, Any]) -> str:
     return ""
 
 
+def _primary_variant_id(item: dict[str, Any]) -> str:
+    structured_content = item.get("structuredContent", {})
+    variants = (
+        structured_content.get("variants", []) if isinstance(structured_content, dict) else []
+    )
+    for variant in variants:
+        if isinstance(variant, dict):
+            variant_id = str(variant.get("id") or "").strip()
+            if variant_id:
+                return variant_id
+    return ""
+
+
 def _is_book_item(item: dict[str, Any]) -> bool:
     categories = [str(category).strip().lower() for category in item.get("categories") or []]
     if any(category in _EXCLUDED_CATEGORIES for category in categories):
@@ -144,10 +160,36 @@ def _cover_url(item: dict[str, Any], listing_cover_urls: dict[str, str] | None =
 
 def _author_from_excerpt(excerpt: str) -> str:
     match = re.search(r"<h[1-6][^>]*>(.*?)</h[1-6]>", excerpt, flags=re.IGNORECASE | re.DOTALL)
-    if not match:
-        return ""
-    text = re.sub(r"<[^>]+>", " ", match.group(1))
-    return re.sub(r"\s+", " ", text).strip()
+    if match:
+        text = re.sub(r"<[^>]+>", " ", match.group(1))
+        return re.sub(r"\s+", " ", text).strip()
+
+    for paragraph in re.findall(r"<p\b[^>]*>(.*?)</p>", excerpt, flags=re.I | re.S):
+        text = _strip_html(paragraph) or ""
+        byline = re.match(
+            r"^(?:by|edited by|translated by)\s+"
+            r"(.+?)(?:\s*,\s*translated\b|\s*,\s*edited\b|\s*,\s*by\b|$)",
+            text,
+            flags=re.I,
+        )
+        if byline:
+            return byline.group(1).strip()
+
+    text = _strip_html(excerpt) or ""
+    byline = re.search(
+        r"\bby\b\s+([A-ZÀ-Ž][\wÀ-ž.'-]+(?:\s+[A-ZÀ-Ž][\wÀ-ž.'-]+){0,4})",
+        text,
+        flags=re.I,
+    )
+    return byline.group(1).strip() if byline else ""
+
+
+def _isbn_from_text(value: str | None) -> str:
+    for match in re.finditer(r"(?<!\d)(97[89](?:[\s-]?\d){10})(?!\d)", value or ""):
+        digits = re.sub(r"[^0-9]", "", match.group(1))
+        if len(digits) == 13:
+            return digits
+    return ""
 
 
 def _strip_html(raw_html: str | None) -> str | None:
@@ -195,7 +237,11 @@ def _item_to_record(
     description = _strip_html(body)
     custom_content = item.get("customContent", {})
     custom_isbn = custom_content.get("isbn", "") if isinstance(custom_content, dict) else ""
-    isbn = str(custom_isbn).replace("-", "").strip() or _first_isbn_from_variants(item)
+    isbn = (
+        str(custom_isbn).replace("-", "").strip()
+        or _first_isbn_from_variants(item)
+        or _isbn_from_text(_strip_html(body))
+    )
     author = custom_content.get("author", "") if isinstance(custom_content, dict) else ""
     if not author and isinstance(body, str):
         author = _author_from_excerpt(body)
@@ -206,6 +252,7 @@ def _item_to_record(
         published_on = published_on[:10]
 
     cover_url = _cover_url(item, listing_cover_urls)
+    variant_id = _primary_variant_id(item)
 
     contributors = []
     if author:
@@ -214,7 +261,7 @@ def _item_to_record(
     record: dict[str, Any] = {
         "provider": provider,
         "source_uri": source_uri,
-        "source_product_id": str(item.get("id", "")),
+        "source_product_id": f"{item.get('id', '')}-{variant_id or 'default'}",
         "source_sku": isbn,
         "publisher": publisher_name or provider,
         "imprint": None,

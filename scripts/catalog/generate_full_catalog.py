@@ -29,7 +29,11 @@ from generate_full_catalog_deep_vellum import (
 )
 
 OUT_DIR = Path("priv/catalog_sources/real_publishers")
-UA = "Hiraeth full catalog loader/1.0 (operator-authorized; local development)"
+UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 "
+    "Hiraeth-full-catalog-loader/1.0"
+)
 TODAY = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 RIGHTS = "Operator-authorized public catalog refresh from official publisher pages/APIs; factual bibliographic metadata, official product descriptions, official cover URLs, purchase links, and source provenance preserved for each field."
 PROVIDERS = {
@@ -105,7 +109,9 @@ PROVIDERS = {
     },
     "phoneme_media_official_store": {
         "file": "phoneme_media.json",
-        "publisher": "Phoneme Media",
+        "publisher": "Deep Vellum",
+        "imprint": "Phoneme Media",
+        "slug_scope": "phoneme-media",
         "source_type": "publisher_dataset",
         "source_urls": ["https://store.deepvellum.org/products.json"],
         "source_hosts": ["store.deepvellum.org"],
@@ -115,7 +121,9 @@ PROVIDERS = {
     },
     "a_strange_object_official_store": {
         "file": "a_strange_object.json",
-        "publisher": "A Strange Object",
+        "publisher": "Deep Vellum",
+        "imprint": "A Strange Object",
+        "slug_scope": "a-strange-object",
         "source_type": "publisher_dataset",
         "source_urls": ["https://store.deepvellum.org/products.json"],
         "source_hosts": ["store.deepvellum.org"],
@@ -125,7 +133,9 @@ PROVIDERS = {
     },
     "la_reunion_official_store": {
         "file": "la_reunion.json",
-        "publisher": "La Reunion",
+        "publisher": "Deep Vellum",
+        "imprint": "La Reunion",
+        "slug_scope": "la-reunion",
         "source_type": "publisher_dataset",
         "source_urls": ["https://store.deepvellum.org/products.json"],
         "source_hosts": ["store.deepvellum.org"],
@@ -135,7 +145,9 @@ PROVIDERS = {
     },
     "fum_destampa_official_store": {
         "file": "fum_destampa.json",
-        "publisher": "Fum d'Estampa",
+        "publisher": "Deep Vellum",
+        "imprint": "Fum d'Estampa",
+        "slug_scope": "fum-destampa",
         "source_type": "publisher_dataset",
         "source_urls": ["https://store.deepvellum.org/products.json"],
         "source_hosts": ["store.deepvellum.org"],
@@ -164,10 +176,38 @@ MONTHS = {m.lower(): i for i, m in enumerate(["January","February","March","Apri
 MONTHS.update({m[:3].lower(): i for m, i in MONTHS.copy().items()})
 
 
-def fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
-    with urllib.request.urlopen(req, timeout=45) as response:
-        return response.read()
+def fetch(url: str, attempts: int = 5) -> bytes:
+    last_error: Exception | None = None
+    headers = {
+        "User-Agent": UA,
+        "Accept": "application/json,text/html;q=0.9,*/*;q=0.8",
+        "Referer": "https://store.deepvellum.org/" if "deepvellum.org" in url else url,
+    }
+    for attempt in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=45) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            last_error = error
+            if error.code not in (429, 500, 502, 503, 504) or attempt == attempts - 1:
+                raise
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            delay = int(retry_after) if retry_after and retry_after.isdigit() else min(2 ** attempt, 30)
+            print(
+                f"warning: {url} returned HTTP {error.code}; retrying in {delay}s "
+                f"(attempt {attempt + 1}/{attempts})",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+        except urllib.error.URLError as error:
+            last_error = error
+            if attempt == attempts - 1:
+                raise
+            time.sleep(min(2 ** attempt, 30))
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"fetch failed for {url}")
 
 
 def fetch_text(url: str) -> str:
@@ -478,13 +518,51 @@ def permission_meta(provider: str) -> dict[str, Any]:
     }
 
 
+def apply_publisher_grouping(records: list[dict[str, Any]], provider: str) -> list[dict[str, Any]]:
+    """Fold a source imprint under its parent publisher while preserving URL slugs.
+
+    The source record keeps its original provider/source URI. ``publisher`` becomes
+    the parent house, ``imprint`` records the source label, and ``slug_scope``
+    preserves the historical slug prefix so existing book URLs do not move.
+    """
+    p = PROVIDERS[provider]
+    imprint = p.get("imprint")
+    slug_scope = p.get("slug_scope")
+    if not imprint and not slug_scope:
+        return records
+
+    grouped: list[dict[str, Any]] = []
+    for record in records:
+        displayed = list(record.get("displayed_fields", []))
+        if imprint and "imprint" not in displayed:
+            displayed.append("imprint")
+        field_sources = dict(record.get("field_sources", {}))
+        if imprint:
+            field_sources["imprint"] = {
+                "provider": provider,
+                "source_uri": record["source_uri"],
+                "source_type": p["source_type"],
+                "rights_basis": RIGHTS,
+            }
+        grouped.append(
+            {
+                **record,
+                "imprint": imprint,
+                "slug_scope": slug_scope,
+                "displayed_fields": displayed,
+                "field_sources": field_sources,
+            }
+        )
+    return grouped
+
+
 def dataset(provider: str, records: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "provider": provider,
         "retrieved_at": TODAY,
         "license_note": RIGHTS,
         "provider_permissions": permission_meta(provider),
-        "records": records,
+        "records": apply_publisher_grouping(records, provider),
     }
 
 
@@ -496,7 +574,7 @@ def shopify_products(base: str) -> list[dict[str, Any]]:
         if not batch:
             break
         products.extend(batch)
-        time.sleep(0.05)
+        time.sleep(0.25)
     return products
 
 
@@ -1074,8 +1152,9 @@ def catalog_builders() -> dict[str, Callable[[], list[dict[str, Any]]]]:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_catalog_args(PROVIDERS, argv)
+    out_dir = Path(args.out_dir) if args.out_dir else OUT_DIR
     if not args.dry_run:
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
 
     builders = catalog_builders()
     selected = [args.provider] if args.provider else list(builders)
@@ -1085,7 +1164,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"building {provider}", file=sys.stderr)
         records = enrich_missing_covers(dedupe(build()), provider)
         records.sort(key=lambda r: (r["work"]["title"].lower(), r["edition"].get("format") or "", r["edition"].get("isbn_13") or ""))
-        path = OUT_DIR / str(PROVIDERS[provider]["file"])
+        path = out_dir / str(PROVIDERS[provider]["file"])
         summary[provider] = len(records)
         if args.dry_run:
             print(f"dry-run {provider} output={path} records={len(records)}", file=sys.stderr)

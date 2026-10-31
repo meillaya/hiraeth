@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "providers": {
+    "a_strange_object_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "a_strange_object_official_store",
+      "output_file": "a_strange_object.json"
+    },
+    "and_other_stories_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/and_other_stories_official_store.json"
+    },
+    "archipelago_books_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "archipelago_books_official_store",
+      "output_file": "archipelago_books.json"
+    },
+    "astra_house_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/astra_house_official_store.json"
+    },
+    "coffee_house_press_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/coffee_house_press_official_store.json"
+    },
+    "dalkey_archive_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "dalkey_archive_official_store",
+      "output_file": "dalkey_archive.json"
+    },
+    "deep_vellum_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "deep_vellum_official_store",
+      "output_file": "deep_vellum.json"
+    },
+    "fitzcarraldo_editions_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/extract_fitzcarraldo_catalog.py",
+      "output_file": "fitzcarraldo_editions.json"
+    },
+    "fum_destampa_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "fum_destampa_official_store",
+      "output_file": "fum_destampa.json"
+    },
+    "historical_materialism_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "historical_materialism_official_site",
+      "output_file": "historical_materialism.json"
+    },
+    "la_reunion_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "la_reunion_official_store",
+      "output_file": "la_reunion.json"
+    },
+    "mcnally_editions_official_site": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/mcnally_editions_official_site.json"
+    },
+    "new_directions_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "new_directions_official_site",
+      "output_file": "new_directions.json"
+    },
+    "nyrb_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/nyrb_official_store.json"
+    },
+    "phoneme_media_official_store": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "phoneme_media_official_store",
+      "output_file": "phoneme_media.json"
+    },
+    "pushkin_press_official_site": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/pushkin_press_official_site.json"
+    },
+    "seagull_books_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/seagull_books_official_store.json"
+    },
+    "semiotexte_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "semiotexte_official_site",
+      "output_file": "semiotexte.json"
+    },
+    "seven_stories_press_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/extract_seven_stories_catalog.py",
+      "output_file": "seven_stories_press.json"
+    },
+    "tilted_axis_press_official_site": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/tilted_axis_press_official_site.json"
+    },
+    "transit_books_official_site": {
+      "strategy": "script",
+      "script": "scripts/catalog/generate_full_catalog.py",
+      "arg_provider": "transit_books_official_site",
+      "output_file": "transit_books.json"
+    },
+    "unnamed_press_official_site": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/unnamed_press_official_site.json"
+    },
+    "wakefield_press_official_store": {
+      "strategy": "sidecar",
+      "manifest": "priv/catalog_sources/provider_manifests/wakefield_press_official_store.json"
+    }
+  }
+}

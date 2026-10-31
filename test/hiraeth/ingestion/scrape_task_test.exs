@@ -9,6 +9,11 @@ defmodule Hiraeth.Ingestion.ScrapeTaskTest do
                            "test/support/fixtures/provider_manifests/valid_scrape_manifest.json"
                          ])
 
+  @valid_api_manifest Path.join([
+                        File.cwd!(),
+                        "test/support/fixtures/provider_manifests/valid_api_manifest.json"
+                      ])
+
   defmodule MockScrapeClient do
     def health(_opts \\ []) do
       {:ok, %{status: "ok", scrapling: true}}
@@ -85,6 +90,35 @@ defmodule Hiraeth.Ingestion.ScrapeTaskTest do
     end
   end
 
+  defmodule MockFetchClient do
+    def health(_opts \\ []) do
+      {:ok, %{status: "ok", scrapling: true}}
+    end
+
+    def fetch(_provider_config, _opts \\ []) do
+      record =
+        MockScrapeClient.scrape_record()
+        |> Map.put(:publisher, "Test Publisher (API)")
+        |> Map.put(:source_uri, "https://www.testpublisher.com/books/api-book")
+        |> put_in([:cover, :source_url], "https://cdn.testpublisher.com/api-book.jpg")
+        |> put_in([:cover, :provider], "test_publisher_api")
+        |> update_in([:field_sources], fn sources ->
+          Map.new(sources, fn {field, source} ->
+            {field,
+             source
+             |> Map.put("provider", "test_publisher_api")
+             |> Map.put("source_uri", "https://www.testpublisher.com/books/api-book")}
+          end)
+        end)
+
+      {:ok, %{records: [record]}}
+    end
+
+    def scrape(_provider_config, _opts \\ []) do
+      raise "api-mode scrape task must call fetch/2, not scrape/2"
+    end
+  end
+
   defmodule MockUnhealthySidecarClient do
     def health(_opts \\ []) do
       {:error, "connection refused"}
@@ -134,6 +168,31 @@ defmodule Hiraeth.Ingestion.ScrapeTaskTest do
       assert output =~ "records=1"
       assert output =~ "covers=1"
       assert output =~ "staged_file=#{staged_path}"
+    end
+
+    test "api manifests use the fetch endpoint instead of the scrape endpoint" do
+      Application.put_env(:hiraeth, :sidecar_client, MockFetchClient)
+      staged_path = staged_path_for("test_publisher_api")
+      File.rm(staged_path)
+      on_exit(fn -> File.rm(staged_path) end)
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert :ok =
+                   Scrape.run([
+                     "--provider",
+                     "test_publisher_api",
+                     "--manifest",
+                     @valid_api_manifest
+                   ])
+        end)
+
+      assert File.exists?(staged_path)
+      assert output =~ "Staged dataset for provider: test_publisher_api"
+      assert {:ok, dataset} = Dataset.load_file(staged_path)
+      assert dataset.provider == "test_publisher_api"
+      assert [record] = dataset.records
+      assert record.source_uri == "https://www.testpublisher.com/books/api-book"
     end
   end
 

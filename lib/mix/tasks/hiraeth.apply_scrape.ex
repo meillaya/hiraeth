@@ -64,12 +64,18 @@ defmodule Mix.Tasks.Hiraeth.ApplyScrape do
 
   defp apply_provider(provider) do
     staged_path = staged_dataset_path(provider)
-    canonical_path = canonical_dataset_path(provider)
 
-    if File.exists?(staged_path) do
+    with true <- File.exists?(staged_path),
+         canonical_path when is_binary(canonical_path) <- canonical_dataset_path(provider) do
       apply_loaded_staged_dataset(provider, staged_path, canonical_path)
     else
-      {:error, "Staged dataset not found: #{staged_path}"}
+      false ->
+        {:error, "Staged dataset not found: #{staged_path}"}
+
+      nil ->
+        {:error,
+         "No checked-in dataset file declares provider=#{provider}; refusing to create an " <>
+           "unmapped duplicate. Use mix hiraeth.catalog.refresh to add a new provider corpus."}
     end
   end
 
@@ -163,7 +169,10 @@ defmodule Mix.Tasks.Hiraeth.ApplyScrape do
   end
 
   defp canonical_dataset_path(provider) do
-    Application.app_dir(:hiraeth, "priv/catalog_sources/real_publishers/#{provider}.json")
+    dir = Application.app_dir(:hiraeth, "priv/catalog_sources/real_publishers")
+
+    Dataset.file_for_provider(provider, dir) ||
+      Path.join(dir, "#{provider}.json")
   end
 
   defp format_error_message(message) when is_binary(message), do: message

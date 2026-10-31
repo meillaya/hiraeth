@@ -328,41 +328,82 @@ async def fetch(config: dict[str, Any]) -> list[dict[str, Any]]:
     max_bytes = rate_limit.get("max_bytes", 10 * 1024 * 1024)
     api_config = config["api"]
     allowed_vendors = set(api_config.get("allowed_vendors") or [])
-    collection_path = str(api_config.get("collection_path") or "").strip("/")
-    products_path = f"/{collection_path}/products.json" if collection_path else "/products.json"
+    collection_paths = api_config.get("collection_paths")
+    if isinstance(collection_paths, list) and collection_paths:
+        products_paths = [
+            f"/{str(path).strip('/')}/products.json"
+            for path in collection_paths
+            if str(path).strip("/")
+        ]
+    else:
+        collection_path = str(api_config.get("collection_path") or "").strip("/")
+        products_paths = [
+            f"/{collection_path}/products.json" if collection_path else "/products.json"
+        ]
+    if not products_paths:
+        products_paths = ["/products.json"]
     vendor_as_author = api_config.get("vendor_as_author", True) is not False
 
     records: list[dict[str, Any]] = []
-    seen_isbns = set()
-    page = 1
+    seen_isbns: set[str] = set()
+    seen_record_keys: set[tuple[str, str]] = set()
 
     async with httpx.AsyncClient() as client:
-        while True:
-            url = f"{endpoint}{products_path}?limit=250&page={page}"
-            response = await client.get(url, headers=_HEADERS)
-            response.raise_for_status()
+        for products_path in products_paths:
+            page = 1
+            while True:
+                url = f"{endpoint}{products_path}?limit=250&page={page}"
+                response = await client.get(url, headers=_HEADERS)
+                response.raise_for_status()
 
-            if len(response.content) > max_bytes:
-                break
+                if len(response.content) > max_bytes:
+                    break
 
-            data = response.json()
-            products = data.get("products", [])
-            if not products:
-                break
+                data = response.json()
+                products = data.get("products", [])
+                if not products:
+                    break
 
-            for product in products:
-                vendor = product.get("vendor") or ""
-                if allowed_vendors and vendor not in allowed_vendors:
-                    continue
-                if not _is_book_product(product):
-                    continue
-                variants = product.get("variants", [])
-                seen_keys = set()
-                if variants:
-                    for variant in variants:
+                for product in products:
+                    vendor = product.get("vendor") or ""
+                    if allowed_vendors and vendor not in allowed_vendors:
+                        continue
+                    if not _is_book_product(product):
+                        continue
+                    variants = product.get("variants", [])
+                    if variants:
+                        for variant in variants:
+                            record = _product_variant_to_record(
+                                product,
+                                variant,
+                                provider,
+                                endpoint,
+                                publisher_name,
+                                vendor_as_author=vendor_as_author,
+                            )
+                            key = (
+                                record["source_uri"],
+                                record["edition"].get("isbn_13") or record["source_sku"],
+                            )
+                            isbn = record["edition"].get("isbn_13")
+                            if (
+                                record["contributors"]
+                                and key not in seen_record_keys
+                                and (not isbn or isbn not in seen_isbns)
+                            ):
+                                records.append(record)
+                                seen_record_keys.add(key)
+                                if isbn:
+                                    seen_isbns.add(isbn)
+                    else:
+                        dummy_variant = {
+                            "id": product.get("id", ""),
+                            "sku": "",
+                            "title": "",
+                        }
                         record = _product_variant_to_record(
                             product,
-                            variant,
+                            dummy_variant,
                             provider,
                             endpoint,
                             publisher_name,
@@ -375,38 +416,19 @@ async def fetch(config: dict[str, Any]) -> list[dict[str, Any]]:
                         isbn = record["edition"].get("isbn_13")
                         if (
                             record["contributors"]
-                            and key not in seen_keys
+                            and key not in seen_record_keys
                             and (not isbn or isbn not in seen_isbns)
                         ):
                             records.append(record)
-                            seen_keys.add(key)
+                            seen_record_keys.add(key)
                             if isbn:
                                 seen_isbns.add(isbn)
-                else:
-                    dummy_variant = {
-                        "id": product.get("id", ""),
-                        "sku": "",
-                        "title": "",
-                    }
-                    record = _product_variant_to_record(
-                        product,
-                        dummy_variant,
-                        provider,
-                        endpoint,
-                        publisher_name,
-                        vendor_as_author=vendor_as_author,
-                    )
-                    isbn = record["edition"].get("isbn_13")
-                    if record["contributors"] and (not isbn or isbn not in seen_isbns):
-                        records.append(record)
-                        if isbn:
-                            seen_isbns.add(isbn)
 
-            if len(products) < 250:
-                break
+                if len(products) < 250:
+                    break
 
-            page += 1
-            if min_delay_ms:
-                await anyio.sleep(min_delay_ms / 1000)
+                page += 1
+                if min_delay_ms:
+                    await anyio.sleep(min_delay_ms / 1000)
 
     return records

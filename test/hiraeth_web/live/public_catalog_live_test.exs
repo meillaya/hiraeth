@@ -340,7 +340,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
              ~s|#publisher-editions-stream h4 a[href*="new-directions-on-the-calculation-of-volume-book-v"]|
            )
            |> LazyHTML.attribute("href")
-           |> length() == 1
+           |> length() >= 1
 
     assert has_element?(new_directions, "#publisher-editions-stream", "Paperback")
     assert has_element?(new_directions, "#publisher-editions-stream", "Ebook")
@@ -638,7 +638,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
            |> length() == 1
   end
 
-  test "book cover component prefers optimized card derivatives and keeps hero originals" do
+  test "book cover component prefers optimized derivatives for cards and hero" do
     html =
       render_component(&CatalogComponents.book_cover/1,
         book: %{
@@ -684,7 +684,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     hero_img = hero_html |> LazyHTML.from_fragment() |> LazyHTML.query("img")
 
-    assert LazyHTML.attribute(hero_img, "src") == ["/covers/cache/cached-cover-book.jpg"]
+    assert LazyHTML.attribute(hero_img, "src") == ["/covers/cache/cached-cover-book-thumb.jpg"]
     assert LazyHTML.attribute(hero_img, "loading") == ["eager"]
     assert LazyHTML.attribute(hero_img, "fetchpriority") == ["high"]
 

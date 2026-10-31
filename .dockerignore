@@ -1,0 +1,13 @@
+.git
+_build
+deps
+node_modules
+tmp
+artifacts
+.venv
+.pytest_cache
+__pycache__
+priv/static/covers/cache
+sidecar/.venv
+.env
+.env.*

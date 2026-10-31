@@ -49,6 +49,46 @@ defmodule Hiraeth.RealCatalog.Dataset do
     end
   end
 
+  @doc """
+  Returns the dataset files grouped by their declared provider.
+
+  Dataset filenames are not provider slugs (`deep_vellum.json` declares
+  `deep_vellum_official_store`), so callers that accept a provider must resolve
+  the file through this index instead of assuming `<provider>.json`.
+  """
+  @spec provider_index(String.t()) :: {:ok, %{String.t() => [String.t()]}} | {:error, term()}
+  def provider_index(dir \\ default_dir()) do
+    dir
+    |> dataset_files()
+    |> Enum.reduce_while({:ok, %{}}, fn file, {:ok, index} ->
+      case load_file(file) do
+        {:ok, dataset} ->
+          {:cont, {:ok, Map.update(index, dataset.provider, [file], &[file | &1])}}
+
+        {:error, reason} ->
+          {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Returns the single checked-in dataset file for a provider, or nil when it is
+  missing or declared more than once.
+  """
+  @spec file_for_provider(String.t(), String.t()) :: String.t() | nil
+  def file_for_provider(provider, dir \\ default_dir()) when is_binary(provider) do
+    case provider_index(dir) do
+      {:ok, index} ->
+        case Map.get(index, provider, []) do
+          [file] -> file
+          _missing_or_duplicate -> nil
+        end
+
+      {:error, _reason} ->
+        nil
+    end
+  end
+
   def load_source_authority_manifest(dir \\ default_dir()) do
     path = Path.join(dir, @source_authority_manifest_file)
 
@@ -104,6 +144,7 @@ defmodule Hiraeth.RealCatalog.Dataset do
     contributors name role cover source_url rights_basis attribution_text
     attribution_url cache_policy no_cover_reason cover_fallback_reason displayed_fields curation status
     notes file_path file_checksum field_sources source_type permission_basis cover_cache_policy source_urls source_hosts cover_hosts excluded_content takedown_contact not_legal_advice
+    slug_scope
   )
   @known_atoms Map.new(@known_keys, &{&1, String.to_atom(&1)})
 

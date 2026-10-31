@@ -55,6 +55,10 @@ def parse_catalog_args(providers: Mapping[str, Mapping[str, Any]], argv: list[st
         action="store_true",
         help="Build and report records without writing catalog JSON files.",
     )
+    parser.add_argument(
+        "--out-dir",
+        help="Write datasets to this directory instead of the checked-in corpus directory.",
+    )
     return parser.parse_args(argv)
 
 
@@ -198,7 +202,19 @@ def build_deep_vellum_catalog(
         return build_shopify(DEEP_VELLUM_PROVIDER, DEEP_VELLUM_ALLOWED_VENDORS)
 
     print("building deep_vellum_official_store with stealthy spider", file=stderr)
-    records = spider_runner(spider_class)
+    try:
+        records = spider_runner(spider_class)
+    except Exception as error:  # noqa: BLE001 - operator refresh falls back to the official Shopify feed
+        print(
+            f"warning: Deep Vellum stealthy spider failed ({error}); falling back to Shopify products.json",
+            file=stderr,
+        )
+        return build_shopify(DEEP_VELLUM_PROVIDER, DEEP_VELLUM_ALLOWED_VENDORS)
+
+    if not records:
+        print("warning: Deep Vellum spider returned no records; falling back to Shopify products.json", file=stderr)
+        return build_shopify(DEEP_VELLUM_PROVIDER, DEEP_VELLUM_ALLOWED_VENDORS)
+
     return [
         deep_vellum_record_from_spider(record, provider_config, make_record, normalize_format, isbn13, parse_date)
         for record in records

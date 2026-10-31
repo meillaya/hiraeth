@@ -3,7 +3,7 @@ defmodule Hiraeth.RealCatalogImporterProviderTest do
 
   @moduletag :reset_committed_catalog
 
-  alias Hiraeth.Catalog.{Edition, Identifier, Publisher, Work}
+  alias Hiraeth.Catalog.{Edition, Identifier, Imprint, Publisher, Work}
   alias Hiraeth.CatalogCleanup
   alias Hiraeth.Covers.CoverAssignment
   alias Hiraeth.Imports.ImportRun
@@ -198,6 +198,100 @@ defmodule Hiraeth.RealCatalogImporterProviderTest do
     assert length(editions) == 2
     assert Enum.map(editions, & &1.work_id) |> Enum.uniq() == [hd(works).id]
     assert Enum.sort(Enum.map(editions, & &1.format)) == ["ebook", "paperback"]
+  end
+
+  @tag timeout: 60_000
+  test "slug_scope folds an imprint under Deep Vellum without moving its URLs" do
+    clear_catalog!()
+    dataset = folded_phoneme_dataset()
+
+    assert {:ok, _summary} = Importer.seed_provider!(dataset, create_import_run!(dataset))
+
+    publisher = Ash.read!(Publisher, authorize?: false) |> Enum.find(&(&1.slug == "deep-vellum"))
+    assert publisher.name == "Deep Vellum"
+
+    imprint = Ash.read!(Imprint, authorize?: false) |> List.first()
+    assert imprint.name == "Phoneme Media"
+    assert imprint.publisher_id == publisher.id
+
+    work = Ash.read!(Work, authorize?: false) |> List.first()
+    assert work.slug == "phoneme-media-a-blind-salmon"
+
+    edition = Ash.read!(Edition, authorize?: false) |> List.first()
+    assert edition.slug == "phoneme-media-a-blind-salmon-paperback-9781646054817"
+    assert edition.publisher_id == publisher.id
+    assert edition.imprint_id == imprint.id
+    assert edition.work_id == work.id
+  end
+
+  defp folded_phoneme_dataset do
+    fields = ~w(title contributors publisher imprint format isbn_13 cover storefront_url)
+    source_uri = "https://store.deepvellum.org/products/a-blind-salmon"
+
+    record = %{
+      source_uri: source_uri,
+      source_product_id: "phoneme-1",
+      source_sku: "9781646054817",
+      publisher: "Deep Vellum",
+      imprint: "Phoneme Media",
+      slug_scope: "phoneme-media",
+      work: %{
+        title: "A Blind Salmon",
+        subtitle: nil,
+        original_title: nil,
+        original_language_code: nil,
+        publication_state: "published"
+      },
+      edition: %{
+        title: "A Blind Salmon",
+        subtitle: nil,
+        format: "paperback",
+        published_on: nil,
+        isbn_13: "9781646054817"
+      },
+      contributors: [%{name: "Julia Wong Kcomt", role: "author"}],
+      displayed_fields: fields,
+      curation: %{status: "approved", notes: "fixture"},
+      storefront_url: source_uri,
+      field_sources:
+        Map.new(fields, fn field ->
+          {field,
+           %{
+             provider: "phoneme_media_official_store",
+             source_uri: source_uri,
+             source_type: "publisher_dataset",
+             rights_basis: "test"
+           }}
+        end),
+      cover: %{
+        source_url: "https://cdn.shopify.com/s/files/phoneme-test.jpg",
+        provider: "phoneme_media_official_store",
+        rights_basis: "local_cache_permitted",
+        attribution_text: "Cover via Phoneme Media",
+        attribution_url: source_uri,
+        cache_policy: "cache_allowed"
+      }
+    }
+
+    Dataset.normalize(%{
+      provider: "phoneme_media_official_store",
+      file: "phoneme-media-fold-test.json",
+      file_path: "test/fixtures/phoneme-media-fold-test.json",
+      file_checksum: "phoneme-media-fold-checksum",
+      license_note: "fixture",
+      provider_permissions: %{
+        provider: "phoneme_media_official_store",
+        source_urls: ["https://store.deepvellum.org/products.json"],
+        source_hosts: ["store.deepvellum.org"],
+        cover_hosts: ["cdn.shopify.com"],
+        permission_basis: "test permission",
+        cover_cache_policy: "cache_allowed",
+        excluded_content: ["raw_html"],
+        takedown_contact: "https://store.deepvellum.org/pages/contact-us",
+        not_legal_advice: true
+      },
+      records: [record]
+    })
   end
 
   defp astra_house_sibling_dataset do

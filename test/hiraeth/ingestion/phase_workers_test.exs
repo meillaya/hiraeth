@@ -394,7 +394,7 @@ defmodule Hiraeth.Ingestion.PhaseWorkersTest do
              |> Map.put(:manifest, manifest)
              |> Phases.ValidateCandidates.run()
 
-    assert reason =~ "expected_record_count 2"
+    assert reason =~ "expected_record_count floor 2"
     assert_phase_failed(run.id, :validate_candidates, "validation_failed")
   end
 

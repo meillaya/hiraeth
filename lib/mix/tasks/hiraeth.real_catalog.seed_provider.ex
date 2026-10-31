@@ -60,9 +60,8 @@ defmodule Mix.Tasks.Hiraeth.RealCatalog.SeedProvider do
   end
 
   defp seed_provider(provider) do
-    dataset_path = canonical_dataset_path(provider)
-
-    with true <- File.exists?(dataset_path),
+    with dataset_path when is_binary(dataset_path) <-
+           Dataset.file_for_provider(provider, dataset_dir()),
          {:ok, dataset} <- Dataset.load_file(dataset_path),
          :ok <- validate_if_manifested(dataset),
          import_run <- create_import_run!(dataset, provider),
@@ -70,9 +69,16 @@ defmodule Mix.Tasks.Hiraeth.RealCatalog.SeedProvider do
       print_summary(provider, dataset)
       :ok
     else
-      false -> {:error, "Dataset file not found: #{dataset_path}"}
-      {:error, findings} when is_list(findings) -> {:error, format_findings(provider, findings)}
-      {:error, reason} -> {:error, reason}
+      nil ->
+        {:error,
+         "Dataset file not found for provider=#{provider}; checked-in datasets are indexed by " <>
+           "their declared provider, not by filename."}
+
+      {:error, findings} when is_list(findings) ->
+        {:error, format_findings(provider, findings)}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -126,10 +132,6 @@ defmodule Mix.Tasks.Hiraeth.RealCatalog.SeedProvider do
   # priv/catalog_sources/real_publishers/ dir (priv/AGENTS.md anti-pattern).
   defp dataset_dir do
     Application.get_env(:hiraeth, :seed_provider_dataset_dir, Dataset.default_dir())
-  end
-
-  defp canonical_dataset_path(provider) do
-    Path.join(dataset_dir(), "#{provider}.json")
   end
 
   defp format_error_message(message) when is_binary(message), do: message

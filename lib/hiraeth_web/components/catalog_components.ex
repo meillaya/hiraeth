@@ -70,9 +70,8 @@ defmodule HiraethWeb.CatalogComponents do
   defp cover_src(nil, _variant), do: nil
 
   defp cover_src(cover, "hero") do
-    cover
-    |> Map.get(:public_url)
-    |> local_cover_url()
+    local_cover_url(Map.get(cover, :thumbnail_url)) ||
+      local_cover_url(Map.get(cover, :public_url))
   end
 
   defp cover_src(cover, _variant) do
