@@ -1,11 +1,11 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-08-05
-**Commit:** b3c94b4
+**Generated:** 2026-10-31
+**Commit:** e616d16
 **Branch:** main
 
 ## OVERVIEW
-Hiraeth is a Phoenix 1.8 / LiveView discovery catalog for indie publisher and bookstore data (v1.0.0, deployed to Railway). Ash resources own domain behavior; Scrapling-powered Python sidecar handles permitted external fetch/scrape work; local dev uses the nix-profile toolchain plus a standalone postgres (the devenv config files remain in-repo as dormant groundwork) while the Dockerfiles remain the production-boundary reference.
+Hiraeth is a Phoenix 1.8 / LiveView discovery catalog for indie publisher and bookstore data (v1.0.0, deployed to Railway). Ash resources own domain behavior; Scrapling-powered Python sidecar handles permitted external fetch/scrape work; local dev uses the nix-profile toolchain plus a standalone postgres (the devenv config files remain in-repo as dormant groundwork) while the Dockerfiles remain the production-boundary reference. The public browser UI is the light-only Softbound edition: one paper sheet, Newsreader/Archivo type, canonical `sb-*` tokens in `assets/css/tokens.css`, and static reference compositions plus a formal spec in `design/`.
 
 ## STRUCTURE
 ```
@@ -15,12 +15,17 @@ lib/hiraeth/ingestion    # provider runs, sidecar client, normalizers, replay
 lib/hiraeth/real_catalog # deterministic corpus: dataset, policy gates, validator, importer
 lib/hiraeth_web/         # Phoenix router, LiveViews, components, public UI, versioned JSON API
 lib/hiraeth_web/api      # OpenAPI document, v1 controller, schemas, serializer
+assets/css/              # Tailwind entry, Softbound tokens, and component layer
+design/                  # formal Softbound spec + static page prototypes (docs-only)
+docs/screenshots/        # versioned README captures + routes manifest
 lib/mix/tasks/           # operator Mix tasks: ingest, scrape, covers, audits
 test/                    # ExUnit, LiveView, fixture, and contract suites
 test/support             # data_case, factories, contract fixtures
 sidecar/                 # private FastAPI + Scrapling sidecar service
 scripts/                 # QA/dev/catalog operational scripts
 scripts/qa/ingestion     # production ingestion drills + adversarial drill
+scripts/qa/design_screenshots.mjs  # on-demand responsive design contract check
+scripts/qa/live_screenshots.mjs    # README gallery refresh
 scripts/qa/perf          # perf baseline measurement harness (measure_gates.sh)
 scripts/ops              # DB backup + restore-drill scripts (restore into separate DB only)
 priv/                    # migrations, source data, snapshots, static covers
@@ -39,11 +44,14 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | Catalog business rules | `lib/hiraeth/catalog`, `lib/hiraeth/*.ex` | Ash domains/actions first |
 | Ingestion/provenance | `lib/hiraeth/ingestion`, `lib/hiraeth/sources`, `lib/hiraeth/real_catalog` | preserve snapshots + ledgers |
 | Public browser UI | `lib/hiraeth_web/live`, `lib/hiraeth_web/public_catalog.ex` | LiveView only |
+| Design system and tokens | `assets/css/tokens.css`, `assets/css/softbound.css`, `design/index.html` | single token source; spec reads the live CSS; Softbound is light-only |
+| Browser capture checks | `scripts/qa/design_screenshots.mjs`, `scripts/qa/live_screenshots.mjs` | Playwright, on demand; not part of `mix gate` |
+| Cover selection and backfill | `lib/hiraeth/covers/policy.ex`, `lib/hiraeth/oban/cover_backfill_worker.ex` | one print-first cover per work; boot backfill fills missing cache |
 | Public JSON API | `lib/hiraeth_web/api`, `docs/api/v1.md` | read-only `/api/v1`, schema-tested |
 | Operator Mix tasks | `lib/mix/tasks` | ingest, scrape, covers, audits |
 | External fetch/scrape | `sidecar/app`, `sidecar/tests` | private sidecar, Scrapling only |
 | Dev/test orchestration | `scripts/dev/ensure_postgres.sh`, `devenv.nix`, `Makefile` | standalone postgres + nix-profile toolchain (devenv dormant) |
-| Frontend verification | `test/hiraeth_web/live`, `test/hiraeth_web` | LiveView/route logic tests (no browser-QA lane) |
+| Frontend verification | `test/hiraeth_web/live`, `test/hiraeth_web` | LiveView/route logic tests plus on-demand Playwright captures; no browser lane in `mix gate` |
 | Ingestion QA drills | `scripts/qa/ingestion` | production drill + adversarial drill |
 | Test support harnesses | `test/support` | data_case, factories, contract fixtures |
 | Migrations | `priv/repo/migrations` | Ash + custom migration history |
@@ -59,7 +67,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.Application` | OTP app | `lib/hiraeth/application.ex` | starts Repo, PubSub, Oban, Endpoint |
 | `HiraethWeb.Router` | router | `lib/hiraeth_web/router.ex` | public route boundary; hard CSP + `:ops` probe pipeline |
 | `HiraethWeb.HealthController` | controller | `lib/hiraeth_web/controllers/health_controller.ex` | `/health` + `/ready` (DB + optional sidecar check) |
-| `HiraethWeb.PublicCatalog` | query facade | `lib/hiraeth_web/public_catalog.ex` | typed public catalog projection/filtering |
+| `HiraethWeb.PublicCatalog` | query facade | `lib/hiraeth_web/public_catalog.ex` | typed projection/filtering; home spotlight and four-title shelf selection; cover projection |
 | `Hiraeth.Catalog.PublicProjection` | typed boundary | `lib/hiraeth/catalog/public_projection.ex` | projection structs + strict builders |
 | `HiraethWeb.Api.Spec` | OpenAPI document | `lib/hiraeth_web/api/spec.ex` | served at `/api/v1/openapi.json` |
 | `HiraethWeb.Api.V1.CatalogController` | controller | `lib/hiraeth_web/api/v1/catalog_controller.ex` | versioned read endpoints |
@@ -78,6 +86,10 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.ProvenanceAudit` | audit exporter | `lib/hiraeth/provenance_audit.ex` | source-ledger/takedown/cover-cache evidence exports |
 | `Hiraeth.Ingestion.ManifestValidator` | manifest gate | `lib/hiraeth/ingestion/manifest_validator.ex` | validates provider manifests before ingestion accepts them |
 | `Hiraeth.Covers` | domain facade | `lib/hiraeth/covers.ex` | cover cache safety + provenance |
+| `Hiraeth.Covers.Policy` | read policy | `lib/hiraeth/covers/policy.ex` | picks the one public cover per work: newest print, non-print fallback |
+| `Hiraeth.Oban.CoverBackfillWorker` | Oban worker | `lib/hiraeth/oban/cover_backfill_worker.ex` | boot-time cache fill for assets with no cached original |
+| `HiraethWeb.CatalogText` | text boundary | `lib/hiraeth_web/catalog_text.ex` | strips publisher markup/shortcodes; placeholder-name guard for contributor display |
+| `HiraethWeb` public LiveViews | browser surfaces | `lib/hiraeth_web/live` | Softbound home, browse, book, publishers, press, collections, contributors, search |
 | `Hiraeth.Oban.ProviderIngestionWorker` | Oban worker | `lib/hiraeth/oban/provider_ingestion_worker.ex` | per-provider fetch/normalize/apply pipeline |
 | `Hiraeth.Oban.ProviderSchedulerWorker` | Oban worker | `lib/hiraeth/oban/provider_scheduler_worker.ex` | triggers provider runs on plan schedule |
 | `Hiraeth.Oban.CoverRefreshWorker` | Oban worker | `lib/hiraeth/oban/cover_refresh_worker.ex` | weekly scheduled cover cache refresh |
@@ -93,9 +105,14 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Public UI reads typed projections; never serialize raw Ash/SQL/sidecar payloads into browser paths.
 - Use `Req` for Elixir HTTP. Do not add HTTPoison/Tesla/httpc.
 - Tailwind v4 stays in `assets/css/app.css` with `@import "tailwindcss" source(none);` and `@source` entries; never use `@apply`.
+- Softbound is the only public skin: light-only, `sb-*` components, and values from `assets/css/tokens.css` / `assets/css/softbound.css`. Do not hardcode palette values, reintroduce a dark theme, or add remote fonts.
+- Treat `design/` as reference material, not production code: `design/index.html` is the formal spec, `design/softbound_*.html` are static compositions, and the running implementation is `lib/hiraeth_web/live`. `design/**` is marked `linguist-documentation` in `.gitattributes`, so it stays tracked but is excluded from GitHub language stats.
+- Render sourced publisher prose only through `HiraethWeb.CatalogText.plain/2`; never emit raw publisher HTML or shortcode soup. Use `CatalogText.unknown_contributor?/1` to suppress placeholder contributor names rather than fabricating replacements.
+- Public covers are selected only by `Hiraeth.Covers.Policy`: the newest displayable print cover wins, with a newest non-print cover as the fallback. A split-format provider declares `cover_source` in its manifest; never hand-pick a cover in a LiveView or refresh the cache to change which edition is displayed.
+- README captures are generated by `scripts/qa/live_screenshots.mjs` into versioned `docs/screenshots/softbound-*.png` names. Keep the versioned names when refreshing; GitHub can serve a stale image from a reused raw URL even after the file changes.
 - LiveViews start templates with `<Layouts.app flash={@flash} ...>` and pass `current_scope` where required.
 - Use `<.input>`, `<.icon>`, `<.link navigate|patch>`, `to_form`, and LiveView streams for collections.
-- Devenv local processes own Postgres `127.0.0.1:54320`, sidecar `127.0.0.1:8000`, Phoenix `127.0.0.1:4000`.
+- Local processes use Postgres `127.0.0.1:54320`, sidecar `127.0.0.1:8000`, Phoenix `127.0.0.1:4000`; start Postgres with `scripts/dev/ensure_postgres.sh start` (devenv files are dormant).
 - Docker sidecar image (`sidecar/Dockerfile`) is the production service-network boundary; do not claim production is fully Nix/devenv-only.
 - Prod runtime is hardened: force_ssl (exempts `/health`), Secure session cookie, JSON logs, `/ready` requires sidecar healthy; `DATABASE_URL`, `SCRAPLING_SIDECAR_URL`, and `SCRAPLING_SIDECAR_TOKEN` are required release env. The sidecar image runs in secure mode with server-side manifests and HMAC-signed requests.
 - Public covers use a bounded local cache plus Cloudflare R2 when `HIRAETH_COVER_STORE=s3`; `/covers/cache/...` is same-origin and the proxy refills local misses from R2. Cards and heroes use generated thumbnails (ImageMagick `magick`/`convert`) and static/proxy responses carry a one-day browser cache. Purge deletes both copies.
@@ -110,14 +127,16 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 - Runtime remote fonts or third-party scripts in public UI; pages and browser captures must stay self-contained.
 - Touching `priv/static/covers/cache/*` during cleanup; use the sandbox/hash guard.
 - Publicly exposing the sidecar, wildcard CORS, private/loopback/link-local fetch targets, or userinfo URLs.
+- Rendering raw publisher HTML/shortcodes or placeholder contributor rows; use `HiraethWeb.CatalogText`.
+- Adding a dark theme or hardcoded Softbound colors outside `assets/css/tokens.css`.
+- Bypassing `Hiraeth.Covers.Policy` or treating a cover-cache refresh as the way to change which edition is displayed.
+- Reusing a previous `docs/screenshots` filename after a visible redesign, which lets GitHub's raw image cache resurrect the old design.
+- Treating the static `design/` prototypes or the Playwright capture scripts as a production surface or a `mix gate` browser lane.
 - `Phoenix.HTML.form_for`, `<.form let=...>`, raw inline `<script>` in HEEx, `live_redirect`, `live_patch`, `<.flash_group>` outside layouts.
 
 ## COMMANDS
 ```bash
-nix run nixpkgs#devenv -- test
 scripts/dev/ensure_postgres.sh start   # standalone postgres (127.0.0.1:54320)
-nix run nixpkgs#devenv -- shell -- mix gate
-nix run nixpkgs#devenv -- shell -- mix ci
 mix gate                 # Layer 0 blocking gate (compile warnings-as-errors + format check + credo --strict + test.fast)
 mix test.fast
 mix test.full
@@ -130,6 +149,8 @@ mix hiraeth.covers.sync --all --missing --json    # fill missing originals + thu
 mix hiraeth.covers.audit --json                   # cover coverage report
 mix hiraeth.real_catalog.sync --check             # authority/artifact/coverage drift gate
 mix hiraeth.catalog.refresh --all --dry-run --json
+node scripts/qa/design_screenshots.mjs http://127.0.0.1:4000 [outDir]
+node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app
 cd sidecar && uv run --extra dev pytest -q
 cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```
@@ -138,7 +159,10 @@ cd sidecar && uv run ruff check . && uv run pyright && uv audit
 - `mix gate` checks compile with warnings-as-errors, unused deps, formatting (checks it, does not rewrite), strict Credo, and the fast test lane; sobelow/hex.audit/dialyzer are slower or network-dependent and run only in `mix ci`.
 - Public API changes require updating `docs/api/v1.md`, the schema modules, and the two API contract tests together. The route contract test pins the exact `/api/v1` path list.
 - `mix test.fast` excludes `slow`, `full_catalog`, `integration`, `performance`, `browser`, `public_catalog_full`. `mix test.full` is the complete suite; bare `mix test` runs the same default set.
-- Verification is local-only (`mix gate`, `mix ci`, `make verify`): GitHub Actions workflows were removed in August 2026 and `test/hiraeth/dev_environment_ci_contract_test.exs` pins their absence. Frontend correctness is verified by the LiveView/route logic tests in `test/hiraeth_web/live` and `test/hiraeth_web`, which run inside the ExUnit lanes; there is no browser-QA lane.
+- Verification is local-only (`mix gate`, `mix ci`, `make verify`): GitHub Actions workflows were removed in August 2026 and `test/hiraeth/dev_environment_ci_contract_test.exs` pins their absence. Frontend correctness is covered by the LiveView/route logic tests in `test/hiraeth_web/live` and `test/hiraeth_web`; `scripts/qa/design_screenshots.mjs` is an on-demand Playwright contract check across nine widths, not a `mix gate` lane.
+- The Softbound spec at `design/index.html` reads computed values from `assets/css/tokens.css`; do not duplicate token values in templates or the spec. `design/**` is tracked but excluded from GitHub language statistics via `.gitattributes` (`linguist-documentation`); `.gitattributes` cannot untrack files, so use `.gitignore` plus `git rm --cached` if a file should actually leave Git.
+- Cover coverage self-heals: `HIRAETH_COVER_BACKFILL_ON_BOOT` (default true in prod) enqueues `CoverBackfillWorker` at boot, scoped to assets with no cached original and independent of `HIRAETH_SCHEDULED_INGEST`. Display selection is read-time `Covers.Policy`; a reissue with a newer print cover replaces the old cover without refetching unchanged assets.
+- README screenshots are versioned (`docs/screenshots/softbound-*.png`) and paired with `docs/screenshots/routes.json`. The live capture script writes both; the versioned names intentionally avoid GitHub's raw-image cache.
 - devenv is dormant local-dev groundwork: local dev runs the nix-profile toolchain on bare PATH plus a standalone postgres via `scripts/dev/ensure_postgres.sh` (127.0.0.1:54320); CI lanes do not invoke devenv.
 - `.omx`, `.omo`, `.omc`, `_build`, `deps`, `.devenv`, `.direnv`, caches, and artifacts are workspace/tool state unless a task explicitly targets them.
 - Custom Mix aliases (`gate`, `ci`, `test.fast`, `test.full`) auto-run under `MIX_ENV=test` via `preferred_envs`; `mix test` auto-creates and migrates the DB first.
