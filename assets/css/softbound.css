@@ -3788,3 +3788,17 @@ ol {
   border-radius: 4px;
   font-size: 22px;
 }
+
+.sb-pressitem__thumb .sb-cover-figure {
+  width: auto;
+  height: 100%;
+}
+
+.sb-pressitem__thumb .sb-cover-figure img {
+  width: auto;
+  height: 100%;
+}
+
+.sb-pressitem__thumb {
+  overflow: hidden;
+}

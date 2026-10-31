@@ -1192,6 +1192,7 @@ defmodule HiraethWeb.PublicCatalog do
 
   defp contributor_summary_rows(role) do
     {where, params} = contributor_role_where(role)
+    where = exclude_placeholder_contributors(where)
 
     {:ok, %{rows: rows}} =
       Hiraeth.Repo.query(
@@ -1230,6 +1231,7 @@ defmodule HiraethWeb.PublicCatalog do
         join editions e on e.work_id = c.work_id or e.id = c.edition_id
         join source_records sr on sr.edition_id = e.id
         where ct.slug = $1
+          and ct.display_name not in ('Unknown contributor', 'Unknown author')
         group by ct.id, ct.display_name, ct.slug
         limit 1
         """,
@@ -1249,6 +1251,7 @@ defmodule HiraethWeb.PublicCatalog do
         join editions e on e.work_id = c.work_id or e.id = c.edition_id
         join source_records sr on sr.edition_id = e.id
         where ct.slug = $1
+          and ct.display_name not in ('Unknown contributor', 'Unknown author')
         group by e.work_id
         order by max(e.published_on) desc nulls last, min(lower(e.title)), min(e.slug)
         """,
@@ -1256,6 +1259,14 @@ defmodule HiraethWeb.PublicCatalog do
       )
 
     Enum.map(rows, fn [work_id] -> work_id end)
+  end
+
+  defp exclude_placeholder_contributors("") do
+    "where ct.display_name not in ('Unknown contributor', 'Unknown author')"
+  end
+
+  defp exclude_placeholder_contributors(where) do
+    where <> " and ct.display_name not in ('Unknown contributor', 'Unknown author')"
   end
 
   defp contributor_role_where(role) do
