@@ -4,11 +4,25 @@ Hiraeth is a Phoenix LiveView and Ash catalog for browsing curated independent p
 
 It is browser-first: the primary surface is the LiveView catalog. It also serves a versioned, read-only JSON API at `/api/v1` from the same typed projections. Public routes include `/browse`, `/search`, `/publishers`, `/series`, `/contributors`, contributor role filters such as `/contributors?role=translator`, and book detail pages.
 
+## Live deployment
+
+The running catalog is deployed on Railway at
+<https://web-production-a31e0.up.railway.app>. The Phoenix service, the private
+FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
+
+[![Hiraeth home page](docs/screenshots/home.png)](https://web-production-a31e0.up.railway.app)
+
+| Browse the catalog | Book detail |
+| --- | --- |
+| [![Browse page](docs/screenshots/browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-theodoros) |
+
+[![Publishers page](docs/screenshots/publishers.png)](https://web-production-a31e0.up.railway.app/publishers)
+
 ## What is in the app
 
 - Curated catalog for the approved indie publisher corpus, currently 8,776 deterministic source records across providers such as New Directions, Deep Vellum, Pushkin Press, and more.
 - Provenance-aware imports, cover attribution, source artifact reports, and gap states instead of fabricated metadata.
-- Local-cache-only public cover display from `/covers/cache/...`; unsafe or missing covers render typographic fallbacks.
+- R2-backed public cover display served same-origin from `/covers/cache/...`; unsafe or missing covers render typographic fallbacks.
 - Ash-backed ingestion control plane for provider sources, provider runs, source snapshots, record candidates, diffs, quarantine, replay, and ingestion events.
 - Oban-backed autonomous ingestion phases: plan, fetch, normalize, validate, diff, cover-cache, apply, audit, quarantine, replay, and retention cleanup.
 - Private-by-default Python sidecar with strict CORS, typed errors, contract snapshots, and URL validation for fetch/scrape adapters.
@@ -118,7 +132,20 @@ is hashed before and after the sandboxed command.
 
 ## Production notes
 
-The repository includes environment examples in `.env.example`; there is no GitHub Actions CI. The public catalog is deployed to Railway at `https://hiraeth-web-production.up.railway.app`: the Phoenix service builds from the root `Dockerfile`, the private Scrapling sidecar builds from `sidecar/Dockerfile`, and Postgres is Railway-managed.
+The repository includes environment examples in `.env.example`; there is no GitHub Actions CI. The public catalog is deployed to Railway at `https://web-production-a31e0.up.railway.app`.
+
+The Railway project has three services. `web` builds from the root `Dockerfile`, serves the LiveView catalog and `/api/v1`, and healthchecks `/health`. `sidecar` builds from `sidecar/Dockerfile`, stays on private networking, and healthchecks `/health/`. `Postgres` is Railway-managed. `railway.json` and `sidecar/railway.json` pin the healthcheck and restart policy. The web service sets `PHX_HOST` to the generated domain, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SCRAPLING_SIDECAR_URL=http://sidecar.railway.internal:8000`, `HIRAETH_READY_SIDECAR_REQUIRED=1`, and `HIRAETH_SCHEDULED_INGEST=false` for the public demo.
+
+The release image has no Mix, so migrations and seeding run from a checkout against the Railway database through a temporary TCP proxy. Create the proxy, point `DATABASE_URL` at its endpoint, run the commands, then delete the proxy:
+
+```sh
+railway tcp-proxy create --port 5432 --service Postgres
+MIX_ENV=dev DATABASE_URL=postgresql://... mix ash.migrate
+MIX_ENV=dev DATABASE_URL=postgresql://... mix run priv/repo/seeds.exs
+railway tcp-proxy delete <proxy-id> --yes
+```
+
+The seed loads 8,776 editions. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the images in this README after a visible change.
 
 Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only.
 

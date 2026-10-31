@@ -48,3 +48,4 @@ __pycache__/
 /.cache/
 /.direnv/
 /.envrc
+node_modules/

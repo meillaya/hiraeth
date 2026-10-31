@@ -20,7 +20,8 @@ ENV HIRAETH_PROVIDER_MANIFESTS_DIR=/app/manifests
 ENV HIRAETH_SIDECAR_REQUIRE_SECURE=1
 
 # Run as a non-root user
-RUN useradd -m appuser
+RUN useradd -m appuser \
+  && chown -R appuser:appuser /app/app /app/manifests
 USER appuser
 
 EXPOSE 8000

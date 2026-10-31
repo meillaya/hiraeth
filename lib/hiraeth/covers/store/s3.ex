@@ -82,10 +82,10 @@ defmodule Hiraeth.Covers.Store.S3 do
 
     if configured?() do
       request =
-        Req.new()
+        Req.new(config[:req_options] || [])
         |> ReqS3.attach(
-          aws_endpoint_url_s3: config[:endpoint],
           aws_sigv4: [
+            service: :s3,
             access_key_id: config[:access_key_id],
             secret_access_key: config[:secret_access_key],
             region: config[:region] || "auto"
@@ -98,13 +98,19 @@ defmodule Hiraeth.Covers.Store.S3 do
     end
   end
 
+  # New Railway and R2 buckets use virtual-hosted URLs, where the bucket is a
+  # subdomain of the endpoint. ReqS3 signs any URL, so build the full URL here
+  # instead of relying on its path-style `s3://` expansion.
   defp object_url(config, key) when is_binary(key) and key != "" do
-    "s3://#{config[:bucket]}/#{key}"
+    endpoint = URI.parse(config[:endpoint])
+
+    %{endpoint | host: "#{config[:bucket]}.#{endpoint.host}", path: "/" <> key, query: nil}
+    |> URI.to_string()
   end
 
   defp content_type(%Req.Response{} = response) do
     case Req.Response.get_header(response, "content-type") do
-      [content_type | _rest] -> content_type
+      [content_type | _rest] -> content_type |> String.split(";") |> List.first() |> String.trim()
       _missing -> nil
     end
   end

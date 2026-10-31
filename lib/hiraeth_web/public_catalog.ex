@@ -7,6 +7,8 @@ defmodule HiraethWeb.PublicCatalog do
   """
 
   alias Hiraeth.Catalog.PublicProjection
+  alias Hiraeth.Covers
+  alias Hiraeth.Covers.Store
   alias Hiraeth.RealCatalog.SourcePolicy
 
   @page_size 24
@@ -1650,7 +1652,7 @@ defmodule HiraethWeb.PublicCatalog do
   defp cover_public_url_from_data(_asset), do: nil
 
   defp thumbnail_url_from_data(path) do
-    if safe_cached_file_path?(path), do: static_cover_path(path)
+    if cached_file_available?(path), do: static_cover_path(path)
   end
 
   defp public_cover_data(covers) do
@@ -1675,10 +1677,18 @@ defmodule HiraethWeb.PublicCatalog do
          "rights_basis" => "local_cache_permitted",
          "cached_file_path" => path
        }) do
-    safe_cached_file_path?(path)
+    cached_file_available?(path)
   end
 
   defp public_cache_policy_data?(_asset), do: false
+
+  # With a durable object store the local file is only a cache. A cold node
+  # must still emit the same-origin URL so the proxy can refill it. Local-only
+  # mode keeps requiring the file so a missing cache entry becomes a fallback.
+  defp cached_file_available?(path) do
+    safe_cached_file_path?(path) or
+      (Store.configured?() and Covers.cache_file_path_safe?(path))
+  end
 
   defp static_cover_path(path) when is_binary(path) do
     path = Path.expand(path)
