@@ -57,6 +57,29 @@ defmodule Hiraeth.NoScopeCreepTest do
     refute Enum.any?(paths, &String.contains?(&1, "/shelves"))
   end
 
+  test "admin write routes stay in the browser surface and ops stays GET-only" do
+    routes = HiraethWeb.Router.__routes__()
+    admin_routes = Enum.filter(routes, &String.starts_with?(&1.path, "/admin"))
+    ops_routes = Enum.filter(routes, &(&1.path == "/ops"))
+
+    assert Enum.map(admin_routes, & &1.path) |> Enum.uniq() == [
+             "/admin",
+             "/admin/candidates",
+             "/admin/candidates/:id",
+             "/admin/candidates/:id/approve",
+             "/admin/candidates/:id/reject",
+             "/admin/candidates/:id/ignore",
+             "/admin/candidates/:id/override"
+           ]
+
+    assert Enum.map(ops_routes, & &1.verb) == [:get]
+
+    refute Enum.any?(
+             routes,
+             &(&1.path |> String.starts_with?("/api") and String.contains?(&1.path, "admin"))
+           )
+  end
+
   test "bootstrap scope has no implementation modules for scraping/social/ecommerce features" do
     lib_paths = Path.wildcard(Path.join(@root, "lib/**/*.ex"))
     lowered_paths = Enum.map(lib_paths, &String.downcase(Path.relative_to(&1, @root)))

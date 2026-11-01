@@ -1,9 +1,11 @@
 defmodule HiraethWeb.PublicCatalog do
   @moduledoc """
-  Ash-backed read model for public LiveView catalog pages.
+  Public read facade over the materialized `catalog_public_works` read model.
 
   The module deliberately projects only known persisted fields. It never fills in
-  unknown dates, languages, dimensions, page counts, or cover art.
+  unknown dates, languages, dimensions, page counts, or cover art. The legacy
+  canonical-query fallback has been removed; imports and seeds refresh the read
+  model through `Hiraeth.Catalog.PublicWorkProjection`.
   """
 
   alias Hiraeth.Catalog.PublicProjection
@@ -92,69 +94,11 @@ defmodule HiraethWeb.PublicCatalog do
   @spec book_page(book_query(), page_param(), pos_integer()) ::
           PublicProjection.Page.t(PublicProjection.Book.t())
   def book_page(query, page, page_size \\ @page_size) do
-    if read_model?() do
-      PublicWorks.book_page(query, page, page_size)
-    else
-      legacy_book_page(query, page, page_size)
-    end
-  end
-
-  defp legacy_book_page(query, page, page_size) do
-    filters = normalize_book_filters(query)
-    requested_page = page |> parse_page() |> max(1) |> min(@max_page)
-    requested_offset = (requested_page - 1) * page_size
-    {total_count, work_ids} = work_page_for_filters(filters, page_size, requested_offset)
-
-    total_count =
-      if work_ids == [] and requested_page > 1 do
-        count_books_for_filters(filters)
-      else
-        total_count
-      end
-
-    total_pages = max(ceil_div(max(total_count, 1), page_size), 1)
-    current_page = min(requested_page, total_pages)
-
-    work_ids =
-      if current_page == requested_page do
-        work_ids
-      else
-        {_total_count, work_ids} =
-          work_page_for_filters(filters, page_size, (current_page - 1) * page_size)
-
-        work_ids
-      end
-
-    PublicProjection.page!(%{
-      entries: books_for_work_ids(work_ids),
-      page: current_page,
-      page_size: page_size,
-      total_count: total_count,
-      total_pages: total_pages
-    })
+    PublicWorks.book_page(query, page, page_size)
   end
 
   @spec book(String.t()) :: PublicProjection.Book.t() | nil
-  def book(slug) do
-    if read_model?() do
-      PublicWorks.get(slug)
-    else
-      legacy_book(slug)
-    end
-  end
-
-  defp legacy_book(slug) do
-    case work_id_for_slug(slug) do
-      nil ->
-        nil
-
-      work_id ->
-        Enum.find(
-          books_for_work_ids([work_id]),
-          &(&1.slug == slug or Enum.any?(&1.formats, fn format -> format.edition_slug == slug end))
-        )
-    end
-  end
+  def book(slug), do: PublicWorks.get(slug)
 
   defp books_for_work_ids([]), do: []
 
@@ -265,14 +209,6 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.map(&edition_projection_from_row/1)
   end
 
-  defp books_for_publisher_id(publisher_id) do
-    edition_rows("where e.publisher_id = $1::uuid", [uuid_param(publisher_id)])
-    |> Enum.map(&edition_projection_from_row/1)
-    |> Enum.group_by(& &1.work_id)
-    |> Enum.map(fn {_work_id, editions} -> book_projection(editions) end)
-    |> Enum.sort_by(&publication_date_sort_key/1)
-  end
-
   defp work_id_for_slug(slug) do
     {:ok, %{rows: rows}} =
       Hiraeth.Repo.query(
@@ -300,391 +236,6 @@ defmodule HiraethWeb.PublicCatalog do
       _rows -> nil
     end
   end
-
-  defp count_books_for_filters(filters) do
-    if default_title_page_filters?(filters) do
-      count_default_title_books()
-    else
-      count_filtered_books(filters)
-    end
-  end
-
-  defp count_default_title_books do
-    {:ok, %{rows: [[count]]}} =
-      Hiraeth.Repo.query(
-        """
-        select count(distinct e.work_id)
-        from editions e
-        join works w on w.id = e.work_id
-        join source_records sr on sr.edition_id = e.id
-        """,
-        []
-      )
-
-    count
-  end
-
-  defp count_filtered_books(filters) do
-    {where, params} = work_filter_where(filters)
-
-    {:ok, %{rows: [[count]]}} =
-      Hiraeth.Repo.query(
-        """
-        select count(distinct e.work_id)
-        from editions e
-        join works w on w.id = e.work_id
-        join source_records sr on sr.edition_id = e.id
-        left join identifiers display_identifier
-          on display_identifier.edition_id = e.id and display_identifier.identifier_type = 'isbn_13'
-        left join publishers p on p.id = e.publisher_id
-        #{where}
-        """,
-        params
-      )
-
-    count
-  end
-
-  defp work_page_for_filters(filters, limit, offset) do
-    if default_title_page_filters?(filters) do
-      default_title_work_page(limit, offset)
-    else
-      filtered_work_page(filters, limit, offset)
-    end
-  end
-
-  defp default_title_work_page(limit, offset) do
-    {limit_sql, params} = limit_params(limit, offset, [])
-
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        select work_id, count(*) over() as total_count
-        from (
-          select
-            e.work_id,
-            lower(w.title) as title_sort,
-            min(e.slug) as slug_sort,
-            max(e.published_on) as newest_sort
-          from editions e
-          join works w on w.id = e.work_id
-          join source_records sr on sr.edition_id = e.id
-          group by e.work_id, w.title
-        ) grouped_books
-        order by #{publication_date_order_sql()}
-        #{limit_sql}
-        """,
-        params
-      )
-
-    work_page_from_rows(rows)
-  end
-
-  defp filtered_work_page(filters, limit, offset) do
-    {where, params} = work_filter_where(filters)
-    {limit_sql, params} = limit_params(limit, offset, params)
-    order_sql = work_page_order_sql(filters.sort)
-
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        select work_id, count(*) over() as total_count
-        from (
-          select
-            e.work_id,
-            lower(w.title) as title_sort,
-            min(e.slug) as slug_sort,
-            max(e.published_on) as newest_sort,
-            max(sr.imported_at) as imported_sort#{work_page_author_sort_sql(filters.sort)}
-          from editions e
-          join works w on w.id = e.work_id
-          join source_records sr on sr.edition_id = e.id
-          left join identifiers display_identifier
-            on display_identifier.edition_id = e.id and display_identifier.identifier_type = 'isbn_13'
-          left join publishers p on p.id = e.publisher_id
-          #{where}
-          group by e.work_id, w.title
-        ) grouped_books
-        order by #{order_sql}
-        #{limit_sql}
-        """,
-        params
-      )
-
-    work_page_from_rows(rows)
-  end
-
-  defp work_page_from_rows([]), do: {0, []}
-
-  defp work_page_from_rows(rows) do
-    total_count = rows |> List.first() |> List.last()
-    work_ids = Enum.map(rows, fn [work_id, _total_count] -> work_id end)
-
-    {total_count, work_ids}
-  end
-
-  defp work_filter_where(filters) do
-    {conditions, params} =
-      {[], []}
-      |> add_text_filter(filters.q)
-      |> add_slug_or_name_filter(filters.publisher, "p.slug", "p.name")
-      |> add_role_filter(filters.role)
-      |> add_contributor_filter(filters.contributor)
-      |> add_exact_filter(filters.format, "lower(coalesce(e.format, ''))")
-      |> add_language_filter(filters.language)
-      |> add_subject_filter(filters.subject)
-      |> add_series_filter(filters.series)
-      |> add_year_filter(filters.year)
-
-    case conditions do
-      [] -> {"", params}
-      _ -> {"where " <> Enum.join(Enum.reverse(conditions), " and "), params}
-    end
-  end
-
-  defp add_text_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_text_filter({conditions, params}, value) do
-    needle = "%#{like_escape(normalize_text(value))}%"
-    normalized_identifier = normalize_identifier(value)
-    identifier = if normalized_identifier == "", do: "", else: "%#{normalized_identifier}%"
-    text_index = length(params) + 1
-    identifier_index = length(params) + 2
-
-    condition =
-      """
-      (lower(coalesce(w.title, '')) like $#{text_index} escape '!'
-         or lower(coalesce(w.subtitle, '')) like $#{text_index} escape '!'
-         or lower(coalesce(e.title, '')) like $#{text_index} escape '!'
-         or lower(coalesce(e.subtitle, '')) like $#{text_index} escape '!'
-         or lower(coalesce(p.name, '')) like $#{text_index} escape '!'
-         or exists (
-           select 1
-           from contributions c
-           join contributors ct on ct.id = c.contributor_id
-           where (c.work_id = w.id or c.edition_id = e.id)
-             and lower(coalesce(ct.display_name, '')) like $#{text_index} escape '!'
-         )
-         or exists (
-           select 1
-           from series_memberships sm
-           join series s on s.id = sm.series_id
-           where sm.work_id = w.id
-             and lower(coalesce(s.title, '')) like $#{text_index} escape '!'
-         )
-         or ($#{identifier_index} <> '' and regexp_replace(coalesce(display_identifier.value, ''), '[^0-9xX]', '', 'g') like $#{identifier_index}))
-      """
-
-    {[condition | conditions], params ++ [needle, identifier]}
-  end
-
-  defp add_slug_or_name_filter({conditions, params}, value, _slug_column, _name_column)
-       when value in [nil, ""] do
-    {conditions, params}
-  end
-
-  defp add_slug_or_name_filter({conditions, params}, value, slug_column, name_column) do
-    exact = normalize_text(value)
-    like = "%#{like_escape(exact)}%"
-    exact_index = length(params) + 1
-    like_index = length(params) + 2
-
-    condition =
-      "(lower(coalesce(#{slug_column}, '')) = $#{exact_index} or lower(coalesce(#{name_column}, '')) like $#{like_index} escape '!')"
-
-    {[condition | conditions], params ++ [exact, like]}
-  end
-
-  defp add_exact_filter({conditions, params}, value, _expression) when value in [nil, ""] do
-    {conditions, params}
-  end
-
-  defp add_exact_filter({conditions, params}, value, expression) do
-    index = length(params) + 1
-    {["#{expression} = $#{index}" | conditions], params ++ [normalize_text(value)]}
-  end
-
-  defp add_role_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_role_filter({conditions, params}, value) do
-    index = length(params) + 1
-
-    condition =
-      """
-      exists (
-        select 1
-        from contributions c
-        where (c.work_id = w.id or c.edition_id = e.id)
-          and c.role = $#{index}
-      )
-      """
-
-    {[condition | conditions], params ++ [normalize_text(value)]}
-  end
-
-  defp add_contributor_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_contributor_filter({conditions, params}, value) do
-    exact = normalize_text(value)
-    like = "%#{like_escape(exact)}%"
-    exact_index = length(params) + 1
-    like_index = length(params) + 2
-
-    condition =
-      """
-      exists (
-        select 1
-        from contributions c
-        join contributors ct on ct.id = c.contributor_id
-        where (c.work_id = w.id or c.edition_id = e.id)
-          and (
-            lower(coalesce(ct.slug, '')) = $#{exact_index}
-            or lower(coalesce(ct.display_name, '')) like $#{like_index} escape '!'
-          )
-      )
-      """
-
-    {[condition | conditions], params ++ [exact, like]}
-  end
-
-  defp add_series_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_series_filter({conditions, params}, value) do
-    exact = normalize_text(value)
-    like = "%#{like_escape(exact)}%"
-    exact_index = length(params) + 1
-    like_index = length(params) + 2
-
-    condition =
-      """
-      exists (
-        select 1
-        from series_memberships sm
-        join series s on s.id = sm.series_id
-        where sm.work_id = w.id
-          and (
-            lower(coalesce(s.slug, '')) = $#{exact_index}
-            or lower(coalesce(s.title, '')) like $#{like_index} escape '!'
-          )
-      )
-      """
-
-    {[condition | conditions], params ++ [exact, like]}
-  end
-
-  defp add_language_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_language_filter({conditions, params}, value) do
-    index = length(params) + 1
-
-    condition =
-      "(lower(coalesce(e.language_code, '')) = $#{index} or lower(coalesce(w.original_language_code, '')) = $#{index})"
-
-    {[condition | conditions], params ++ [normalize_text(value)]}
-  end
-
-  defp add_subject_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_subject_filter({conditions, params}, value) do
-    index = length(params) + 1
-
-    {["w.subjects @> ARRAY[$#{index}]::text[]" | conditions], params ++ [to_string(value)]}
-  end
-
-  defp add_year_filter({conditions, params}, value) when value in [nil, ""],
-    do: {conditions, params}
-
-  defp add_year_filter({conditions, params}, value) do
-    case Integer.parse(to_string(value)) do
-      {year, ""} when year > 0 ->
-        index = length(params) + 1
-        {["extract(year from e.published_on)::int = $#{index}" | conditions], params ++ [year]}
-
-      _invalid ->
-        {["false" | conditions], params}
-    end
-  end
-
-  defp work_page_order_sql("title"), do: "title_sort asc nulls last, slug_sort"
-  defp work_page_order_sql("author"), do: "author_sort asc nulls last, title_sort, slug_sort"
-
-  defp work_page_order_sql("recently_added"),
-    do: "imported_sort desc nulls last, title_sort, slug_sort"
-
-  defp work_page_order_sql(_sort), do: publication_date_order_sql()
-
-  defp work_page_author_sort_sql("author") do
-    """
-    ,
-        min((select min(lower(ct.display_name))
-         from contributions c
-         join contributors ct on ct.id = c.contributor_id
-         where c.work_id = e.work_id or c.edition_id = e.id)) as author_sort
-    """
-  end
-
-  defp work_page_author_sort_sql(_sort), do: ""
-
-  defp publication_date_order_sql, do: "newest_sort desc nulls last, title_sort, slug_sort"
-
-  defp limit_params(limit, offset, params) do
-    limit_index = length(params) + 1
-    offset_index = length(params) + 2
-    {"limit $#{limit_index} offset $#{offset_index}", params ++ [limit, offset]}
-  end
-
-  defp normalize_book_filters(query) when is_map(query) do
-    %{
-      q: filter_value(query, :q) || filter_value(query, :query) || "",
-      publisher: filter_value(query, :publisher),
-      role: filter_value(query, :role),
-      contributor: filter_value(query, :contributor),
-      format: filter_value(query, :format),
-      language: filter_value(query, :language),
-      subject: filter_value(query, :subject),
-      series: filter_value(query, :series),
-      year: filter_value(query, :year),
-      sort: normalize_sort(filter_value(query, :sort))
-    }
-  end
-
-  defp normalize_book_filters(query) do
-    normalize_book_filters(%{q: query})
-  end
-
-  defp filter_value(filters, key) do
-    value = Map.get(filters, key) || Map.get(filters, to_string(key))
-
-    cond do
-      is_nil(value) -> nil
-      is_binary(value) -> String.trim(value)
-      is_atom(value) -> value |> Atom.to_string() |> String.trim()
-      is_integer(value) -> Integer.to_string(value)
-      is_map(value) -> nil
-      is_list(value) -> nil
-      true -> value |> to_string() |> String.trim()
-    end
-  end
-
-  defp normalize_sort(sort) when sort in ~w(newest title author recently_added), do: sort
-  defp normalize_sort(_sort), do: "newest"
-
-  defp default_title_page_filters?(%{sort: "newest"} = filters) do
-    Enum.all?(
-      ~w(q publisher role contributor format language subject series year)a,
-      fn key -> blank_filter_value?(Map.get(filters, key)) end
-    )
-  end
-
-  defp default_title_page_filters?(_filters), do: false
-
-  defp blank_filter_value?(value), do: value in [nil, ""]
 
   @spec editions() :: [PublicProjection.Edition.t()]
   def editions do
@@ -718,17 +269,9 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec publishers() :: [PublicProjection.Publisher.t()]
   def publishers do
-    if read_model?() do
-      PublicWorks.publisher_summaries()
-      |> Enum.map(&publisher_summary_projection/1)
-      |> Enum.sort_by(&String.downcase(&1.name))
-    else
-      cached({:publishers}, fn ->
-        publisher_summary_rows()
-        |> Enum.map(&publisher_summary_from_row/1)
-        |> Enum.sort_by(&String.downcase(&1.name))
-      end)
-    end
+    PublicWorks.publisher_summaries()
+    |> Enum.map(&publisher_summary_projection/1)
+    |> Enum.sort_by(&String.downcase(&1.name))
   end
 
   defp publisher_summary_projection(summary) do
@@ -747,28 +290,7 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   @spec publisher(String.t()) :: PublicProjection.Publisher.t() | nil
-  def publisher(slug) do
-    if read_model?(), do: publisher_from_read_model(slug), else: legacy_publisher(slug)
-  end
-
-  defp legacy_publisher(slug) do
-    cached({:publisher, slug}, fn ->
-      case publisher_summary_for_slug(slug) do
-        nil ->
-          nil
-
-        publisher ->
-          books = books_for_publisher_id(publisher.id)
-
-          %{
-            publisher
-            | editions: books,
-              editions_count: length(books),
-              groupings: publisher_groupings(books)
-          }
-      end
-    end)
-  end
+  def publisher(slug), do: publisher_from_read_model(slug)
 
   defp publisher_from_read_model(slug) do
     case PublicWorks.publisher_summary(slug) do
@@ -777,21 +299,40 @@ defmodule HiraethWeb.PublicCatalog do
 
       summary ->
         books = PublicWorks.books_for_publisher(slug)
-        cover_sample = books |> Enum.find(& &1.cover) |> cover_sample_for_book()
 
-        publisher =
-          PublicProjection.publisher!(%{
-            id: uuid_text(summary.id),
-            name: summary.name,
-            slug: summary.slug,
-            description: summary.description,
-            editions: [],
-            editions_count: length(books),
-            cover_sample: cover_sample,
-            groupings: publisher_groupings(books)
-          })
+        cond do
+          books == [] and PublicWorks.publisher_has_editions?(slug) ->
+            nil
 
-        %{publisher | editions: books}
+          books == [] ->
+            PublicProjection.publisher!(%{
+              id: uuid_text(summary.id),
+              name: summary.name,
+              slug: summary.slug,
+              description: summary.description,
+              editions: [],
+              editions_count: 0,
+              cover_sample: nil,
+              groupings: empty_publisher_groupings()
+            })
+
+          true ->
+            cover_sample = books |> Enum.find(& &1.cover) |> cover_sample_for_book()
+
+            publisher =
+              PublicProjection.publisher!(%{
+                id: uuid_text(summary.id),
+                name: summary.name,
+                slug: summary.slug,
+                description: summary.description,
+                editions: [],
+                editions_count: length(books),
+                cover_sample: cover_sample,
+                groupings: publisher_groupings(books)
+              })
+
+            %{publisher | editions: books}
+        end
     end
   end
 
@@ -801,18 +342,6 @@ defmodule HiraethWeb.PublicCatalog do
     do: PublicProjection.cover_sample!(%{title: title, cover: cover})
 
   defp cover_sample_for_book(_book), do: nil
-
-  defp publisher_summary_for_slug(slug) do
-    if public_catalog_cache?() do
-      Enum.find(publishers(), &(&1.slug == slug))
-    else
-      publisher_summary_by_slug(slug)
-    end
-  end
-
-  defp read_model? do
-    Application.get_env(:hiraeth, :public_read_model, :legacy) == :on
-  end
 
   @spec clear_cache() :: :ok
   def clear_cache do
@@ -923,82 +452,69 @@ defmodule HiraethWeb.PublicCatalog do
     end
   end
 
+  @doc """
+  Returns absolute-path entries for the XML sitemap.
+
+  Book entries carry the read model's last refresh date; index pages have no
+  reliable modified date and are emitted without one. Duplicate slugs are
+  collapsed so a work with several editions appears once.
+  """
+  @spec sitemap_entries() :: [%{path: String.t(), lastmod: Date.t() | nil}]
+  def sitemap_entries do
+    books =
+      Hiraeth.Repo.query!("""
+      select slug, max(refreshed_at)::date
+      from catalog_public_works
+      where is_book = true
+      group by slug
+      order by slug
+      """).rows
+      |> Enum.map(fn [slug, lastmod] -> %{path: "/books/#{slug}", lastmod: lastmod} end)
+
+    publishers =
+      publishers()
+      |> Enum.map(&%{path: "/publishers/#{&1.slug}", lastmod: nil})
+
+    series =
+      series()
+      |> Enum.map(&%{path: "/series/#{&1.slug}", lastmod: nil})
+
+    contributors =
+      contributors(nil)
+      |> Enum.map(&%{path: "/contributors/#{&1.slug}", lastmod: nil})
+
+    static =
+      Enum.map(["/", "/browse", "/publishers", "/series", "/contributors"], fn path ->
+        %{path: path, lastmod: nil}
+      end)
+
+    (static ++ books ++ publishers ++ series ++ contributors)
+    |> Enum.uniq_by(& &1.path)
+  end
+
   @spec series() :: [PublicProjection.Series.t()]
   def series do
-    if read_model?() do
-      PublicWorks.series_list()
-      |> Enum.map(&series_projection_from_read_model(&1, :index))
-      |> Enum.sort_by(&String.downcase(&1.title))
-    else
-      series_summary_rows()
-      |> Enum.map(&series_summary_from_row/1)
-      |> Enum.sort_by(&String.downcase(&1.title))
-    end
+    PublicWorks.series_list()
+    |> Enum.filter(&(&1.books != []))
+    |> Enum.map(&series_projection_from_read_model(&1, :index))
+    |> Enum.sort_by(&String.downcase(&1.title))
   end
 
   @spec series_with_preview_editions() :: [PublicProjection.Series.t()]
   @spec series_with_preview_editions(pos_integer()) :: [PublicProjection.Series.t()]
   def series_with_preview_editions(limit \\ 4) do
-    if read_model?() do
-      PublicWorks.series_list()
-      |> Enum.map(&series_projection_from_read_model(&1, {:preview, limit}))
-      |> Enum.sort_by(&String.downcase(&1.title))
-    else
-      legacy_series_with_preview_editions(limit)
-    end
-  end
-
-  defp legacy_series_with_preview_editions(limit) do
-    series = series()
-    preview_work_ids_by_slug = series_preview_work_ids_by_slug(limit)
-
-    preview_books_by_work_id =
-      preview_work_ids_by_slug
-      |> Map.values()
-      |> List.flatten()
-      |> Enum.uniq()
-      |> Enum.map(&uuid_param/1)
-      |> books_for_work_ids()
-      |> Map.new(&{&1.work_id, &1})
-
-    Enum.map(series, fn series_summary ->
-      preview_editions =
-        preview_work_ids_by_slug
-        |> Map.get(series_summary.slug, [])
-        |> Enum.map(&Map.get(preview_books_by_work_id, &1))
-        |> Enum.reject(&is_nil/1)
-
-      %{series_summary | preview_editions: preview_editions}
-    end)
+    PublicWorks.series_list()
+    |> Enum.filter(&(&1.books != []))
+    |> Enum.map(&series_projection_from_read_model(&1, {:preview, limit}))
+    |> Enum.sort_by(&String.downcase(&1.title))
   end
 
   @spec series_by_slug(String.t()) :: PublicProjection.Series.t() | nil
   def series_by_slug(slug) do
-    if read_model?() do
-      case PublicWorks.series(slug) do
-        nil -> nil
-        summary -> series_projection_from_read_model(summary, :detail)
-      end
-    else
-      legacy_series_by_slug(slug)
-    end
-  end
-
-  defp legacy_series_by_slug(slug) do
-    case series_summary_by_slug(slug) do
-      nil ->
-        nil
-
-      series ->
-        books =
-          series.memberships
-          |> Enum.map(& &1.work_id)
-          |> Enum.uniq()
-          |> Enum.map(&uuid_param/1)
-          |> books_for_work_ids()
-          |> Enum.sort_by(&publication_date_sort_key/1)
-
-        %{series | memberships: [], editions: books, editions_count: length(books)}
+    case PublicWorks.series(slug) do
+      nil -> nil
+      %{books: []} -> nil
+      summary -> series_projection_from_read_model(summary, :detail)
     end
   end
 
@@ -1015,131 +531,6 @@ defmodule HiraethWeb.PublicCatalog do
         |> Enum.find(&(&1.slug == slug))
     end
   end
-
-  defp publisher_summary_rows do
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        with publisher_counts as (
-          select p.id, p.name, p.slug, p.description, count(distinct e.work_id) as editions_count
-          from publishers p
-          join editions e on e.publisher_id = p.id
-          where exists (
-            select 1
-            from source_records sr
-            where sr.edition_id = e.id
-          )
-          group by p.id, p.name, p.slug, p.description
-        )
-        select
-          pc.id,
-          pc.name,
-          pc.slug,
-          pc.description,
-          pc.editions_count,
-          sample_cover.data
-        from publisher_counts pc
-        left join lateral (
-          select jsonb_build_object(
-            'title', e.title,
-            'cover', jsonb_build_object(
-              'id', ca.id,
-              'position', ca.position,
-              'visible?', ca."visible?",
-              'source_url', cover.source_url,
-              'provider', cover.provider,
-              'rights_basis', cover.rights_basis,
-              'attribution_text', cover.attribution_text,
-              'attribution_url', cover.attribution_url,
-              'cache_policy', cover.cache_policy,
-              'cached_file_path', cover.cached_file_path,
-              'thumbnail_file_path', cover.thumbnail_file_path,
-              'takedown_state', cover.takedown_state
-            )
-          ) as data
-          from editions e
-          join source_records sr on sr.edition_id = e.id
-          join cover_assignments ca on ca.edition_id = e.id
-          join cover_assets cover on cover.id = ca.cover_asset_id
-          where e.publisher_id = pc.id
-            and ca."visible?" = true
-            and cover.takedown_state = 'visible'
-            and cover.cache_policy = 'cache_allowed'
-            and cover.rights_basis = 'local_cache_permitted'
-          order by (e.format = any($1::text[])) desc, e.published_on desc nulls last, e.slug, ca.position nulls last
-          limit 1
-        ) sample_cover on true
-        """,
-        [Policy.print_formats()]
-      )
-
-    rows
-  end
-
-  defp publisher_summary_by_slug(slug) do
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        select
-          p.id,
-          p.name,
-          p.slug,
-          p.description,
-          count(distinct e.work_id) filter (
-            where exists (
-              select 1
-              from source_records sr
-              where sr.edition_id = e.id
-            )
-          ) as editions_count,
-          count(distinct e.work_id) as total_editions_count
-        from publishers p
-        left join editions e on e.publisher_id = p.id
-        where p.slug = $1
-        group by p.id, p.name, p.slug, p.description
-        limit 1
-        """,
-        [slug]
-      )
-
-    case List.first(rows) do
-      nil ->
-        nil
-
-      [_id, _name, _slug, _description, 0, total_editions_count]
-      when total_editions_count > 0 ->
-        nil
-
-      [id, name, slug, description, editions_count, _total_editions_count] ->
-        publisher_summary_from_row([id, name, slug, description, editions_count, nil])
-    end
-  end
-
-  defp publisher_summary_from_row([id, name, slug, description, editions_count]) do
-    publisher_summary_from_row([id, name, slug, description, editions_count, nil])
-  end
-
-  defp publisher_summary_from_row([id, name, slug, description, editions_count, cover_sample]) do
-    PublicProjection.publisher!(%{
-      id: uuid_text(id),
-      name: name,
-      slug: slug,
-      description: description,
-      editions: [],
-      editions_count: editions_count,
-      cover_sample: publisher_cover_sample_from_data(cover_sample),
-      groupings: empty_publisher_groupings()
-    })
-  end
-
-  defp publisher_cover_sample_from_data(%{"title" => title, "cover" => cover}) do
-    case cover_projection_from_data(cover) do
-      nil -> nil
-      cover -> PublicProjection.cover_sample!(%{title: title, cover: cover})
-    end
-  end
-
-  defp publisher_cover_sample_from_data(_cover_sample), do: nil
 
   defp empty_publisher_groupings do
     PublicProjection.groupings!(%{
@@ -1439,155 +830,6 @@ defmodule HiraethWeb.PublicCatalog do
     if mode == :detail, do: %{series | editions: editions}, else: series
   end
 
-  defp series_summary_rows do
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        select
-          s.id,
-          s.title,
-          s.slug,
-          p.name,
-          p.slug,
-          count(distinct e.work_id) as editions_count,
-          coalesce(bool_or(sm.position is null) filter (where sm.id is not null), false) as unknown_order
-        from series s
-        left join publishers p on p.id = s.publisher_id
-        join series_memberships sm on sm.series_id = s.id
-        join editions e on e.work_id = sm.work_id
-        where exists (
-          select 1
-          from source_records sr
-          where sr.edition_id = e.id
-        )
-        group by s.id, s.title, s.slug, p.name, p.slug
-        """,
-        []
-      )
-
-    rows
-  end
-
-  defp series_preview_work_ids_by_slug(limit) when is_integer(limit) and limit > 0 do
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        with series_books as (
-          select
-            s.slug as series_slug,
-            e.work_id,
-            lower(w.title) as title_sort,
-            min(e.slug) as slug_sort,
-            max(e.published_on) as newest_sort
-          from series s
-          join series_memberships sm on sm.series_id = s.id
-          join works w on w.id = sm.work_id
-          join editions e on e.work_id = sm.work_id
-          where exists (
-            select 1
-            from source_records sr
-            where sr.edition_id = e.id
-          )
-          group by s.id, s.slug, e.work_id, w.title
-        ), ranked as (
-          select
-            series_slug,
-            work_id,
-            row_number() over (
-              partition by series_slug
-              order by newest_sort desc nulls last, title_sort, slug_sort
-            ) as row_number
-          from series_books
-        )
-        select series_slug, work_id
-        from ranked
-        where row_number <= $1
-        order by series_slug, row_number
-        """,
-        [limit]
-      )
-
-    rows
-    |> Enum.group_by(fn [series_slug, _work_id] -> series_slug end, fn [_series_slug, work_id] ->
-      uuid_text(work_id)
-    end)
-  end
-
-  defp series_preview_work_ids_by_slug(_limit), do: %{}
-
-  defp series_summary_by_slug(slug) do
-    {:ok, %{rows: rows}} =
-      Hiraeth.Repo.query(
-        """
-        select
-          s.id,
-          s.title,
-          s.slug,
-          p.name,
-          p.slug,
-          count(distinct e.work_id) as editions_count,
-          coalesce(bool_or(sm.position is null) filter (where sm.id is not null), false) as unknown_order,
-          coalesce(
-            jsonb_agg(
-              jsonb_build_object('work_id', sm.work_id, 'position', sm.position)
-              order by coalesce(sm.position, 0), sm.id
-            ) filter (where sm.id is not null),
-            '[]'::jsonb
-          ) as memberships
-        from series s
-        left join publishers p on p.id = s.publisher_id
-        join series_memberships sm on sm.series_id = s.id
-        join editions e on e.work_id = sm.work_id
-        where s.slug = $1
-          and exists (
-            select 1
-            from source_records sr
-            where sr.edition_id = e.id
-          )
-        group by s.id, s.title, s.slug, p.name, p.slug
-        limit 1
-        """,
-        [slug]
-      )
-
-    rows |> List.first() |> then(&(&1 && series_summary_from_row(&1)))
-  end
-
-  defp series_summary_from_row([
-         id,
-         title,
-         slug,
-         publisher,
-         publisher_slug,
-         editions_count,
-         unknown_order?
-       ]) do
-    PublicProjection.series!(%{
-      id: uuid_text(id),
-      title: title,
-      name: title,
-      slug: slug,
-      publisher: publisher,
-      publisher_slug: publisher_slug,
-      editions: [],
-      editions_count: editions_count,
-      unknown_order?: unknown_order?
-    })
-  end
-
-  defp series_summary_from_row(row) do
-    memberships = List.last(row)
-
-    %{
-      series_summary_from_row(Enum.take(row, 7))
-      | memberships: Enum.map(memberships || [], &membership_from_data/1)
-    }
-  end
-
-  defp membership_from_data(%{"work_id" => work_id, "position" => position}) do
-    PublicProjection.series_membership!(%{work_id: uuid_text(work_id), position: position})
-  end
-
   defp edition_rows(where_sql, params) do
     {:ok, %{rows: rows}} =
       Hiraeth.Repo.query(
@@ -1691,6 +933,7 @@ defmodule HiraethWeb.PublicCatalog do
               'cache_policy', cover.cache_policy,
               'cached_file_path', cover.cached_file_path,
               'thumbnail_file_path', cover.thumbnail_file_path,
+              'responsive_variants', cover.responsive_variants,
               'takedown_state', cover.takedown_state
             )
             order by coalesce(ca.position, 0), ca.id
@@ -1925,9 +1168,35 @@ defmodule HiraethWeb.PublicCatalog do
       takedown_state: asset["takedown_state"],
       cached_file_path: asset["cached_file_path"],
       thumbnail_file_path: asset["thumbnail_file_path"],
-      thumbnail_url: thumbnail_url_from_data(asset["thumbnail_file_path"])
+      thumbnail_url: thumbnail_url_from_data(asset["thumbnail_file_path"]),
+      responsive_variants: responsive_variants_from_data(asset["responsive_variants"])
     })
   end
+
+  defp responsive_variants_from_data(variants) when is_list(variants) do
+    variants
+    |> Enum.flat_map(fn variant ->
+      path = variant["path"]
+      url = if cached_file_available?(path), do: static_cover_path(path)
+
+      if is_binary(url) do
+        [
+          %{
+            format: variant["format"],
+            width: variant["width"],
+            sha256: variant["sha256"],
+            bytes: variant["bytes"],
+            url: url
+          }
+        ]
+      else
+        []
+      end
+    end)
+    |> Enum.sort_by(&{&1.width, &1.format})
+  end
+
+  defp responsive_variants_from_data(_variants), do: []
 
   defp cover_public_url_from_data(%{
          "cache_policy" => "cache_allowed",
@@ -2191,30 +1460,12 @@ defmodule HiraethWeb.PublicCatalog do
 
   defp uuid_text(value), do: value
 
-  defp uuid_param(value) when is_binary(value) and byte_size(value) == 16, do: value
-
-  defp uuid_param(value) when is_binary(value) do
-    case Ecto.UUID.dump(value) do
-      {:ok, raw_uuid} -> raw_uuid
-      :error -> value
-    end
-  end
-
-  defp uuid_param(value), do: value
-
   defp normalize_text(value) do
     value
     |> to_string()
     |> String.downcase()
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
-  end
-
-  defp like_escape(value) do
-    value
-    |> String.replace("!", "!!")
-    |> String.replace("%", "!%")
-    |> String.replace("_", "!_")
   end
 
   defp normalize_identifier(value) do

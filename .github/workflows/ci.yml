@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MIX_ENV: test
+  HIRAETH_COVER_STORE: local
+  HIRAETH_SCHEDULED_INGEST: "false"
+  DATABASE_HOST: localhost
+  DATABASE_PORT: "5432"
+
+jobs:
+  gate:
+    name: Elixir gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.3.4.16"
+          elixir-version: "1.18.4"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - run: mix deps.get
+      - run: mix ash.migrate
+      - run: mix gate
+
+  sidecar:
+    name: Sidecar checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sidecar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --extra dev
+      - run: uv run --extra dev pytest -q
+      - run: uv run ruff check .
+      - run: uv run pyright
+      - run: uv run uv audit
+
+  browser:
+    name: Visual and accessibility checks
+    runs-on: ubuntu-latest
+    needs: gate
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MIX_ENV: dev
+      HIRAETH_COVER_STORE: local
+      HIRAETH_COVER_BACKFILL_ON_BOOT: "false"
+      HIRAETH_PROJECTION_ON_BOOT: "false"
+      HIRAETH_SCHEDULED_INGEST: "false"
+      PHX_SERVER: "true"
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.3.4.16"
+          elixir-version: "1.18.4"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-browser-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-browser-
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - run: mix deps.get
+      - run: mix ecto.create
+      - run: mix ash.migrate
+      - name: Seed the public catalogue
+        run: |
+          mix run priv/repo/seeds.exs
+          mix hiraeth.public_projection.rebuild --json
+      - run: mix assets.deploy
+      - name: Install Playwright
+        working-directory: scripts/qa
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Start Phoenix
+        run: |
+          mkdir -p tmp
+          mix phx.server > tmp/phx-ci.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:4000/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat tmp/phx-ci.log
+          exit 1
+      - name: Responsive design contract
+        run: node scripts/qa/design_screenshots.mjs http://127.0.0.1:4000 artifacts/qa/design
+      - name: Accessibility contract
+        run: node scripts/qa/accessibility_screenshots.mjs http://127.0.0.1:4000 artifacts/qa/accessibility
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence
+          path: artifacts/qa
+          if-no-files-found: warn
+      - name: Phoenix log
+        if: always()
+        run: cat tmp/phx-ci.log || true

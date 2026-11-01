@@ -80,15 +80,6 @@ cover_cache_max_bytes =
 
 config :hiraeth, :cover_cache_max_bytes, cover_cache_max_bytes
 
-public_read_model =
-  case System.get_env("HIRAETH_PUBLIC_READ_MODEL", "legacy") do
-    "on" -> :on
-    "shadow" -> :shadow
-    _ -> :legacy
-  end
-
-config :hiraeth, :public_read_model, public_read_model
-
 service_role =
   case System.get_env("HIRAETH_SERVICE_ROLE", "all") do
     "worker" -> :worker

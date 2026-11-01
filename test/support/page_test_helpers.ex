@@ -1,9 +1,9 @@
 defmodule HiraethWeb.PageTestHelpers do
   @moduledoc "Small helpers for assertions against controller-rendered HTML."
 
-  def page(conn, path) do
+  def page(conn, path, status \\ 200) do
     conn = Phoenix.ConnTest.dispatch(conn, HiraethWeb.Endpoint, :get, path)
-    {Phoenix.ConnTest.html_response(conn, 200), conn}
+    {Phoenix.ConnTest.html_response(conn, status), conn}
   end
 
   def page_has?(html, selector, text \\ nil) do

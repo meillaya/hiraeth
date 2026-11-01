@@ -88,7 +88,12 @@ defmodule Hiraeth.Catalog.PublicProjection do
   @doc "Builds a typed publicly renderable cover."
   @spec cover!(map()) :: Cover.t()
   def cover!(%Cover{} = cover), do: cover
-  def cover!(attrs) when is_map(attrs), do: struct!(Cover, attrs)
+
+  def cover!(attrs) when is_map(attrs) do
+    attrs
+    |> Map.update(:responsive_variants, [], &List.wrap/1)
+    |> then(&struct!(Cover, &1))
+  end
 
   @doc "Builds a typed paged envelope whose entries are already projected."
   @spec page!(map()) :: Page.t()

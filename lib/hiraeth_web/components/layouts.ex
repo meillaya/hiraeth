@@ -118,6 +118,41 @@ defmodule HiraethWeb.Layouts do
   defp format_count(count), do: to_string(count)
 
   @doc """
+  Minimal operator shell for the authenticated candidate-review console.
+
+  It intentionally has no public catalogue navigation beyond a return link:
+  the admin console is a write surface and should never be mistaken for a
+  public reading page.
+  """
+  attr :flash, :map, required: true
+  attr :page_title, :string, default: "Candidate review"
+  slot :inner_block, required: true
+
+  def admin(assigns) do
+    ~H"""
+    <div class="admin-shell">
+      <header class="admin-bar">
+        <a href={~p"/admin"} class="sb-brand" aria-label="Hiraeth admin home">
+          Hiraeth<span class="sb-brand__dot">.</span>
+        </a>
+        <nav class="admin-nav" aria-label="Admin">
+          <a href={~p"/admin/candidates"}>Candidates</a>
+          <a href={~p"/ops"}>Ops health</a>
+          <a href={~p"/"}>Public site</a>
+        </nav>
+        <p class="admin-bar__title">{@page_title}</p>
+      </header>
+
+      <main id="admin-main" class="admin-main">
+        {render_slot(@inner_block)}
+      </main>
+
+      <.flash_group flash={@flash} />
+    </div>
+    """
+  end
+
+  @doc """
   Shows the flash group with standard titles and content.
 
   ## Examples

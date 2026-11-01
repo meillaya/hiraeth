@@ -1,0 +1,89 @@
+<HiraethWeb.Layouts.app
+  flash={%{}}
+  current_scope={%{}}
+  catalog_count={@catalog_count}
+  press_count={@publisher_count}
+  series_count={@series_count}
+>
+  <div id="publisher-detail-shell">
+    <header id="publisher-masthead" class="sb-presshead">
+      <div class="sb-presshead__cover">
+        <div :if={!sample_book(@publisher)} class="sb-pressmark">
+          {initial(@publisher.name)}
+        </div>
+        <HiraethWeb.CatalogComponents.catalog_cover
+          :if={sample_book(@publisher)}
+          book={sample_book(@publisher)}
+          variant={:record}
+        />
+        <p class="sb-figcap">
+          <span>{@publisher.name}</span>
+          <span>{format_count(@publisher.editions_count)} books</span>
+        </p>
+      </div>
+
+      <div class="sb-presshead__body">
+        <p class="sb-kicker">
+          Publisher dossier
+          <span>/</span> {format_count(length(@publisher.groupings.series))} collections
+        </p>
+        <h1 id="publisher-title">{@publisher.name}</h1>
+        <p :if={@publisher.description} class="sb-presshead__intro">
+          {HiraethWeb.CatalogText.plain(@publisher.description, 420)}
+        </p>
+
+        <div class="sb-pressledger">
+          <span><strong>{format_count(@publisher.editions_count)}</strong> books</span>
+          <span>
+            <strong>{format_count(length(@publisher.groupings.series))}</strong> collections
+          </span>
+          <span>
+            <strong>{format_count(length(@publisher.groupings.formats))}</strong> formats
+          </span>
+        </div>
+
+        <div class="sb-presshead__actions">
+          <a
+            id="publisher-browse-cta"
+            href={~p"/browse?publisher=#{@publisher.slug}"}
+            class="sb-button"
+          >
+            Browse this press <span>→</span>
+          </a>
+          <a href={~p"/publishers"} class="sb-link">All presses →</a>
+        </div>
+      </div>
+    </header>
+
+    <section id="publisher-editions" class="sb-pressworks">
+      <div class="sb-sectionhead">
+        <div>
+          <p class="sb-kicker">The catalogue</p>
+          <h2>Books from this press</h2>
+        </div>
+        <span class="sb-link--plain">{format_count(@publisher.editions_count)} books</span>
+      </div>
+
+      <%= if @publisher.editions_count == 0 do %>
+        <div id="publisher-no-editions" class="sb-empty sb-empty--press">
+          <h2>No books are attached.</h2>
+          <p>This publisher shelf is empty for now.</p>
+          <a href={~p"/publishers"} class="sb-link">Back to publishers</a>
+        </div>
+      <% else %>
+        <div id="publisher-editions-stream" class="sb-grid sb-grid--press">
+          <HiraethWeb.CatalogComponents.sb_book_card
+            :for={book <- @publisher.editions}
+            book={book}
+            id_prefix="publisher-edition"
+          />
+        </div>
+      <% end %>
+    </section>
+
+    <HiraethWeb.CatalogComponents.press_nav
+      publishers={@publishers}
+      index={@publisher_index}
+    />
+  </div>
+</HiraethWeb.Layouts.app>

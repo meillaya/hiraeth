@@ -1,5 +1,5 @@
 defmodule Hiraeth.Ingestion.ProductionIngestionScriptContractTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   @root Path.expand("../../..", __DIR__)
 

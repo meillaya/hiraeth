@@ -7,7 +7,12 @@ defmodule Hiraeth.Application do
 
   require Logger
 
-  alias Hiraeth.Oban.{CoverBackfillWorker, PublicProjectionWorker}
+  alias Hiraeth.Oban.{
+    CoverBackfillWorker,
+    CoverVariantBackfillWorker,
+    PublicProjectionWorker
+  }
+
   alias Hiraeth.ServiceRole
 
   @impl true
@@ -53,6 +58,7 @@ defmodule Hiraeth.Application do
 
   defp enqueue_worker_boot_jobs do
     enqueue_cover_backfill()
+    enqueue_cover_variant_backfill()
 
     if Application.get_env(:hiraeth, :public_projection_on_boot, true) do
       %{"trigger" => "boot"}
@@ -84,6 +90,27 @@ defmodule Hiraeth.Application do
   rescue
     exception ->
       Logger.warning("cover backfill enqueue skipped: #{Exception.message(exception)}")
+  end
+
+  # Existing cache entries predate responsive delivery. This pass renders
+  # variants from the local originals after the original backfill, so a deploy
+  # does not need a publisher fetch to add srcset URLs.
+  defp enqueue_cover_variant_backfill do
+    if Application.get_env(:hiraeth, :cover_backfill_on_boot, false) do
+      %{}
+      |> CoverVariantBackfillWorker.new()
+      |> Oban.insert()
+      |> case do
+        {:ok, job} ->
+          Logger.info("cover variant backfill enqueued job_id=#{job.id}")
+
+        {:error, reason} ->
+          Logger.warning("cover variant backfill could not be enqueued: #{inspect(reason)}")
+      end
+    end
+  rescue
+    exception ->
+      Logger.warning("cover variant backfill enqueue skipped: #{Exception.message(exception)}")
   end
 
   # Tell Phoenix to update the endpoint configuration

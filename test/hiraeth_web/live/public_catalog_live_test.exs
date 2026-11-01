@@ -344,33 +344,32 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
   end
 
   test "publisher index/detail routes render real publishers", %{conn: conn} do
-    {:ok, publishers, _html} = live(conn, ~p"/publishers")
+    {publishers, _conn} = page(conn, "/publishers")
 
-    assert has_element?(publishers, "#publishers-shell")
-    assert has_element?(publishers, "#publishers-grid")
-    assert has_element?(publishers, "#publisher-deep-vellum")
-    assert has_element?(publishers, "#publisher-dalkey-archive")
-    assert has_element?(publishers, "#publisher-archipelago-books")
+    assert page_has?(publishers, "#publishers-shell")
+    assert page_has?(publishers, "#publishers-grid")
+    assert page_has?(publishers, "#publisher-deep-vellum")
+    assert page_has?(publishers, "#publisher-dalkey-archive")
+    assert page_has?(publishers, "#publisher-archipelago-books")
 
-    {:ok, publisher, _html} = live(conn, ~p"/publishers/deep-vellum")
-    assert has_element?(publisher, "#publisher-detail-shell")
-    assert has_element?(publisher, "#publisher-title", "Deep Vellum")
+    {publisher, _conn} = page(conn, "/publishers/deep-vellum")
+    assert page_has?(publisher, "#publisher-detail-shell")
+    assert page_has?(publisher, "#publisher-title", "Deep Vellum")
 
-    assert has_element?(
+    assert page_has?(
              publisher,
              ~s|a#publisher-browse-cta[href="/browse?publisher=deep-vellum"]|
            )
 
-    refute has_element?(publisher, "#publisher-context")
-    refute has_element?(publisher, "#publisher-groups")
-    refute has_element?(publisher, "#publisher-editions", "Cataloged books")
-    assert has_element?(publisher, "#publisher-editions", "Immigrant")
-    assert has_element?(publisher, "#publisher-editions-stream")
+    refute page_has?(publisher, "#publisher-context")
+    refute page_has?(publisher, "#publisher-groups")
+    refute page_has?(publisher, "#publisher-editions", "Cataloged books")
+    assert page_has?(publisher, "#publisher-editions", "Immigrant")
+    assert page_has?(publisher, "#publisher-editions-stream")
 
-    {:ok, new_directions, _html} = live(conn, ~p"/publishers/new-directions")
-    new_directions_html = render(new_directions)
+    {new_directions, _conn} = page(conn, "/publishers/new-directions")
 
-    assert new_directions_html
+    assert new_directions
            |> LazyHTML.from_fragment()
            |> LazyHTML.query(
              ~s|#publisher-editions-stream h4 a[href*="new-directions-on-the-calculation-of-volume-book-v"]|
@@ -378,8 +377,8 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
            |> LazyHTML.attribute("href")
            |> length() >= 1
 
-    assert has_element?(new_directions, "#publisher-editions-stream", "Paperback")
-    assert has_element?(new_directions, "#publisher-editions-stream", "Ebook")
+    assert page_has?(new_directions, "#publisher-editions-stream", "Paperback")
+    assert page_has?(new_directions, "#publisher-editions-stream", "Ebook")
 
     public_projection = PublicCatalog.publisher("new-directions")
     book_titles = Enum.map(public_projection.editions, & &1.title)
@@ -531,6 +530,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     on_exit(fn -> File.rm_rf!(tmp) end)
 
     assert {:ok, _summary} = Importer.seed!(tmp)
+    rebuild_public_projection!()
 
     cache_cover_for_edition_slug!(
       "archipelago-books-bob-and-hilbert-hardcover-9781962770651",
@@ -572,6 +572,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     on_exit(fn -> File.rm_rf!(tmp) end)
 
     assert {:ok, _summary} = Importer.seed!(tmp)
+    rebuild_public_projection!()
 
     slug = "archipelago-books-bob-and-hilbert-hardcover-source-57168-9781962770651"
     {view, _html} = page(conn, "/books/#{slug}")
@@ -590,8 +591,8 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     {:ok, search, _html} = live(conn, ~p"/search?q=Bob")
     assert has_element?(search, "#search-results", "Bob and Hilbert")
 
-    {:ok, publisher, _html} = live(conn, ~p"/publishers/archipelago-books")
-    assert has_element?(publisher, "#publisher-editions", "Bob and Hilbert")
+    {publisher, _conn} = page(conn, "/publishers/archipelago-books")
+    assert page_has?(publisher, "#publisher-editions", "Bob and Hilbert")
 
     expected_path = "/books/#{slug}"
 
@@ -613,9 +614,9 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     refute book =~ "Source provenance"
     assert HiraethWeb.PublicCatalog.book(fixture.book_slug).source.field_sources != %{}
 
-    {:ok, publisher, _html} = live(conn, ~p"/publishers/#{fixture.publisher_slug}")
-    refute has_element?(publisher, "#publisher-context")
-    assert has_element?(publisher, "#publisher-editions", "Rich Metadata Novel")
+    {publisher, _conn} = page(conn, "/publishers/#{fixture.publisher_slug}")
+    refute page_has?(publisher, "#publisher-context")
+    assert page_has?(publisher, "#publisher-editions", "Rich Metadata Novel")
 
     {series, _html} = page(conn, "/series/#{fixture.series_slug}")
     assert page_has?(series, "#series-context", "Metadata Series")
@@ -656,6 +657,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       |> Ash.create!(authorize?: false)
     end)
 
+    rebuild_public_projection!()
     series_projection = PublicCatalog.series_by_slug(fixture.series_slug)
 
     assert series_projection.editions_count == 1
@@ -860,6 +862,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       translator_slug: translator_slug,
       series_slug: series_slug
     }
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_rich_metadata_book! do
@@ -968,6 +971,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       work_id: work.id,
       publisher_id: publisher.id
     }
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp field_source(field, suffix) do
@@ -1022,6 +1026,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       visible?: true
     })
     |> Ash.create!(authorize?: false)
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp clear_catalog! do

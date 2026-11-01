@@ -1,0 +1,60 @@
+<HiraethWeb.Layouts.admin flash={@flash} page_title={@page_title}>
+  <div id="admin-home">
+    <header class="sb-pagehead">
+      <p class="sb-kicker">Operations <span>/</span> Candidate review</p>
+      <div class="sb-pagehead__row">
+        <h1>Ingestion review</h1>
+        <p class="sb-pagehead__intro">
+          Approve, reject, ignore, or override normalized candidates before the
+          apply phase writes them into the catalogue. Every decision records the
+          operator, timestamp, and note on the candidate row.
+        </p>
+      </div>
+      <p class="sb-pagehead__meta">
+        <span><strong>{format_count(@counts.pending)}</strong> pending</span>
+        <span><strong>{format_count(@counts.approved)}</strong> approved</span>
+        <span><strong>{format_count(@counts.rejected)}</strong> rejected</span>
+        <span><strong>{format_count(@counts.ignored)}</strong> ignored</span>
+      </p>
+    </header>
+
+    <p class="admin-actions">
+      <a class="sb-button" href={~p"/admin/candidates"}>Review pending candidates</a>
+    </p>
+
+    <section id="admin-recent-runs">
+      <div class="sb-sectionhead">
+        <div>
+          <p class="sb-kicker">Pipeline</p>
+          <h2>Recent provider runs</h2>
+        </div>
+      </div>
+
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th scope="col">Run</th>
+            <th scope="col">Status</th>
+            <th scope="col">Requested by</th>
+            <th scope="col">Candidates</th>
+            <th scope="col">Started</th>
+            <th scope="col">Finished</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={run <- @recent_runs}>
+            <td><code>{run.run_key}</code></td>
+            <td>{run.status}</td>
+            <td>{run.requested_by || "—"}</td>
+            <td>{run.candidate_count}</td>
+            <td>{timestamp(run.started_at)}</td>
+            <td>{timestamp(run.finished_at)}</td>
+          </tr>
+          <tr :if={@recent_runs == []}>
+            <td colspan="6">No provider runs recorded.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</HiraethWeb.Layouts.admin>

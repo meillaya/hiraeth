@@ -63,7 +63,7 @@ defmodule HiraethWeb.HomeLive do
           </div>
 
           <div class="sb-hero__cover">
-            <.link navigate={~p"/books/#{@spotlight.slug}"} aria-label={"Open #{@spotlight.title}"}>
+            <.link navigate={~p"/books/#{@spotlight.slug}"}>
               <CatalogComponents.catalog_cover
                 book={@spotlight}
                 variant={:hero}

@@ -30,18 +30,10 @@ defmodule HiraethWeb.OpsController do
     username = System.get_env("HIRAETH_OPS_USERNAME")
     password = System.get_env("HIRAETH_OPS_PASSWORD")
 
-    cond do
-      username in [nil, ""] or password in [nil, ""] ->
-        conn |> send_resp(404, "") |> halt()
-
-      Plug.BasicAuth.basic_auth(conn, username: username, password: password) ->
-        conn
-
-      true ->
-        conn
-        |> put_resp_header("www-authenticate", ~s(Basic realm="Hiraeth ops"))
-        |> send_resp(401, "")
-        |> halt()
+    if username in [nil, ""] or password in [nil, ""] do
+      conn |> send_resp(404, "") |> halt()
+    else
+      Plug.BasicAuth.basic_auth(conn, username: username, password: password)
     end
   end
 

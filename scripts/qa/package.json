@@ -1,0 +1,10 @@
+{
+  "name": "hiraeth-qa",
+  "private": true,
+  "type": "module",
+  "description": "On-demand Playwright visual and accessibility tooling for Hiraeth.",
+  "dependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "playwright": "^1.56.0"
+  }
+}

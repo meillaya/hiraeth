@@ -40,7 +40,7 @@ defmodule HiraethWeb.CatalogPages do
         </div>
 
         <div class="sb-hero__cover">
-          <a href={~p"/books/#{@spotlight.slug}"} aria-label={"Open #{@spotlight.title}"}>
+          <a href={~p"/books/#{@spotlight.slug}"}>
             <CatalogComponents.catalog_cover
               book={@spotlight}
               variant={:hero}

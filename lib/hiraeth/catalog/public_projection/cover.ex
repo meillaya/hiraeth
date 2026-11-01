@@ -14,8 +14,17 @@ defmodule Hiraeth.Catalog.PublicProjection.Cover do
     :takedown_state,
     :cached_file_path,
     :thumbnail_file_path,
-    :thumbnail_url
+    :thumbnail_url,
+    responsive_variants: []
   ]
+
+  @type variant :: %{
+          format: String.t(),
+          width: non_neg_integer(),
+          sha256: String.t() | nil,
+          bytes: non_neg_integer() | nil,
+          url: String.t()
+        }
 
   @type t :: %__MODULE__{
           source_url: String.t() | nil,
@@ -28,7 +37,8 @@ defmodule Hiraeth.Catalog.PublicProjection.Cover do
           takedown_state: String.t() | nil,
           cached_file_path: String.t() | nil,
           thumbnail_file_path: String.t() | nil,
-          thumbnail_url: String.t() | nil
+          thumbnail_url: String.t() | nil,
+          responsive_variants: [variant()]
         }
 
   @spec fetch(t(), term()) :: {:ok, term()} | :error

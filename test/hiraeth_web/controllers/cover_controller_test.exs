@@ -46,6 +46,39 @@ defmodule HiraethWeb.CoverControllerTest do
     assert File.read!(asset.cached_file_path) == @jpeg
   end
 
+  test "serves a content-hashed responsive variant with immutable caching", %{conn: conn} do
+    unique = System.unique_integer([:positive])
+    digest = String.duplicate("a", 64)
+    path = "priv/static/covers/cache/variant-#{unique}-400w-#{digest}.webp"
+
+    asset =
+      cover_asset!(
+        cached_file_path: nil,
+        responsive_variants: [
+          %{
+            "path" => path,
+            "format" => "webp",
+            "width" => 400,
+            "sha256" => digest,
+            "bytes" => byte_size(@jpeg)
+          }
+        ]
+      )
+
+    key = Covers.object_key(path)
+    assert :ok = CoverStoreFake.put(key, @jpeg, "image/webp")
+    on_exit(fn -> File.rm(path) end)
+
+    conn = get(conn, "/" <> key)
+
+    assert conn.status == 200
+    assert conn.resp_body == @jpeg
+    assert get_resp_header(conn, "content-type") == ["image/webp"]
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
+    assert File.read!(path) == @jpeg
+    assert asset.id
+  end
+
   test "returns 404 for a cover that is under takedown", %{conn: conn} do
     asset = cover_asset!(takedown_state: "hidden")
     key = Covers.object_key(asset.cached_file_path)

@@ -3563,6 +3563,10 @@ ol {
   justify-content: flex-start;
 }
 
+.sb-cover-figure picture {
+  display: contents;
+}
+
 .sb-cover-figure img {
   display: block;
   width: auto;
@@ -3836,4 +3840,149 @@ ol {
   .sb-menu {
     display: block;
   }
+}
+
+/* Authenticated candidate-review console. It reuses the Hiraeth paper and
+   type tokens but has its own shell so it is never confused with a public
+   reading surface. */
+
+.admin-shell {
+  min-height: 100vh;
+  padding: var(--sb-sheet-inset);
+  background: var(--sb-sage);
+}
+
+.admin-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sb-gutter);
+  flex-wrap: wrap;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 24px;
+  background: var(--sb-paper);
+  border: 1px solid var(--sb-hairline);
+  border-radius: var(--sb-tray-radius);
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--sb-font-ui);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-nav a {
+  color: var(--sb-green);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.admin-nav a:hover,
+.admin-nav a:focus-visible {
+  border-bottom-color: currentColor;
+}
+
+.admin-bar__title {
+  margin-left: auto;
+  color: var(--sb-muted);
+  font-family: var(--sb-font-ui);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-main {
+  max-width: 1180px;
+  margin: 18px auto 0;
+  padding: clamp(22px, 3vw, 42px);
+  background: var(--sb-paper);
+  border: 1px solid var(--sb-hairline);
+  border-radius: var(--sb-sheet-radius);
+}
+
+.admin-main .spec-table {
+  width: 100%;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin: 18px 0;
+}
+
+.admin-actions label {
+  display: grid;
+  gap: 4px;
+  font-family: var(--sb-font-ui);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sb-muted);
+}
+
+.admin-actions input[type="text"],
+.admin-actions textarea {
+  min-width: 260px;
+  padding: 8px 10px;
+  border: 1px solid var(--sb-line);
+  border-radius: 4px;
+  background: var(--sb-paper);
+  color: var(--sb-ink);
+  font-family: var(--sb-font-ui);
+  font-size: 13px;
+}
+
+.admin-actions textarea {
+  width: 100%;
+  min-height: 180px;
+  font-family: monospace;
+}
+
+.admin-json {
+  overflow-x: auto;
+  padding: 14px;
+  border: 1px solid var(--sb-line);
+  border-radius: 4px;
+  background: var(--sb-tray);
+  color: var(--sb-ink);
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-actions label.admin-wide {
+  width: 100%;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--sb-line);
+  border-radius: 999px;
+  font-family: var(--sb-font-ui);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-badge--approved {
+  border-color: var(--sb-green);
+  color: var(--sb-green);
+}
+
+.admin-badge--rejected {
+  border-color: var(--sb-ink);
+  color: var(--sb-ink);
+}
+
+.admin-badge--ignored {
+  border-color: var(--sb-subtle);
+  color: var(--sb-subtle);
 }

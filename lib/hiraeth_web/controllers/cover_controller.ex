@@ -15,8 +15,6 @@ defmodule HiraethWeb.CoverController do
   alias Hiraeth.Covers
   alias Hiraeth.Covers.{CachePruner, CoverAsset, Store}
 
-  require Ash.Query
-
   @cache_root "priv/static/covers/cache"
   @allowed_content_types ~w(image/jpeg image/png image/webp image/gif image/avif)
   @max_body_bytes 10 * 1024 * 1024
@@ -25,16 +23,26 @@ defmodule HiraethWeb.CoverController do
   # allowlist and whose body is capped, so it cannot be rendered as HTML.
   # sobelow_skip ["XSS.SendResp"]
   def show(conn, %{"path" => relative}) do
+    path = Path.join(@cache_root, relative)
+
     case serve(relative) do
       {:ok, body, content_type} ->
         conn
         |> put_resp_header("content-type", content_type)
         |> put_resp_header("x-content-type-options", "nosniff")
-        |> put_resp_header("cache-control", "public, max-age=86400")
+        |> put_resp_header("cache-control", cache_control(path))
         |> send_resp(200, body)
 
       :not_found ->
         send_resp(conn, 404, "")
+    end
+  end
+
+  defp cache_control(path) do
+    if Covers.responsive_variant_path?(path) do
+      "public, max-age=31536000, immutable"
+    else
+      "public, max-age=86400"
     end
   end
 
@@ -51,16 +59,33 @@ defmodule HiraethWeb.CoverController do
   end
 
   defp visible_asset(path) do
-    CoverAsset
-    |> Ash.Query.filter(cached_file_path == ^path or thumbnail_file_path == ^path)
-    |> Ash.read_one(authorize?: false)
-    |> case do
+    case Hiraeth.Repo.query!(
+           """
+           select id
+           from cover_assets
+           where cached_file_path = $1
+              or thumbnail_file_path = $1
+              or exists (
+                select 1
+                from jsonb_array_elements(responsive_variants) as variant
+                where variant->>'path' = $1
+              )
+           limit 1
+           """,
+           [path]
+         ).rows do
+      [[id]] ->
+        proxyable_asset(id)
+
+      _missing_or_error ->
+        :not_public
+    end
+  end
+
+  defp proxyable_asset(id) do
+    case Ash.get(CoverAsset, id, authorize?: false) do
       {:ok, %CoverAsset{} = asset} ->
-        if Covers.proxyable_cover_asset?(asset) do
-          {:ok, asset}
-        else
-          :not_public
-        end
+        if Covers.proxyable_cover_asset?(asset), do: {:ok, asset}, else: :not_public
 
       _missing_or_error ->
         :not_public

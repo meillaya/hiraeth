@@ -1,0 +1,34 @@
+<HiraethWeb.Layouts.app
+  flash={%{}}
+  current_scope={%{}}
+  catalog_count={@catalog_count}
+  press_count={@publisher_count}
+  series_count={@series_count}
+>
+  <div id="publishers-shell">
+    <header class="sb-pagehead">
+      <p class="sb-kicker">
+        The presses <span>/</span> {format_count(@publisher_count)} imprints
+      </p>
+      <div class="sb-pagehead__row">
+        <h1>Publishers</h1>
+        <p class="sb-pagehead__intro">
+          An index of the independent presses represented in Hiraeth: fiction, poetry,
+          essays, and criticism, catalogued from their official sources.
+        </p>
+      </div>
+      <p class="sb-pagehead__meta">
+        <span><strong>{format_count(@publisher_count)}</strong> presses</span>
+        <span><strong>{format_count(@series_count)}</strong> collections</span>
+      </p>
+    </header>
+
+    <div id="publishers-grid" class="sb-pressindex">
+      <HiraethWeb.CatalogComponents.press_row
+        :for={{publisher, index} <- Enum.with_index(@publishers)}
+        publisher={publisher}
+        index={index}
+      />
+    </div>
+  </div>
+</HiraethWeb.Layouts.app>

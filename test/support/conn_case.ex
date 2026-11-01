@@ -27,6 +27,7 @@ defmodule HiraethWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import Hiraeth.DataCase
       import HiraethWeb.ConnCase
     end
   end

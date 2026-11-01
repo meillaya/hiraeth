@@ -12,6 +12,7 @@ Ecto.Adapters.SQL.Sandbox.mode(Hiraeth.Repo, :manual)
 :ok =
   Ecto.Adapters.SQL.Sandbox.unboxed_run(Hiraeth.Repo, fn ->
     for table <- ~w(
+          catalog_public_works
           source_ledger_entries
           curation_overrides
           source_records
@@ -31,6 +32,12 @@ Ecto.Adapters.SQL.Sandbox.mode(Hiraeth.Repo, :manual)
         ) do
       Hiraeth.Repo.query!("DELETE FROM #{table}", [], timeout: :infinity)
     end
+
+    Hiraeth.Repo.query!(
+      "UPDATE catalog_public_projection_state SET revision = NULL, status = 'idle', row_count = 0, finished_at = NULL, error = NULL",
+      [],
+      timeout: :infinity
+    )
 
     :ok
   end)

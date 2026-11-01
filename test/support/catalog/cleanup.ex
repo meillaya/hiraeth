@@ -2,6 +2,7 @@ defmodule Hiraeth.CatalogCleanup do
   @moduledoc false
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.RealCatalog.{Dataset, Importer, SourceArtifacts}
   alias Hiraeth.Repo
 
@@ -9,6 +10,7 @@ defmodule Hiraeth.CatalogCleanup do
   # table it references. Resets delete in this exact order, so concurrent
   # full-table DELETEs lock rows in the same order and can never deadlock.
   @tables ~w(
+    catalog_public_works
     source_ledger_entries
     curation_overrides
     source_records
@@ -75,6 +77,7 @@ defmodule Hiraeth.CatalogCleanup do
       Sandbox.unboxed_run(Repo, fn ->
         delete_all_tables!(@tables)
         seed_committed_catalog_fixtures!()
+        rebuild_public_projection!()
       end)
     end)
 
@@ -83,10 +86,28 @@ defmodule Hiraeth.CatalogCleanup do
 
   def ensure_committed_catalog_fixtures! do
     with_committed_catalog_fixture_lock(fn ->
-      Sandbox.unboxed_run(Repo, fn -> seed_committed_catalog_if_needed!() end)
+      Sandbox.unboxed_run(Repo, fn ->
+        seed_committed_catalog_if_needed!()
+        rebuild_public_projection!()
+      end)
     end)
 
     clear_public_catalog_cache!()
+  end
+
+  # The read model is always the public read path now, so a test database that
+  # just reseeded the corpus must rebuild it before any browser test reads a
+  # page. The state row tells us whether the last build still describes the
+  # corpus that is present.
+  defp rebuild_public_projection! do
+    row_count =
+      Repo.query!("select count(*) from catalog_public_works").rows
+      |> List.first()
+      |> List.first()
+
+    if is_nil(row_count) or row_count == 0 do
+      {:ok, _summary} = PublicWorkProjection.rebuild!(trigger: "test_fixture")
+    end
   end
 
   defp seed_committed_catalog_if_needed! do

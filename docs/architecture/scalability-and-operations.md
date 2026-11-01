@@ -162,8 +162,10 @@ pool budget, not a larger single pool
 
 ## Railway deployment posture
 
-Hiraeth currently deploys one Phoenix service that also runs Oban, one private
-sidecar, and Railway-managed Postgres. The healthcheck split is deliberate:
+Hiraeth deploys a `web` Phoenix service, a separate `worker` release with
+`HIRAETH_SERVICE_ROLE=worker` and no public domain, one private sidecar, and
+Railway-managed Postgres. The split is mirrored in a `staging` environment.
+The healthcheck split is deliberate:
 `/health` answers without touching dependencies, and `/ready` checks the database
 and the sidecar. `/health` passing therefore does not mean the service can serve
 catalog pages, and `/ready` is the probe that should gate traffic. Whichever path
@@ -187,12 +189,13 @@ name. It does not today.
 
 ## Recommendations, ordered by return
 
-1. Split the worker process from the web service. Give Oban its own pool and
-   keep web page latency independent of ingestion. This is the smallest change
-   that removes the first failure mode.
-2. The cover cache has moved to R2 with a local working set. Remove the Railway
-   volume from the service and set `HIRAETH_COVER_STORE=s3` with the R2
-   variables. The local cache is capped by `HIRAETH_COVER_CACHE_MAX_BYTES`.
+1. Done: the worker process is separate from the web service. Oban, projection
+   rebuilds, cover backfill, and responsive-variant generation run on `worker`
+   with their own pool, so web page latency is independent of ingestion.
+2. Done: the cover cache moved to R2 with a local working set. Railway services
+   set `HIRAETH_COVER_STORE=s3` with the R2 variables, and the local cache is
+   capped by `HIRAETH_COVER_CACHE_MAX_BYTES`. The worker refills originals and
+   renders variants from R2 on a cold start.
 3. Add a rate limit and a response cache header to `/api/v1`. The API is
    read-only and cacheable by content type; a 30-second `Cache-Control` matches
    the existing read model TTL.

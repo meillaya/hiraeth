@@ -52,7 +52,7 @@ defmodule HiraethWeb.CatalogComponents do
           by {role_names(@book[:authors])}
         </p>
       </div>
-      <div class="relative flex items-center justify-between text-[8px] font-mono uppercase tracking-wider opacity-70 border-t border-current/25 pt-2 gap-2">
+      <div class="relative flex items-center justify-between text-[8px] font-mono uppercase tracking-wider border-t border-current/25 pt-2 gap-2">
         <span class="truncate">{List.first(@book[:series_titles] || []) || @book[:series] || "Edition"}</span>
         <span :if={@book[:year]}>{@book.year}</span>
       </div>
@@ -77,7 +77,7 @@ defmodule HiraethWeb.CatalogComponents do
 
     ~H"""
     <article id={@id} class="sb-card">
-      <a class="sb-card__well" href={~p"/books/#{@book.slug}"} aria-label={"Open #{@book.title}"}>
+      <a class="sb-card__well" href={~p"/books/#{@book.slug}"}>
         <.catalog_cover book={@book} variant={:card} />
       </a>
       <div class="sb-card__meta">
@@ -123,23 +123,33 @@ defmodule HiraethWeb.CatalogComponents do
   def catalog_cover(assigns) do
     assigns =
       assigns
-      |> assign(:cover_image_src, catalog_cover_src(assigns.book, assigns.variant))
+      |> assign(:cover_image, catalog_cover_image(assigns.book, assigns.variant))
       |> assign(:cover_authors, role_names(assigns.book[:authors]))
 
     ~H"""
-    <figure :if={@cover_image_src} id={"public-cover-#{@book.slug}"} class="sb-cover-figure">
-      <img
-        src={@cover_image_src}
-        alt={"Cover for #{@book.title}"}
-        loading={@loading}
-        decoding="async"
-        fetchpriority={@fetchpriority}
-        width="400"
-        height="600"
-        class="sb-cover-image"
-      />
+    <figure :if={@cover_image} id={"public-cover-#{@book.slug}"} class="sb-cover-figure">
+      <picture>
+        <source
+          :if={@cover_image.webp_srcset}
+          type="image/webp"
+          srcset={@cover_image.webp_srcset}
+          sizes={@cover_image.sizes}
+        />
+        <img
+          src={@cover_image.src}
+          srcset={@cover_image.jpg_srcset}
+          sizes={@cover_image.sizes}
+          alt={"Cover for #{@book.title}"}
+          loading={@loading}
+          decoding="async"
+          fetchpriority={@fetchpriority}
+          width="400"
+          height="600"
+          class="sb-cover-image"
+        />
+      </picture>
     </figure>
-    <div :if={!@cover_image_src} id={"missing-cover-#{@book.slug}"} class="sb-fallback">
+    <div :if={!@cover_image} id={"missing-cover-#{@book.slug}"} class="sb-fallback">
       <span class="sb-fallback__press">{@book.publisher || "Publisher unknown"}</span>
       <span class="sb-fallback__title">{@book.title}</span>
       <span :if={@cover_authors} class="sb-fallback__author">{@cover_authors}</span>
@@ -148,17 +158,76 @@ defmodule HiraethWeb.CatalogComponents do
     """
   end
 
-  defp catalog_cover_src(book, variant) do
+  defp catalog_cover_image(book, variant) do
     cover = Map.get(book, :cover)
 
-    url =
+    fallback =
       case variant do
         :hero -> cover_url(cover, [:public_url, :thumbnail_url])
         _ -> cover_url(cover, [:thumbnail_url, :public_url])
       end
 
-    if is_binary(url) and String.starts_with?(url, "/covers/cache/"), do: url
+    fallback = local_cover_url(fallback)
+
+    variants =
+      cover
+      |> then(&(&1 && Map.get(&1, :responsive_variants)))
+      |> List.wrap()
+      |> Enum.filter(fn candidate ->
+        candidate[:url] |> local_cover_url() |> is_binary()
+      end)
+
+    jpg_srcset = srcset(variants, "jpg")
+    webp_srcset = srcset(variants, "webp")
+
+    src =
+      preferred_variant_url(variants, 400, "jpg") ||
+        preferred_variant_url(variants, 800, "jpg") ||
+        fallback
+
+    if is_binary(src) do
+      %{
+        src: src,
+        jpg_srcset: jpg_srcset || fallback_srcset(variants, fallback),
+        webp_srcset: webp_srcset,
+        sizes: cover_sizes(variant)
+      }
+    end
   end
+
+  defp srcset([], _format), do: nil
+
+  defp srcset(variants, format) do
+    variants
+    |> Enum.filter(&(&1[:format] == format))
+    |> Enum.map(fn candidate -> "#{candidate[:url]} #{candidate[:width]}w" end)
+    |> case do
+      [] -> nil
+      entries -> Enum.join(entries, ", ")
+    end
+  end
+
+  defp fallback_srcset([], _fallback), do: nil
+
+  defp fallback_srcset(variants, fallback) do
+    width = variants |> Enum.map(& &1[:width]) |> Enum.max(fn -> 400 end)
+    "#{fallback} #{width}w"
+  end
+
+  defp preferred_variant_url(variants, width, format) do
+    variants
+    |> Enum.find(fn candidate ->
+      candidate[:format] == format and candidate[:width] == width
+    end)
+    |> case do
+      nil -> nil
+      candidate -> local_cover_url(candidate[:url])
+    end
+  end
+
+  defp cover_sizes(:hero), do: "(max-width: 760px) 92vw, 560px"
+  defp cover_sizes(:record), do: "(max-width: 760px) 90vw, 420px"
+  defp cover_sizes(_variant), do: "(max-width: 760px) 45vw, 320px"
 
   defp cover_url(nil, _keys), do: nil
   defp cover_url(cover, keys), do: Enum.find_value(keys, &Map.get(cover, &1))
@@ -197,7 +266,6 @@ defmodule HiraethWeb.CatalogComponents do
       <.link
         navigate={~p"/books/#{@edition.slug}"}
         class="qi-focus block rounded-sm"
-        aria-label={"Open #{@edition.title}"}
       >
         <.book_cover book={@edition} />
       </.link>
@@ -399,7 +467,7 @@ defmodule HiraethWeb.CatalogComponents do
       >
         ← Previous
       </.link>
-      <span :if={!@has_previous} class="qi-muted opacity-70">← Previous</span>
+      <span :if={!@has_previous} class="qi-muted">← Previous</span>
       <span id="catalog-page-count">Page {@page} of {@total_pages}</span>
       <.link
         :if={@has_next}
@@ -409,7 +477,7 @@ defmodule HiraethWeb.CatalogComponents do
       >
         Next →
       </.link>
-      <span :if={!@has_next} class="qi-muted opacity-70">Next →</span>
+      <span :if={!@has_next} class="qi-muted">Next →</span>
     </nav>
     """
   end
@@ -514,4 +582,94 @@ defmodule HiraethWeb.CatalogComponents do
     |> Enum.reject(fn {_key, value} -> value in [nil, ""] end)
     |> Map.new()
   end
+
+  attr :publisher, :map, required: true
+  attr :index, :integer, default: nil
+
+  @doc "One row in the static publisher directory."
+  def press_row(assigns) do
+    ~H"""
+    <a
+      id={"publisher-#{@publisher.slug}"}
+      class="sb-pressitem"
+      href={~p"/publishers/#{@publisher.slug}"}
+    >
+      <span class="sb-pressitem__no">{number(@index)}</span>
+      <span class="sb-pressitem__name">{@publisher.name}</span>
+      <span class="sb-pressitem__count">{format_count(@publisher.editions_count)} books</span>
+      <span class="sb-pressitem__thumb">
+        <.catalog_cover
+          :if={sample_book(@publisher)}
+          book={sample_book(@publisher)}
+          variant={:thumb}
+        />
+        <span :if={!sample_book(@publisher)} class="sb-pressmark">
+          {initial(@publisher.name)}
+        </span>
+      </span>
+    </a>
+    """
+  end
+
+  attr :publishers, :list, required: true
+  attr :index, :integer, default: nil
+
+  @doc "Previous/next press navigation for a static press dossier."
+  def press_nav(assigns) do
+    previous = neighbour(assigns.publishers, assigns.index, -1)
+    following = neighbour(assigns.publishers, assigns.index, 1)
+
+    assigns = assign(assigns, previous: previous, following: following)
+
+    ~H"""
+    <nav :if={@previous || @following} class="sb-pressnav" aria-label="Presses">
+      <a :if={@previous} href={~p"/publishers/#{@previous.slug}"}>
+        <span>← Previous press</span>
+        <b>{@previous.name}</b>
+      </a>
+      <span :if={!@previous}></span>
+      <a :if={@following} href={~p"/publishers/#{@following.slug}"} class="sb-pressnav__next">
+        <span>Next press →</span>
+        <b>{@following.name}</b>
+      </a>
+    </nav>
+    """
+  end
+
+  defp neighbour(_publishers, nil, _offset), do: nil
+
+  defp neighbour(publishers, index, offset) do
+    Enum.at(publishers, index + offset)
+  end
+
+  defp sample_book(%{slug: slug, cover_sample: %{title: title, cover: cover}})
+       when is_binary(title) and not is_nil(cover) do
+    %{
+      slug: "press-sample-#{slug}",
+      title: title,
+      publisher: nil,
+      authors: [],
+      published_on: nil,
+      cover: cover
+    }
+  end
+
+  defp sample_book(_publisher), do: nil
+
+  defp initial(name) when is_binary(name) do
+    name |> String.first() |> Kernel.||("H") |> String.upcase()
+  end
+
+  defp number(nil), do: "—"
+
+  defp number(index),
+    do: index |> Kernel.+(1) |> Integer.to_string() |> String.pad_leading(2, "0")
+
+  defp format_count(count) when is_integer(count) do
+    count
+    |> Integer.to_string()
+    |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  end
+
+  defp format_count(count), do: to_string(count)
 end

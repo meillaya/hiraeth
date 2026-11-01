@@ -4,8 +4,6 @@ import Config
 # show up without a restart.
 config :open_api_spex, :cache_adapter, OpenApiSpex.Plug.NoneCache
 
-config :hiraeth, :public_read_model, :on
-
 # Configure your database. DATABASE_URL wins when set so `railway run -- mix ...`
 # on a developer machine reaches the Railway Postgres without each call having to
 # override DATABASE_HOST/PORT/USER/PASSWORD individually. The standalone localhost

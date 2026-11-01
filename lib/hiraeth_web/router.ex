@@ -66,17 +66,26 @@ defmodule HiraethWeb.Router do
     pipe_through :browser
 
     get "/ops", OpsController, :index
+    get "/admin", AdminController, :index
+    get "/admin/candidates", AdminController, :candidates
+    get "/admin/candidates/:id", AdminController, :show
+    post "/admin/candidates/:id/approve", AdminController, :approve
+    post "/admin/candidates/:id/reject", AdminController, :reject
+    post "/admin/candidates/:id/ignore", AdminController, :ignore
+    post "/admin/candidates/:id/override", AdminController, :override
+    get "/sitemap.xml", SitemapController, :sitemap
+    get "/robots.txt", SitemapController, :robots
     get "/", CatalogPageController, :home
     live "/browse", BrowseLive, :index
     live "/search", SearchLive, :index
     get "/contributors", CatalogPageController, :contributors
     get "/contributors/:slug", CatalogPageController, :contributor
-    live "/publishers", PublishersLive, :index
+    get "/publishers", CatalogPageController, :publishers
     get "/publishers/a-strange-object", RedirectController, :publisher_group
     get "/publishers/fum-destampa", RedirectController, :publisher_group
     get "/publishers/la-reunion", RedirectController, :publisher_group
     get "/publishers/phoneme-media", RedirectController, :publisher_group
-    live "/publishers/:slug", PublishersLive, :show
+    get "/publishers/:slug", CatalogPageController, :publisher
     get "/series", CatalogPageController, :series
     get "/series/:slug", CatalogPageController, :series_show
     get "/books/:slug", CatalogPageController, :book

@@ -10,6 +10,7 @@ defmodule HiraethWeb.BookCoverSelectionTest do
 
   use Hiraeth.DataCase, async: false
 
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.Covers
   alias Hiraeth.Covers.CoverAsset
   alias Hiraeth.RealCatalog.{Dataset, Importer}
@@ -53,6 +54,7 @@ defmodule HiraethWeb.BookCoverSelectionTest do
     )
 
     assert {:ok, _summary} = Importer.seed!(tmp)
+    assert {:ok, _summary} = PublicWorkProjection.rebuild!(trigger: "test")
 
     book = PublicCatalog.book("dalkey-archive-serpent")
     assert book.cover

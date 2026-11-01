@@ -12,6 +12,10 @@ defmodule Hiraeth.Covers do
   @cache_root "priv/static/covers/cache"
   @thumbnail_timeout 5_000
   @thumbnail_command_timeout "5s"
+  @variant_widths [200, 400, 800]
+  @variant_formats ["webp", "jpg"]
+  @variant_timeout 8_000
+  @variant_command_timeout "8s"
   @default_max_body_size 40 * 1024 * 1024
 
   @accepted_content_types %{
@@ -213,6 +217,9 @@ defmodule Hiraeth.Covers do
     timeout = Keyword.get(opts, :timeout, 15_000)
     thumbnailer = Keyword.get(opts, :thumbnailer, &generate_thumbnail/2)
     thumbnail_timeout = Keyword.get(opts, :thumbnail_timeout, @thumbnail_timeout)
+    variant_generator = Keyword.get(opts, :variant_generator, &generate_variants/3)
+    variant_timeout = Keyword.get(opts, :variant_timeout, @variant_timeout)
+    variants_only? = Keyword.get(opts, :variants_only?, false)
     strict? = Keyword.get(opts, :strict?, false)
     source_urls = Keyword.get(opts, :source_urls, :all)
     provider = Keyword.get(opts, :provider)
@@ -225,7 +232,11 @@ defmodule Hiraeth.Covers do
     |> Ash.read!(authorize?: false)
     |> filter_source_urls(source_urls)
     |> filter_provider(provider)
-    |> Enum.filter(&cache_candidate?/1)
+    |> Enum.filter(fn asset ->
+      cache_candidate?(asset) and
+        (not variants_only? or
+           (present?(asset.cached_file_path) and missing_responsive_variants?(asset)))
+    end)
     |> Task.async_stream(
       &cover_cache_plan(
         &1,
@@ -234,34 +245,71 @@ defmodule Hiraeth.Covers do
         fetch,
         req_options,
         max_body_size,
-        prefer_store?
+        prefer_store?,
+        variants_only?
       ),
       max_concurrency: max_concurrency,
       timeout: timeout,
       on_timeout: :kill_task
     )
     |> Enum.reduce(
-      %{cached: 0, thumbnails: 0, skipped: 0, failed: 0, failures: [], assets: []},
+      %{cached: 0, thumbnails: 0, variants: 0, skipped: 0, failed: 0, failures: [], assets: []},
       fn
         {:ok, {:skip, _asset}}, summary ->
           %{summary | skipped: summary.skipped + 1}
+
+        {:ok, {:variants, asset, source_path}}, summary ->
+          {variant_asset, variants} =
+            store_responsive_variants(
+              asset,
+              source_path,
+              cache_root,
+              variant_generator,
+              variant_timeout
+            )
+
+          summary
+          |> count_variants(variants)
+          |> Map.update!(:assets, &[variant_asset | &1])
 
         {:ok, {:thumbnail, asset, cache_path, thumbnail_path}}, summary ->
           thumbnail_file_path =
             maybe_generate_thumbnail(cache_path, thumbnail_path, thumbnailer, thumbnail_timeout)
 
+          {variant_asset, variants} =
+            store_responsive_variants(
+              asset,
+              cache_path,
+              cache_root,
+              variant_generator,
+              variant_timeout
+            )
+
           cached_asset =
-            asset
+            variant_asset
             |> Ash.Changeset.for_update(:update, %{thumbnail_file_path: thumbnail_file_path})
             |> Ash.update!(authorize?: false)
 
-          upload_cached_paths([asset.cached_file_path, thumbnail_file_path])
+          upload_cached_paths(
+            [asset.cached_file_path, thumbnail_file_path] ++ variant_paths(variants)
+          )
 
-          count_cached(summary, cached_asset, thumbnail_file_path)
+          summary
+          |> count_variants(variants)
+          |> count_cached(cached_asset, thumbnail_file_path)
 
         {:ok, {:adopt, asset, cache_path, thumbnail_path}}, summary ->
+          {variant_asset, variants} =
+            store_responsive_variants(
+              asset,
+              cache_path,
+              cache_root,
+              variant_generator,
+              variant_timeout
+            )
+
           cached_asset =
-            asset
+            variant_asset
             |> Ash.Changeset.for_update(:update, %{
               cache_policy: "cache_allowed",
               cached_file_path: cache_path,
@@ -270,9 +318,11 @@ defmodule Hiraeth.Covers do
             })
             |> Ash.update!(authorize?: false)
 
-          upload_cached_paths([cache_path, thumbnail_path])
+          upload_cached_paths([cache_path, thumbnail_path] ++ variant_paths(variants))
 
-          count_cached(summary, cached_asset, thumbnail_path)
+          summary
+          |> count_variants(variants)
+          |> count_cached(cached_asset, thumbnail_path)
 
         {:ok, {:cache, asset, cache_path, body}}, summary ->
           ensure_safe_cache_write_path!(cache_path, cache_root)
@@ -286,8 +336,17 @@ defmodule Hiraeth.Covers do
               thumbnail_timeout
             )
 
+          {variant_asset, variants} =
+            store_responsive_variants(
+              asset,
+              cache_path,
+              cache_root,
+              variant_generator,
+              variant_timeout
+            )
+
           cached_asset =
-            asset
+            variant_asset
             |> Ash.Changeset.for_update(:update, %{
               cache_policy: "cache_allowed",
               cached_file_path: cache_path,
@@ -296,9 +355,11 @@ defmodule Hiraeth.Covers do
             })
             |> Ash.update!(authorize?: false)
 
-          upload_cached_paths([cache_path, thumbnail_file_path])
+          upload_cached_paths([cache_path, thumbnail_file_path] ++ variant_paths(variants))
 
-          count_cached(summary, cached_asset, thumbnail_file_path)
+          summary
+          |> count_variants(variants)
+          |> count_cached(cached_asset, thumbnail_file_path)
 
         {:ok, {:error, asset, reason}}, summary ->
           handle_cache_failure(summary, asset.source_url, reason, strict?)
@@ -317,7 +378,8 @@ defmodule Hiraeth.Covers do
   Returns cover-cache coverage grouped by provider.
 
   `cached` counts eligible assets whose original cache file exists; `thumbnails`
-  counts eligible assets with both the original and thumbnail present.
+  counts eligible assets with both the original and thumbnail present;
+  `variants` counts eligible assets with a complete responsive variant set.
   """
   @spec audit_cache(keyword()) :: [map()]
   def audit_cache(opts \\ []) do
@@ -353,6 +415,33 @@ defmodule Hiraeth.Covers do
     |> Enum.sort()
   end
 
+  @doc """
+  Returns source URLs whose cached original exists but whose responsive variant
+  set is missing or stale. A cold container can refill originals from R2 and
+  then rebuild variants from the local original without re-fetching the source.
+  """
+  @spec missing_variant_source_urls() :: [String.t()]
+  def missing_variant_source_urls do
+    public_asset_ids = public_cover_asset_ids()
+
+    CoverAsset
+    |> Ash.read!(authorize?: false)
+    |> Enum.filter(
+      &(MapSet.member?(public_asset_ids, &1.id) and cache_candidate?(&1) and
+          present?(&1.cached_file_path) and missing_responsive_variants?(&1))
+    )
+    |> Enum.map(& &1.source_url)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp public_cover_asset_ids do
+    CoverAssignment
+    |> Ash.Query.for_read(:public)
+    |> Ash.read!(authorize?: false)
+    |> MapSet.new(& &1.cover_asset_id)
+  end
+
   @doc "Returns true when the stored cache path exists and is safe to serve."
   @spec cached_file_available?(String.t() | nil) :: boolean()
   def cached_file_available?(path), do: cached_file_present?(path)
@@ -369,14 +458,21 @@ defmodule Hiraeth.Covers do
           cached_file_available?(asset.thumbnail_file_path)
       end)
 
+    variants =
+      Enum.count(eligible, fn asset ->
+        cached_file_available?(asset.cached_file_path) and responsive_variants_current?(asset)
+      end)
+
     %{
       provider: provider,
       assets: length(assets),
       eligible: length(eligible),
       cached: cached,
       thumbnails: thumbnails,
+      variants: variants,
       missing_cache: length(eligible) - cached,
       missing_thumbnails: cached - thumbnails,
+      missing_variants: cached - variants,
       non_public: length(assets) - length(eligible)
     }
   end
@@ -411,6 +507,12 @@ defmodule Hiraeth.Covers do
 
   defp count_thumbnail(summary, _path), do: summary
 
+  defp count_variants(summary, []), do: summary
+
+  defp count_variants(summary, variants) when is_list(variants) do
+    %{summary | variants: summary.variants + 1}
+  end
+
   defp cover_cache_plan(
          %CoverAsset{} = asset,
          cache_root,
@@ -418,12 +520,30 @@ defmodule Hiraeth.Covers do
          fetch,
          req_options,
          max_body_size,
-         prefer_store?
+         prefer_store?,
+         variants_only?
        ) do
     cache_path = cache_path(asset, cache_root)
     thumbnail_path = thumbnail_path(asset, cache_root)
 
     cond do
+      variants_only? and cached_file_present?(asset.cached_file_path) ->
+        {:variants, asset, asset.cached_file_path}
+
+      variants_only? ->
+        # A cold worker has the database path but no local original. Refill it
+        # from the durable store (or the publisher as a last resort) inside the
+        # variant pass so the worker does not need a page visit to warm each
+        # cover before rendering its variants.
+        fetch_into_cache(
+          asset,
+          cache_path,
+          fetch,
+          req_options,
+          max_body_size,
+          prefer_store?
+        )
+
       cached_skip?(asset, force?) ->
         {:skip, asset}
 
@@ -523,22 +643,25 @@ defmodule Hiraeth.Covers do
   end
 
   def purge_cached_cover!(%CoverAsset{} = asset) do
-    delete_stored_cover(asset.cached_file_path)
-    delete_stored_cover(asset.thumbnail_file_path)
+    deletable_variant_paths = variant_paths(asset.responsive_variants)
 
-    if safe_cached_file_path?(asset.cached_file_path) and File.exists?(asset.cached_file_path) do
-      File.rm!(asset.cached_file_path)
-    end
+    [asset.cached_file_path, asset.thumbnail_file_path | deletable_variant_paths]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.each(&delete_stored_cover/1)
 
-    if safe_cached_file_path?(asset.thumbnail_file_path) and
-         File.exists?(asset.thumbnail_file_path) do
-      File.rm!(asset.thumbnail_file_path)
-    end
+    [asset.cached_file_path, asset.thumbnail_file_path | deletable_variant_paths]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.each(fn path ->
+      if safe_cached_file_path?(path) and File.exists?(path) do
+        File.rm!(path)
+      end
+    end)
 
     asset
     |> Ash.Changeset.for_update(:update, %{
       cached_file_path: nil,
       thumbnail_file_path: nil,
+      responsive_variants: [],
       cached_at: nil
     })
     |> Ash.update!(authorize?: false)
@@ -605,7 +728,7 @@ defmodule Hiraeth.Covers do
   end
 
   defp upload_asset(asset, summary) do
-    [asset.cached_file_path, asset.thumbnail_file_path]
+    [asset.cached_file_path, asset.thumbnail_file_path | variant_paths(asset.responsive_variants)]
     |> Enum.reject(&is_nil/1)
     |> Enum.reduce(summary, &upload_and_count/2)
   end
@@ -682,7 +805,8 @@ defmodule Hiraeth.Covers do
       cache_policy: cover_asset.cache_policy,
       cached_file_path: cover_asset.cached_file_path,
       thumbnail_file_path: cover_asset.thumbnail_file_path,
-      thumbnail_url: public_thumbnail_url(cover_asset.thumbnail_file_path)
+      thumbnail_url: public_thumbnail_url(cover_asset.thumbnail_file_path),
+      responsive_variants: public_variants(cover_asset.responsive_variants)
     }
   end
 
@@ -694,6 +818,35 @@ defmodule Hiraeth.Covers do
   defp public_cover_url(%CoverAsset{}), do: nil
 
   defp public_thumbnail_url(path) do
+    if safe_cached_file_path?(path), do: static_path(path)
+  end
+
+  defp public_variants(variants) when is_list(variants) do
+    variants
+    |> Enum.flat_map(fn variant ->
+      path = variant_path(variant)
+      url = public_variant_url(path)
+
+      if is_binary(url) do
+        [
+          %{
+            format: variant_value(variant, :format),
+            width: variant_value(variant, :width),
+            sha256: variant_value(variant, :sha256),
+            bytes: variant_value(variant, :bytes),
+            url: url
+          }
+        ]
+      else
+        []
+      end
+    end)
+    |> Enum.sort_by(&{&1.width, &1.format})
+  end
+
+  defp public_variants(_variants), do: []
+
+  defp public_variant_url(path) do
     if safe_cached_file_path?(path), do: static_path(path)
   end
 
@@ -777,6 +930,197 @@ defmodule Hiraeth.Covers do
       _ -> nil
     end
   end
+
+  @doc """
+  Generates the responsive WebP/JPEG variant set for one cached original.
+
+  A variant filename embeds the hash of its own bytes, so the URL changes when
+  the rendered image changes and can be cached immutably. ImageMagick is a
+  runtime dependency of the release image; when it is unavailable the function
+  returns an empty list and the caller keeps the existing cover URLs.
+  """
+  @spec generate_variants(String.t(), CoverAsset.t(), String.t()) :: [map()]
+  def generate_variants(source_path, %CoverAsset{} = asset, cache_root \\ @cache_root) do
+    source_hash = sha256(asset.source_url)
+
+    for width <- @variant_widths,
+        format <- @variant_formats,
+        {:ok, variant} <- [generate_variant(source_path, cache_root, source_hash, width, format)] do
+      variant
+    end
+  end
+
+  defp generate_variant(source_path, cache_root, source_hash, width, format) do
+    temporary_path =
+      Path.join(
+        cache_root,
+        "#{source_hash}-#{width}w-#{System.unique_integer([:positive])}.tmp.#{format}"
+      )
+
+    try do
+      with {_program, command} when is_binary(command) <- thumbnail_command(),
+           timeout when is_binary(timeout) <- System.find_executable("timeout"),
+           true <- safe_cached_file_path?(source_path),
+           true <- safe_cache_write_path?(temporary_path, expanded_cache_root()),
+           {_, 0} <-
+             System.cmd(
+               timeout,
+               [
+                 @variant_command_timeout,
+                 command,
+                 source_path,
+                 "-auto-orient",
+                 "-resize",
+                 "#{width}x>",
+                 "-strip",
+                 "-quality",
+                 "82",
+                 temporary_path
+               ],
+               stderr_to_stdout: true
+             ),
+           {:ok, body} <- File.read(temporary_path),
+           content_hash = sha256(body),
+           final_path =
+             Path.join(cache_root, "#{source_hash}-#{width}w-#{content_hash}.#{format}"),
+           :ok <- move_variant(temporary_path, final_path),
+           {:ok, stat} <- File.stat(final_path) do
+        {:ok,
+         %{
+           "path" => final_path,
+           "format" => format,
+           "width" => width,
+           "sha256" => content_hash,
+           "bytes" => stat.size
+         }}
+      else
+        _ -> nil
+      end
+    after
+      File.rm(temporary_path)
+    end
+  end
+
+  defp move_variant(temporary_path, final_path) do
+    case File.rename(temporary_path, final_path) do
+      :ok -> :ok
+      {:error, :eexist} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp store_responsive_variants(asset, source_path, cache_root, generator, timeout) do
+    variants = maybe_generate_variants(source_path, asset, cache_root, generator, timeout)
+
+    if variants == [] do
+      {asset, []}
+    else
+      updated =
+        asset
+        |> Ash.Changeset.for_update(:update, %{responsive_variants: variants})
+        |> Ash.update!(authorize?: false)
+
+      {updated, variants}
+    end
+  end
+
+  defp maybe_generate_variants(source_path, asset, cache_root, generator, timeout)
+       when is_function(generator, 3) do
+    task = Task.async(fn -> generator.(source_path, asset, cache_root) end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
+      {:ok, variants} when is_list(variants) -> normalize_variants(variants)
+      _result -> []
+    end
+  rescue
+    _exception -> []
+  end
+
+  defp maybe_generate_variants(_source_path, _asset, _cache_root, _generator, _timeout), do: []
+
+  defp normalize_variants(variants) do
+    variants
+    |> Enum.flat_map(fn variant ->
+      path = variant_value(variant, :path)
+      format = variant_value(variant, :format)
+      width = variant_value(variant, :width)
+
+      if is_binary(path) and format in @variant_formats and is_integer(width) and width > 0 and
+           safe_cached_file_path?(path) do
+        [
+          %{
+            "path" => stored_variant_path(path),
+            "format" => format,
+            "width" => width,
+            "sha256" => variant_value(variant, :sha256) || sha256(File.read!(path)),
+            "bytes" => variant_value(variant, :bytes) || File.stat!(path).size
+          }
+        ]
+      else
+        []
+      end
+    end)
+    |> Enum.uniq_by(&{&1["width"], &1["format"]})
+    |> Enum.sort_by(&{&1["width"], &1["format"]})
+  end
+
+  defp stored_variant_path(path) do
+    expanded = Path.expand(path)
+    cwd = Path.expand(".")
+
+    if String.starts_with?(expanded, cwd <> "/") do
+      Path.relative_to(expanded, cwd)
+    else
+      path
+    end
+  end
+
+  defp responsive_variants_current?(%CoverAsset{responsive_variants: variants})
+       when is_list(variants) and variants != [] do
+    present =
+      variants
+      |> Enum.map(fn variant ->
+        {variant_value(variant, :width), variant_value(variant, :format), variant_path(variant)}
+      end)
+      |> Enum.filter(fn {width, format, path} ->
+        is_integer(width) and format in @variant_formats and
+          safe_cached_file_path?(path)
+      end)
+      |> MapSet.new(fn {width, format, _path} -> {width, format} end)
+
+    Enum.all?(for(width <- @variant_widths, format <- @variant_formats, do: {width, format}), fn
+      key -> MapSet.member?(present, key)
+    end)
+  end
+
+  defp responsive_variants_current?(_asset), do: false
+
+  defp missing_responsive_variants?(%CoverAsset{} = asset) do
+    not responsive_variants_current?(asset)
+  end
+
+  defp variant_paths(variants) when is_list(variants) do
+    variants |> Enum.map(&variant_path/1) |> Enum.reject(&is_nil/1)
+  end
+
+  defp variant_paths(_variants), do: []
+
+  defp variant_path(variant) when is_map(variant), do: variant_value(variant, :path)
+  defp variant_path(_variant), do: nil
+
+  defp variant_value(variant, key) when is_map(variant) do
+    Map.get(variant, key) || Map.get(variant, Atom.to_string(key))
+  end
+
+  defp variant_value(_variant, _key), do: nil
+
+  @doc "True when a cache path is a content-hashed responsive variant."
+  @spec responsive_variant_path?(term()) :: boolean()
+  def responsive_variant_path?(path) when is_binary(path) do
+    path =~ ~r/-\d+w-[0-9a-f]{64}\.(webp|jpg)$/
+  end
+
+  def responsive_variant_path?(_path), do: false
 
   defp cache_candidate?(%CoverAsset{} = asset) do
     uri = parse_uri(asset.source_url)

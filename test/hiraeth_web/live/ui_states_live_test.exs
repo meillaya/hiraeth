@@ -5,6 +5,7 @@ defmodule HiraethWeb.UiStatesLiveTest do
   import HiraethWeb.PageTestHelpers
 
   alias Hiraeth.Catalog.{Edition, Identifier, Publisher, Series, SeriesMembership, Work}
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.Sources.SourceRecord
   alias HiraethWeb.CatalogComponents
 
@@ -29,10 +30,11 @@ defmodule HiraethWeb.UiStatesLiveTest do
 
   test "not-found and missing-cover states are explicit", %{conn: conn} do
     Hiraeth.DemoFixtures.seed!()
+    assert {:ok, _summary} = PublicWorkProjection.rebuild!(trigger: "test")
 
-    {:ok, publisher, _html} = live(conn, ~p"/publishers/not-a-publisher")
-    assert has_element?(publisher, "#publisher-not-found", "No publisher matches")
-    assert has_element?(publisher, "a[href='/publishers']", "Back to publishers")
+    {publisher, _conn} = page(conn, "/publishers/not-a-publisher", 404)
+    assert page_has?(publisher, "#catalog-page-not-found", "No publisher matches")
+    assert page_has?(publisher, "a[href='/browse']", "Back to books")
 
     assert redirected_to(get(conn, ~p"/editions/the-orchard-of-minor-moons-paperback")) ==
              "/books/the-orchard-of-minor-moons-paperback"
@@ -52,8 +54,8 @@ defmodule HiraethWeb.UiStatesLiveTest do
     publisher =
       create!(Publisher, %{name: "Empty Shelf Press", slug: "empty-shelf-press"}, admin)
 
-    {:ok, publisher_view, _html} = live(conn, ~p"/publishers/#{publisher.slug}")
-    assert has_element?(publisher_view, "#publisher-no-editions", "No books are attached")
+    {publisher_view, _conn} = page(conn, "/publishers/#{publisher.slug}")
+    assert page_has?(publisher_view, "#publisher-no-editions", "No books are attached")
 
     series = create!(Series, %{title: "Unnumbered Sequence", slug: "unnumbered-sequence"}, admin)
     work = create!(Work, %{title: "Loose Leaf Noon", slug: "loose-leaf-noon"}, admin)
@@ -93,6 +95,8 @@ defmodule HiraethWeb.UiStatesLiveTest do
       },
       admin
     )
+
+    assert {:ok, _summary} = PublicWorkProjection.rebuild!(trigger: "test")
 
     {series_view, _html} = page(conn, "/series/#{series.slug}")
     refute page_has?(series_view, "#series-unknown-order")

@@ -78,20 +78,55 @@ defmodule Hiraeth.Catalog.PublicWorks do
 
   @spec publisher_summaries() :: [map()]
   def publisher_summaries do
+    summaries =
+      Repo.all(
+        from(work in PublicWork,
+          where: not is_nil(work.publisher_slug),
+          group_by: [work.publisher_slug, work.publisher_name],
+          select: %{
+            id: work.publisher_slug,
+            slug: work.publisher_slug,
+            name: work.publisher_name,
+            editions_count: count(work.work_id)
+          },
+          order_by: [asc: work.publisher_name]
+        )
+      )
+
+    samples = cover_samples_by_publisher()
+
+    Enum.map(summaries, &Map.put(&1, :cover_sample, Map.get(samples, &1.slug)))
+  end
+
+  # One cover query replaces a per-publisher lookup. Only the newest covered
+  # work for each publisher is decoded.
+  defp cover_samples_by_publisher do
     Repo.all(
       from(work in PublicWork,
-        where: not is_nil(work.publisher_slug),
-        group_by: [work.publisher_slug, work.publisher_name],
-        select: %{
-          id: work.publisher_slug,
-          slug: work.publisher_slug,
-          name: work.publisher_name,
-          editions_count: count(work.work_id)
-        },
-        order_by: [asc: work.publisher_name]
+        where: work.has_cover == true and not is_nil(work.publisher_slug),
+        order_by: [
+          asc: work.publisher_slug,
+          desc_nulls_last: work.published_on,
+          asc: work.title_sort
+        ]
       )
     )
-    |> Enum.map(&add_cover_sample/1)
+    |> Enum.uniq_by(& &1.publisher_slug)
+    |> Map.new(&{&1.publisher_slug, decode!(&1)})
+  end
+
+  @spec publisher_has_editions?(String.t()) :: boolean()
+  def publisher_has_editions?(slug) do
+    Repo.query!(
+      """
+      select 1
+      from editions e
+      join publishers p on p.id = e.publisher_id
+      where p.slug = $1
+      limit 1
+      """,
+      [slug]
+    ).rows != []
   end
 
   @spec books_for_series(String.t()) :: [PublicProjection.Book.t()]
@@ -132,18 +167,23 @@ defmodule Hiraeth.Catalog.PublicWorks do
 
   @spec series_list() :: [map()]
   def series_list do
-    Repo.query!("""
-    select s.id, s.title, s.slug, p.name, p.slug,
-           count(sm.id) filter (where sm.position is null) as unknown_positions
-    from series s
-    left join publishers p on p.id = s.publisher_id
-    left join series_memberships sm on sm.series_id = s.id
-    group by s.id, s.title, s.slug, p.name, p.slug
-    order by lower(s.title)
-    """).rows
-    |> Enum.map(fn [id, title, slug, publisher, publisher_slug, unknown_positions] ->
-      books = books_for_series(slug)
+    rows =
+      Repo.query!("""
+      select s.id, s.title, s.slug, p.name, p.slug,
+             count(sm.id) filter (where sm.position is null) as unknown_positions
+      from series s
+      left join publishers p on p.id = s.publisher_id
+      left join series_memberships sm on sm.series_id = s.id
+      group by s.id, s.title, s.slug, p.name, p.slug
+      order by lower(s.title)
+      """).rows
 
+    slugs =
+      Enum.map(rows, fn [_id, _title, slug, _publisher, _publisher_slug, _positions] -> slug end)
+
+    books_by_slug = series_books_by_slug(slugs)
+
+    Enum.map(rows, fn [id, title, slug, publisher, publisher_slug, unknown_positions] ->
       %{
         id: id,
         title: title,
@@ -151,9 +191,30 @@ defmodule Hiraeth.Catalog.PublicWorks do
         publisher: publisher,
         publisher_slug: publisher_slug,
         unknown_order?: unknown_positions > 0,
-        books: books
+        books: Map.get(books_by_slug, slug, [])
       }
     end)
+  end
+
+  # One overlap query replaces a per-series book query. This keeps the series
+  # directory to two SQL statements regardless of how many series exist.
+  defp series_books_by_slug([]), do: %{}
+
+  defp series_books_by_slug(slugs) do
+    Repo.all(
+      from(work in PublicWork,
+        where: fragment("? && ?", work.series_slugs, ^slugs),
+        order_by: [desc_nulls_last: work.newest_sort, asc: work.title_sort]
+      )
+    )
+    |> Enum.reduce(%{}, fn work, grouped ->
+      book = decode!(work)
+
+      Enum.reduce(work.series_slugs, grouped, fn slug, acc ->
+        Map.update(acc, slug, [book], &[book | &1])
+      end)
+    end)
+    |> Map.new(fn {slug, books} -> {slug, Enum.reverse(books)} end)
   end
 
   @spec series(String.t()) :: map() | nil
@@ -173,25 +234,29 @@ defmodule Hiraeth.Catalog.PublicWorks do
     |> Enum.map(&decode!/1)
   end
 
-  defp add_cover_sample(summary) do
-    sample =
-      Repo.one(
-        from(work in PublicWork,
-          where: work.publisher_slug == ^summary.slug and work.has_cover == true,
-          order_by: [desc_nulls_last: work.published_on, asc: work.title_sort],
-          limit: 1
+  defp filter_query(query, value) do
+    term = "%#{escape_like(String.downcase(value))}%"
+    normalized = normalize_identifier(value)
+
+    cond do
+      not searchable_query?(value) ->
+        where(query, [work], false)
+
+      String.length(String.trim(value)) < 3 ->
+        # One- and two-character terms cannot use the trigram index. The
+        # expression GIN index still answers the full-text half, while an
+        # ILIKE substring scan would read the whole table on every keystroke.
+        where(
+          query,
+          [work],
+          fragment(
+            "to_tsvector('simple', ?) @@ websearch_to_tsquery('simple', ?)",
+            work.search_text,
+            ^value
+          )
         )
-      )
 
-    Map.put(summary, :cover_sample, sample && decode!(sample))
-  end
-
-  defp apply_filters(query, filters) do
-    Enum.reduce(filters, query, fn
-      {:q, value}, query when value not in [nil, ""] ->
-        term = "%#{escape_like(String.downcase(value))}%"
-        normalized = normalize_identifier(value)
-
+      true ->
         where(
           query,
           [work],
@@ -203,6 +268,13 @@ defmodule Hiraeth.Catalog.PublicWorks do
             ilike(work.search_text, ^term) or
             (^normalized != "" and ilike(work.search_text, ^"%#{normalized}%"))
         )
+    end
+  end
+
+  defp apply_filters(query, filters) do
+    Enum.reduce(filters, query, fn
+      {:q, value}, query when value not in [nil, ""] ->
+        filter_query(query, value)
 
       {:publisher, value}, query when value not in [nil, ""] ->
         needle = String.downcase(value)
@@ -342,6 +414,10 @@ defmodule Hiraeth.Catalog.PublicWorks do
   defp parse_page(_page), do: 1
 
   defp ceil_div(value, divisor), do: div(value + divisor - 1, divisor)
+
+  defp searchable_query?(value) do
+    Regex.match?(~r/[\p{L}\p{N}]/u, value)
+  end
 
   defp escape_like(value) do
     value

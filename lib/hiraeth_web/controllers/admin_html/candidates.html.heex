@@ -1,0 +1,83 @@
+<HiraethWeb.Layouts.admin flash={@flash} page_title={@page_title}>
+  <div id="admin-candidates">
+    <header class="sb-pagehead">
+      <p class="sb-kicker">Candidates <span>/</span> Latest 200</p>
+      <div class="sb-pagehead__row">
+        <h1>Record candidates</h1>
+        <p class="sb-pagehead__intro">
+          Review normalized provider records. The list is capped at the 200 most
+          recent matches; narrow it with the filters below.
+        </p>
+      </div>
+    </header>
+
+    <form class="admin-actions" method="get" action={~p"/admin/candidates"}>
+      <label>
+        Decision
+        <select name="decision">
+          <option
+            :for={value <- ~w(pending_review approved rejected ignored all)}
+            value={value}
+            selected={@filters["decision"] == value}
+          >
+            {value}
+          </option>
+        </select>
+      </label>
+      <label>
+        Diff
+        <select name="diff">
+          <option
+            :for={value <- ~w(all new changed unchanged removed invalid destructive)}
+            value={value}
+            selected={@filters["diff"] == value}
+          >
+            {value}
+          </option>
+        </select>
+      </label>
+      <label>
+        Search
+        <input
+          type="text"
+          name="q"
+          value={@filters["q"]}
+          placeholder="identity, source URI, type"
+        />
+      </label>
+      <button class="sb-button" type="submit">Filter</button>
+    </form>
+
+    <table class="spec-table">
+      <thead>
+        <tr>
+          <th scope="col">Candidate</th>
+          <th scope="col">Type</th>
+          <th scope="col">Diff</th>
+          <th scope="col">Decision</th>
+          <th scope="col">Quarantine</th>
+          <th scope="col">Inserted</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={candidate <- @candidates} id={"candidate-row-#{candidate.id}"}>
+          <td>
+            <a href={~p"/admin/candidates/#{candidate.id}"}>
+              {candidate.candidate_identity}
+            </a>
+          </td>
+          <td>{candidate.record_type}</td>
+          <td>{candidate.diff_classification}</td>
+          <td>
+            <span class={badge_class(candidate.review_decision)}>{candidate.review_decision}</span>
+          </td>
+          <td>{candidate.quarantine_status}</td>
+          <td>{timestamp(candidate.inserted_at)}</td>
+        </tr>
+        <tr :if={@candidates == []}>
+          <td colspan="6">No candidates match these filters.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</HiraethWeb.Layouts.admin>

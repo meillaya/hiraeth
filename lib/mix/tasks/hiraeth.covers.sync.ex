@@ -6,6 +6,11 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
       mix hiraeth.covers.sync --provider <slug> [--force] [--json]
       mix hiraeth.covers.sync --all [--force] [--json]
       mix hiraeth.covers.sync --all --allow-missing
+      mix hiraeth.covers.sync --all --variants
+
+  `--variants` renders the responsive WebP/JPEG set from local originals
+  instead of fetching publisher sources. An asset without a cached original is
+  skipped until the original-cover pass has run.
 
   The task never fabricates a cover. A failed fetch or thumbnail leaves the
   asset uncached and is reported in the summary; the command exits non-zero
@@ -41,6 +46,7 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
           all: :boolean,
           force: :boolean,
           missing: :boolean,
+          variants: :boolean,
           json: :boolean,
           allow_missing: :boolean,
           cache_root: :string,
@@ -73,6 +79,7 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
       Covers.cache_public_covers!(
         provider: provider,
         force?: Keyword.get(opts, :force, false),
+        variants_only?: Keyword.get(opts, :variants, false),
         cache_root: Keyword.get(opts, :cache_root, "priv/static/covers/cache"),
         max_concurrency: Keyword.get(opts, :concurrency, 4),
         timeout: Keyword.get(opts, :timeout, 15_000)
@@ -81,7 +88,7 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
     audit = Covers.audit_cache(provider: provider)
     print(summary, audit, opts)
 
-    if failed?(summary, audit) and not Keyword.get(opts, :allow_missing, false) do
+    if failed?(summary, audit, opts) and not Keyword.get(opts, :allow_missing, false) do
       {:error,
        "cover sync left missing cache entries; rerun or pass --allow-missing to report only."}
     else
@@ -89,15 +96,19 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
     end
   end
 
-  defp failed?(summary, audit) do
+  defp failed?(summary, audit, opts) do
     summary.failed > 0 or
-      Enum.any?(audit, &(&1.missing_cache > 0 or &1.missing_thumbnails > 0))
+      Enum.any?(audit, fn row ->
+        row.missing_cache > 0 or row.missing_thumbnails > 0 or
+          (Keyword.get(opts, :variants, false) and row.missing_variants > 0)
+      end)
   end
 
   defp print(summary, audit, opts) do
     payload = %{
       cached: summary.cached,
       thumbnails: summary.thumbnails,
+      variants: summary.variants,
       skipped: summary.skipped,
       failed: summary.failed,
       failures: summary.failures,
@@ -109,6 +120,7 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
     else
       Mix.shell().info("cover_cache_cached=#{summary.cached}")
       Mix.shell().info("cover_cache_thumbnails=#{summary.thumbnails}")
+      Mix.shell().info("cover_cache_variants=#{summary.variants}")
       Mix.shell().info("cover_cache_skipped=#{summary.skipped}")
       Mix.shell().info("cover_cache_failed=#{summary.failed}")
 
@@ -124,8 +136,9 @@ defmodule Mix.Tasks.Hiraeth.Covers.Sync do
     Enum.each(audit, fn row ->
       Mix.shell().info(
         "cover_audit provider=#{row.provider} assets=#{row.assets} eligible=#{row.eligible} " <>
-          "cached=#{row.cached} thumbnails=#{row.thumbnails} " <>
-          "missing_cache=#{row.missing_cache} missing_thumbnails=#{row.missing_thumbnails}"
+          "cached=#{row.cached} thumbnails=#{row.thumbnails} variants=#{row.variants} " <>
+          "missing_cache=#{row.missing_cache} missing_thumbnails=#{row.missing_thumbnails} " <>
+          "missing_variants=#{row.missing_variants}"
       )
     end)
   end

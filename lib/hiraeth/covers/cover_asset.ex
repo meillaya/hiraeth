@@ -55,6 +55,12 @@ defmodule Hiraeth.Covers.CoverAsset do
       public? true
     end
 
+    attribute :responsive_variants, {:array, :map} do
+      allow_nil? false
+      default []
+      public? true
+    end
+
     attribute :takedown_state, :string do
       allow_nil? false
       default "visible"
@@ -86,6 +92,7 @@ defmodule Hiraeth.Covers.CoverAsset do
         :cached_file_path,
         :cached_at,
         :thumbnail_file_path,
+        :responsive_variants,
         :takedown_state
       ]
 
@@ -106,6 +113,7 @@ defmodule Hiraeth.Covers.CoverAsset do
         :cached_file_path,
         :cached_at,
         :thumbnail_file_path,
+        :responsive_variants,
         :takedown_state
       ]
 
@@ -130,18 +138,50 @@ defmodule Hiraeth.Covers.CoverAsset do
   defp validate_cache_rights(changeset) do
     cached_file_path = Ash.Changeset.get_attribute(changeset, :cached_file_path)
     thumbnail_file_path = Ash.Changeset.get_attribute(changeset, :thumbnail_file_path)
+    responsive_variants = Ash.Changeset.get_attribute(changeset, :responsive_variants) || []
     cache_policy = Ash.Changeset.get_attribute(changeset, :cache_policy)
     rights_basis = Ash.Changeset.get_attribute(changeset, :rights_basis)
 
-    if (present?(cached_file_path) or present?(thumbnail_file_path)) and
-         not (cache_policy == "cache_allowed" and rights_basis == "local_cache_permitted") do
-      {:error,
-       field: :cached_file_path,
-       message: "cache file path requires cache_allowed policy and local cache rights basis"}
-    else
-      :ok
+    cond do
+      not valid_variants?(responsive_variants) ->
+        {:error,
+         field: :responsive_variants,
+         message: "responsive variants must be maps with a safe cache path, format, and width"}
+
+      (present?(cached_file_path) or present?(thumbnail_file_path) or
+         responsive_variants != []) and
+          not (cache_policy == "cache_allowed" and rights_basis == "local_cache_permitted") ->
+        {:error,
+         field: :cached_file_path,
+         message: "cache file path requires cache_allowed policy and local cache rights basis"}
+
+      true ->
+        :ok
     end
   end
+
+  defp valid_variants?(variants) when is_list(variants) do
+    Enum.all?(variants, fn
+      %{"path" => path, "format" => format, "width" => width} ->
+        safe_variant_path?(path) and format in ["webp", "jpg"] and is_integer(width) and width > 0
+
+      %{path: path, format: format, width: width} ->
+        safe_variant_path?(path) and format in ["webp", "jpg"] and is_integer(width) and width > 0
+
+      _variant ->
+        false
+    end)
+  end
+
+  defp valid_variants?(_variants), do: false
+
+  defp safe_variant_path?(path) when is_binary(path) do
+    String.starts_with?(path, "priv/static/covers/cache/") and
+      not String.contains?(path, "..") and
+      not String.contains?(path, "\0")
+  end
+
+  defp safe_variant_path?(_path), do: false
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""
 end

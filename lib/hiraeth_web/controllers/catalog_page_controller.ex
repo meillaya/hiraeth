@@ -50,6 +50,49 @@ defmodule HiraethWeb.CatalogPageController do
     end
   end
 
+  def publishers(conn, _params) do
+    publishers = PublicCatalog.publishers()
+    series_count = length(PublicCatalog.series())
+
+    cached_page(conn, {:publishers, conn.query_string}, 60, fn ->
+      render_page(:publishers,
+        page_title: "Publishers",
+        publishers: publishers,
+        publisher_count: length(publishers),
+        series_count: series_count,
+        catalog_count: nil
+      )
+    end)
+  end
+
+  def publisher(conn, %{"slug" => slug}) do
+    case PublicCatalog.publisher(slug) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> send_page(:not_found,
+          page_title: "Publisher not found",
+          message: "No publisher matches that slug."
+        )
+
+      publisher ->
+        publishers = PublicCatalog.publishers()
+        index = Enum.find_index(publishers, &(&1.slug == publisher.slug))
+
+        cached_page(conn, {:publisher, slug}, 300, fn ->
+          render_page(:publisher,
+            page_title: publisher.name,
+            publisher: publisher,
+            publishers: publishers,
+            publisher_index: index,
+            publisher_count: length(publishers),
+            series_count: length(PublicCatalog.series()),
+            catalog_count: publisher.editions_count
+          )
+        end)
+    end
+  end
+
   def series(conn, _params) do
     series = PublicCatalog.series_with_preview_editions()
     streams = %{series_editions: []}

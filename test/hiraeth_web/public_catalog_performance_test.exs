@@ -276,21 +276,11 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
              &(is_list(&1.preview_editions) and length(&1.preview_editions) <= 4)
            )
 
-    refute broad_edition_projection_query?(publisher_index)
-    refute broad_edition_projection_query?(series_index)
-    refute broad_edition_projection_query?(series_index_with_previews)
-    assert scoped_edition_projection_query?(publisher_detail, "where e.publisher_id = $1::uuid")
-
-    assert scoped_edition_projection_query?(
-             series_index_with_previews,
-             "where e.work_id = any($1::uuid[])"
-           )
+    assert read_model_query?(publisher_detail, ~s|"publisher_slug" = $1|)
+    assert read_model_query?(series_index_with_previews, "series_slugs")
 
     if series_detail do
-      assert scoped_edition_projection_query?(
-               series_detail,
-               "where e.work_id = any($1::uuid[])"
-             )
+      assert read_model_query?(series_detail, "series_slugs")
     end
 
     for measurement <- [
@@ -397,6 +387,7 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
       work_slug: work.slug,
       edition_slug: edition.slug
     }
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_cached_cover_publisher! do
@@ -485,7 +476,14 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
     })
     |> Ash.create!(authorize?: false)
 
+    for path <- [cached_path, thumbnail_path] do
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "cached cover test bytes")
+      on_exit(fn -> File.rm(path) end)
+    end
+
     %{publisher_slug: publisher_slug, title: title, cached_path: cached_path}
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_filter_contract_edition! do
@@ -582,6 +580,7 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
       year: "2026",
       sort: "title"
     }
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_enriched_projection_edition! do
@@ -659,6 +658,7 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
     |> Ash.create!(authorize?: false)
 
     edition.slug
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_new_directions_link_only_cover_edition! do
@@ -740,6 +740,7 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
     |> Ash.create!(authorize?: false)
 
     edition.slug
+    |> tap(fn _ -> rebuild_public_projection!() end)
   end
 
   defp create_contributor!(name, slug) do
@@ -785,20 +786,9 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
   defp publication_date_rank(%{published_on: %Date{} = date}), do: Date.to_gregorian_days(date)
   defp publication_date_rank(_entry), do: Date.to_gregorian_days(~D[0001-01-01])
 
-  defp broad_edition_projection_query?(measurement) do
+  defp read_model_query?(measurement, predicate) do
     Enum.any?(measurement.queries, fn query ->
-      edition_projection_query?(query) and
-        not String.contains?(query, "where e.")
+      String.contains?(query, "catalog_public_works") and String.contains?(query, predicate)
     end)
-  end
-
-  defp scoped_edition_projection_query?(measurement, scope_sql) do
-    Enum.any?(measurement.queries, fn query ->
-      edition_projection_query?(query) and String.contains?(query, scope_sql)
-    end)
-  end
-
-  defp edition_projection_query?(query) do
-    query =~ ~r/select\s+e\.id,\s+e\.work_id,/i
   end
 end

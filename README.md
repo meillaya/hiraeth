@@ -36,21 +36,32 @@ The browser and API read `catalog_public_works`, a derived table built by `Hirae
 mix hiraeth.public_projection.rebuild --json
 ```
 
-Production runs with `HIRAETH_PUBLIC_READ_MODEL=on`. The read model is normally refreshed by `Hiraeth.Oban.PublicProjectionWorker` after imports and cover changes. To split background work from HTTP:
+The read model is now the only public read path; the legacy canonical-query fallback has been removed. It is normally refreshed by `Hiraeth.Oban.PublicProjectionWorker` after imports and cover changes. To split background work from HTTP:
 
 - web service: `HIRAETH_SERVICE_ROLE=web`, `PHX_SERVER=true`
 - worker service: `HIRAETH_SERVICE_ROLE=worker`, `PHX_SERVER=false`, no public domain
 - local/test: `HIRAETH_SERVICE_ROLE=all`
 
-The worker is the only process that should run Oban and the boot cover backfill. `/ops` is a BasicAuth-protected read-only health page when `HIRAETH_OPS_USERNAME` and `HIRAETH_OPS_PASSWORD` are set.
+The worker is the only process that should run Oban, migrations, and the boot cover backfill. `/ops` is a BasicAuth-protected read-only health page when `HIRAETH_OPS_USERNAME` and `HIRAETH_OPS_PASSWORD` are set. `/admin` is a separate BasicAuth-protected write console for candidate approvals, rejections, ignores, and normalized-metadata overrides; it is enabled only when `HIRAETH_ADMIN_USERNAME` and `HIRAETH_ADMIN_PASSWORD` are set and is marked `noindex`.
+
+## Candidate review
+
+When `HIRAETH_ADMIN_USERNAME` and `HIRAETH_ADMIN_PASSWORD` are set, `/admin` is a
+BasicAuth-protected write console for ingestion candidates. It lists pending,
+approved, rejected, and ignored candidates; a detail page shows the raw and
+normalized payloads, fingerprint, validation findings, and run/snapshot context.
+Operators can approve, reject, ignore, or override the normalized JSON. Every
+write records the operator, timestamp, and note on the candidate. Approvals feed
+the existing apply phase; the console does not write catalog rows directly.
+`/ops` remains read-only and `/admin` is marked `noindex`.
 
 ## What is in the app
 
 - Curated catalog for the approved indie publisher corpus, currently 9,415 deterministic source records across providers such as New Directions, Deep Vellum, Pushkin Press, and more. Fum d'Estampa, Phoneme Media, La Reunion, and A Strange Object are catalogued as Deep Vellum imprints while retaining their original provider provenance.
 - Provenance-aware imports, cover attribution, source artifact reports, and gap states instead of fabricated metadata.
 - Materialized public read model: public pages and `/api/v1` read one derived `catalog_public_works` row per work (filter/search columns plus an encoded book payload), rebuilt by an Oban worker after imports and cover changes.
-- Server-rendered home, book, collection, and contributor pages with ETS caching and ETag/304 handling; browse and search remain LiveView for interaction.
-- R2-backed public cover display served same-origin from `/covers/cache/...`; cards and book heroes use generated thumbnails, and unsafe or missing covers render typographic fallbacks.
+- Server-rendered home, book, publisher, press, collection, and contributor pages with ETS caching and ETag/304 handling; browse and search remain LiveView for interaction. `/sitemap.xml` and `/robots.txt` are generated from the same public read model.
+- R2-backed public cover display served same-origin from `/covers/cache/...`. Cover writes generate 200/400/800px WebP and JPEG variants with content-hashed filenames; cards, shelves, and heroes render them through `srcset`/`<picture>`, and unsafe or missing covers render typographic fallbacks.
 - Ash-backed ingestion control plane for provider sources, provider runs, source snapshots, record candidates, diffs, quarantine, replay, and ingestion events.
 - Oban-backed autonomous ingestion phases: plan, fetch, normalize, validate, diff, cover-cache, apply, audit, quarantine, replay, and retention cleanup.
 - Private-by-default Python sidecar with strict CORS, typed errors, contract snapshots, and URL validation for fetch/scrape adapters.
@@ -125,11 +136,11 @@ Autonomous scheduled ingestion runs on its own per-provider cadence; see the "Au
 
 ## Verify/build
 
-Verification is local-only: there is no GitHub Actions CI (workflows removed August 2026, pinned by `test/hiraeth/dev_environment_ci_contract_test.exs`). The local surface is `mix gate` (≤5 min blocking gate), `mix test.fast`, `mix test.full`, `mix ci`, `mix dialyzer`, and `make verify`.
+Verification runs locally and in hosted GitHub Actions (`.github/workflows/ci.yml`): the gate job runs `mix gate`, the sidecar job runs pytest, ruff, pyright, and uv audit, and the browser job captures the responsive design contract plus an axe-core WCAG A/AA check. The local surface remains `mix gate` (≤5 min blocking gate), `mix test.fast`, `mix test.full`, `mix ci`, `mix dialyzer`, and `make verify`.
 
 - **Layer 0: local blocking gate (`mix gate`, ≤5 min):** `make gate` wraps the `mix gate` alias (compile with warnings-as-errors, unused-deps check, format check, strict Credo, and the fast ExUnit lane). It is the single blocking local preflight for every change.
 
-Frontend correctness is verified by the LiveView and route logic test suites under `test/hiraeth_web/live/` (and the route/controller tests under `test/hiraeth_web/`), which run as part of the ExUnit lanes above; there is no separate browser-level QA lane.
+Frontend correctness is covered by the LiveView and route logic test suites under `test/hiraeth_web/live/` (and the route/controller tests under `test/hiraeth_web/`) plus two hosted Playwright lanes: `scripts/qa/design_screenshots.mjs` checks nine widths, and `scripts/qa/accessibility_screenshots.mjs` fails on serious or critical axe-core findings at mobile and desktop widths.
 
 Fast local preflight targets the under-60s developer loop:
 
@@ -171,22 +182,28 @@ is hashed before and after the sandboxed command.
 
 ## Production notes
 
-The repository includes environment examples in `.env.example`; there is no GitHub Actions CI. The public catalog is deployed to Railway at `https://web-production-a31e0.up.railway.app`.
+The repository includes environment examples in `.env.example`. The public catalog is deployed to Railway at `https://web-production-a31e0.up.railway.app`; the staging environment is `https://web-staging-935d.up.railway.app`.
 
-The Railway project has three services. `web` builds from the root `Dockerfile`, serves the LiveView catalog and `/api/v1`, and healthchecks `/health`. `sidecar` builds from `sidecar/Dockerfile`, stays on private networking, and healthchecks `/health/`. `Postgres` is Railway-managed. `railway.json` and `sidecar/railway.json` pin the healthcheck and restart policy. The web service sets `PHX_HOST` to the generated domain, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SCRAPLING_SIDECAR_URL=http://sidecar.railway.internal:8000`, `HIRAETH_READY_SIDECAR_REQUIRED=1`, and `HIRAETH_SCHEDULED_INGEST=false` for the public demo.
+The Railway production environment has four services. `web` builds from the root `Dockerfile`, serves the browser UI and `/api/v1`, and healthchecks `/health`. `worker` builds from the same root `Dockerfile` with `HIRAETH_SERVICE_ROLE=worker`, `PHX_SERVER=false`, no public domain, and no healthcheck; it owns Oban, projection rebuilds, and cover/variant backfills. `sidecar` builds from `sidecar/Dockerfile`, stays on private networking, and has no public domain. `Postgres` is Railway-managed. `railway.json` and `sidecar/railway.json` pin the healthcheck and restart policy. Web sets `PHX_HOST` to the generated domain, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SCRAPLING_SIDECAR_URL=http://sidecar.railway.internal:8000`, `HIRAETH_READY_SIDECAR_REQUIRED=1`, and `HIRAETH_SCHEDULED_INGEST=false` for the public demo. The worker gets the same database/sidecar/R2 variables plus `HIRAETH_SERVICE_ROLE=worker` and `PHX_SERVER=false`.
 
-The release image has no Mix, so migrations and seeding run from a checkout against the Railway database through a temporary TCP proxy. Create the proxy, point `DATABASE_URL` at its endpoint, run the commands, then delete the proxy:
+The release image has no Mix. Migrations run inside a deployed release through the release runner:
+
+```sh
+railway ssh --service worker --environment production -- \
+  /app/bin/hiraeth eval 'Hiraeth.Release.migrate\(\)'
+```
+
+Seeding and one-off catalog maintenance can run as an RPC against the running worker (`/app/bin/hiraeth rpc '...'`), or from a checkout through a temporary TCP proxy:
 
 ```sh
 railway tcp-proxy create --port 5432 --service Postgres
-MIX_ENV=dev DATABASE_URL=postgresql://... mix ash.migrate
 MIX_ENV=dev DATABASE_URL=postgresql://... mix run priv/repo/seeds.exs
 railway tcp-proxy delete <proxy-id> --yes
 ```
 
 The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the README images and `docs/screenshots/routes.json` after a visible change. The script captures the home, browse, book, publishers, press, collections, collection, contributors, and search surfaces at 1440×1000.
 
-Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The Phoenix service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only. Thumbnails require ImageMagick; the Docker runtime installs it, and local bare-toolchain users can run `nix profile add nixpkgs#imagemagick`. The five publisher pages that previously had no covers (Astra House, Pushkin Press, Seven Stories Press, Tilted Axis Press, Wakefield Press) are covered by `mix hiraeth.covers.sync`; see [docs/covers.md](docs/covers.md).
+Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The web service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. The worker renders WebP/JPEG variants from cached originals and uploads them to the same bucket. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only. Thumbnails and responsive variants require ImageMagick; the Docker runtime installs it, and local bare-toolchain users can run `nix profile add nixpkgs#imagemagick`. The five publisher pages that previously had no covers (Astra House, Pushkin Press, Seven Stories Press, Tilted Axis Press, Wakefield Press) are covered by `mix hiraeth.covers.sync`; see [docs/covers.md](docs/covers.md).
 
 Both services must share `SCRAPLING_SIDECAR_TOKEN`. The sidecar image runs in secure mode, refuses to start without the token and its manifests, and rejects unsigned data requests. Phoenix refuses to boot in production without the token and signs every sidecar request. When a provider manifest changes, run `bash scripts/catalog/sync_sidecar_manifests.sh` before building the sidecar; a sidecar test fails if the image copies drift from `priv/catalog_sources/provider_manifests`.
 

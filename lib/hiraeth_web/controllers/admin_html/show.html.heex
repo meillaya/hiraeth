@@ -1,0 +1,165 @@
+<HiraethWeb.Layouts.admin flash={@flash} page_title={@page_title}>
+  <div id="admin-candidate">
+    <header class="sb-pagehead">
+      <p class="sb-kicker">
+        <a href={~p"/admin/candidates"}>Candidates</a> <span>/</span> {@candidate.record_type}
+      </p>
+      <div class="sb-pagehead__row">
+        <h1 id="admin-candidate-identity">{@candidate.candidate_identity}</h1>
+        <p class="sb-pagehead__intro">
+          {@candidate.source_uri}
+        </p>
+      </div>
+      <p class="sb-pagehead__meta">
+        <span>Diff <strong>{@candidate.diff_classification}</strong></span>
+        <span>Decision <strong>{@candidate.review_decision}</strong></span>
+        <span>Quarantine <strong>{@candidate.quarantine_status}</strong></span>
+        <span>Status <strong>{@candidate.review_status}</strong></span>
+      </p>
+    </header>
+
+    <table class="spec-table">
+      <tbody>
+        <tr>
+          <td>Candidate ID</td><td><code>{@candidate.id}</code></td>
+        </tr>
+        <tr>
+          <td>Fingerprint</td><td><code>{@candidate.fingerprint}</code></td>
+        </tr>
+        <tr>
+          <td>Provider run</td><td><code>{@candidate.provider_run_id}</code></td>
+        </tr>
+        <tr>
+          <td>Run status</td><td>{@candidate.provider_run.status}</td>
+        </tr>
+        <tr>
+          <td>Source snapshot</td><td><code>{@candidate.source_snapshot_id}</code></td>
+        </tr>
+        <tr>
+          <td>Inserted</td><td>{timestamp(@candidate.inserted_at)}</td>
+        </tr>
+        <tr>
+          <td>Updated</td><td>{timestamp(@candidate.updated_at)}</td>
+        </tr>
+        <tr>
+          <td>Reviewed</td><td>{timestamp(@candidate.reviewed_at)}</td>
+        </tr>
+        <tr>
+          <td>Reviewer</td><td>{@candidate.review_actor_id || "—"}</td>
+        </tr>
+        <tr>
+          <td>Reviewer note</td><td>{@candidate.reviewer_note || "—"}</td>
+        </tr>
+        <tr>
+          <td>Validation errors</td><td>{Enum.join(@candidate.validation_errors, "; ")}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <section id="admin-decisions">
+      <div class="sb-sectionhead">
+        <div>
+          <p class="sb-kicker">Decision</p>
+          <h2>Approve, reject, or ignore</h2>
+        </div>
+      </div>
+
+      <form
+        id="admin-approve-form"
+        class="admin-actions"
+        method="post"
+        action={~p"/admin/candidates/#{@candidate.id}/approve"}
+      >
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <label>
+          Note <input type="text" name="candidate[note]" value={@candidate.reviewer_note} />
+        </label>
+        <button class="sb-button" type="submit">Approve for apply</button>
+      </form>
+
+      <form
+        id="admin-reject-form"
+        class="admin-actions"
+        method="post"
+        action={~p"/admin/candidates/#{@candidate.id}/reject"}
+      >
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <label>
+          Note <input type="text" name="candidate[note]" />
+        </label>
+        <button class="sb-button" type="submit">Reject</button>
+      </form>
+
+      <form
+        id="admin-ignore-form"
+        class="admin-actions"
+        method="post"
+        action={~p"/admin/candidates/#{@candidate.id}/ignore"}
+      >
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <label>
+          Note <input type="text" name="candidate[note]" />
+        </label>
+        <button class="sb-button" type="submit">Ignore</button>
+      </form>
+    </section>
+
+    <section id="admin-override">
+      <div class="sb-sectionhead">
+        <div>
+          <p class="sb-kicker">Override</p>
+          <h2>Edit normalized metadata</h2>
+        </div>
+      </div>
+
+      <p>
+        The payload must stay a JSON object. Saving it recalculates the candidate
+        fingerprint and records the operator. Approving here also clears
+        quarantine, so use the plain approve action when the payload is unchanged.
+      </p>
+
+      <form
+        id="admin-override-form"
+        class="admin-actions"
+        method="post"
+        action={~p"/admin/candidates/#{@candidate.id}/override"}
+      >
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <label>
+          Decision
+          <select name="candidate[decision]">
+            <option
+              value="pending_review"
+              selected={@candidate.review_decision == "pending_review"}
+            >
+              pending_review
+            </option>
+            <option value="approved" selected={@candidate.review_decision == "approved"}>
+              approved
+            </option>
+            <option value="rejected" selected={@candidate.review_decision == "rejected"}>
+              rejected
+            </option>
+          </select>
+        </label>
+        <label>
+          Note <input type="text" name="candidate[note]" value={@candidate.reviewer_note} />
+        </label>
+        <label class="admin-wide">
+          Normalized metadata <textarea name="candidate[normalized_metadata]">{@metadata_json}</textarea>
+        </label>
+        <button class="sb-button" type="submit">Save override</button>
+      </form>
+    </section>
+
+    <details>
+      <summary>Raw provider payload</summary>
+      <pre class="admin-json">{@raw_json}</pre>
+    </details>
+
+    <details>
+      <summary>Validation findings</summary>
+      <pre class="admin-json">{@findings_json}</pre>
+    </details>
+  </div>
+</HiraethWeb.Layouts.admin>

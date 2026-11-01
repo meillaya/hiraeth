@@ -55,6 +55,11 @@ defmodule Hiraeth.Catalog.PublicWorkProjection do
           {deleted, _} =
             Repo.delete_all(from work in PublicWork, where: work.build_id != ^build_id)
 
+          # The derived table is rewritten wholesale; refresh planner statistics
+          # in the same transaction so the next public search does not run on a
+          # stale sample from the previous build.
+          Repo.query!("ANALYZE catalog_public_works")
+
           revision = Ecto.UUID.generate()
 
           Repo.update_all(

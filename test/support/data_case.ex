@@ -17,8 +17,10 @@ defmodule Hiraeth.DataCase do
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.CatalogCleanup
   alias Hiraeth.Repo
+  alias HiraethWeb.PublicCatalog
 
   using do
     quote do
@@ -81,5 +83,20 @@ defmodule Hiraeth.DataCase do
   """
   def trusted_catalog_actor(attrs \\ %{}) do
     Map.merge(%{id: Ash.UUID.generate(), catalog_write?: true}, attrs)
+  end
+
+  @doc """
+  Rebuilds the public read model after a test creates catalog rows directly.
+
+  Public reads no longer have a canonical-query fallback, so a test that writes
+  through Ash and then reads `HiraethWeb.PublicCatalog` must refresh the derived
+  table the same way an import would.
+  """
+  def rebuild_public_projection! do
+    {:ok, _summary} =
+      PublicWorkProjection.rebuild!(trigger: "test")
+
+    PublicCatalog.clear_cache()
+    :ok
   end
 end

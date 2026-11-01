@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Responsive public covers: cache writes generate 200/400/800px WebP and JPEG variants with content-hashed filenames, public reads carry them through the typed `Cover` projection, and cards/shelves/heroes render `<picture>` + `srcset`. Variants are served `immutable`, uploaded/downloaded through R2, and backfilled by `CoverVariantBackfillWorker` or `mix hiraeth.covers.sync --variants`.
+- Static publisher directory and press dossiers through `HiraethWeb.CatalogPageController`, plus generated `/sitemap.xml` and `/robots.txt` from the public read model.
+- Authenticated candidate-review console at `/admin` (approve, reject, ignore, and normalized-metadata overrides with operator/timestamp/note audit) behind `HIRAETH_ADMIN_USERNAME` / `HIRAETH_ADMIN_PASSWORD`; `/ops` remains read-only.
+- Hosted CI (`.github/workflows/ci.yml`) with Elixir gate, sidecar pytest/ruff/pyright/audit, and Playwright responsive + axe-core accessibility lanes; `scripts/qa/accessibility_screenshots.mjs` fails on serious or critical WCAG A/AA violations.
+- A Railway staging environment and a separate production `worker` service running `HIRAETH_SERVICE_ROLE=worker` with `PHX_SERVER=false` and no public domain.
 - Hiraeth design system: canonical tokens in `assets/css/tokens.css`, the component layer in `assets/css/hiraeth.css`, the self-hosted Archivo variable font, and a formal responsive specification in `design/index.html` (tokens, type scale, breakpoint matrix, component contracts, and acceptance checklist).
 - `scripts/qa/design_screenshots.mjs` captures every public surface at nine acceptance widths (390–1440px) and fails on horizontal overflow, sheet inset drift, or header-mode drift.
 - `scripts/qa/design_screenshots.mjs` captures every public surface at nine acceptance widths (390–1440px) and fails on horizontal overflow, sheet inset drift, or header-mode drift.
@@ -41,6 +46,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The public read model is the only public read path. The legacy canonical-query fallback and the `HIRAETH_PUBLIC_READ_MODEL` switch are gone; imports, seeds, and cover changes refresh `catalog_public_works` through the projection worker, and tests rebuild it explicitly after direct Ash fixtures.
+- Publisher/directory and series queries are set-based on the read model (one cover-sample and one series-books query) instead of a per-row query, and the projection rebuild runs `ANALYZE` so search plans stay current.
+- Public search rejects punctuation-only queries and uses full-text only for one- and two-character terms, avoiding a full-table ILIKE scan on every keystroke.
 - The public browser UI is rebuilt: a single paper sheet on a sage ground, Newsreader display type with Archivo interface text, a featured-forthcoming homepage hero, a four-title recent/forthcoming shelf, filter-tray browse, book records, press dossiers, collection shelves, contributor directory, and search. The dark theme toggle and its palette are retired; Hiraeth is light-only. Tokens live only in `assets/css/tokens.css`; the component layer is `assets/css/hiraeth.css`, and the formal spec is `design/index.html`.
 - The contributor directory suppresses placeholder contributor rows (`Unknown contributor`, `Unknown author`), and public bylines omit those placeholder names. The underlying provenance rows are retained for audit.
 - README screenshots are versioned (`docs/screenshots/hiraeth-*.png`) and the capture set now covers all nine public surfaces. The rename is deliberate: GitHub's raw image cache can serve an old image from a reused path even after the file changes.
@@ -79,6 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Removed
 
+- `HIRAETH_PUBLIC_READ_MODEL`, the legacy `PublicCatalog` canonical-query branches, `PublishersLive`, and the static `priv/static/robots.txt` file (the route is now generated).
 - Unrouted page scaffold, Swoosh/Mailer, and the dev-only mailbox route.
 - `Hiraeth.Search` domain, the Imports CSV workflow (including its tables via a drop migration), and the never-enqueued `SourceSnapshotReplayWorker`.
 - `compose.yaml` and every Compose reference; devenv owns local, Dockerfiles own production.

@@ -12,7 +12,8 @@ official publisher page/API
   → HTTPS + provider cover-host allowlist
   → bounded fetch (redirect allowlist, body cap, image type allowlist)
   → priv/static/covers/cache/<sha>.<ext>
-  → thumbnail 400×600 JPEG
+  → legacy 400×600 JPEG thumbnail
+  → 200/400/800px WebP + JPEG responsive variants, content-hashed filenames
   → Cloudflare R2 (when HIRAETH_COVER_STORE=s3)
   → /covers/cache/... same-origin response
   → typographic fallback only for an explicit gap
@@ -37,6 +38,7 @@ typographic fallback. Nothing is fabricated.
 # Fill missing local files/thumbnails for one provider or all providers.
 mix hiraeth.covers.sync --provider astra_house_official_store --json
 mix hiraeth.covers.sync --all --missing --json
+mix hiraeth.covers.sync --all --variants
 
 # Report coverage without writing.
 mix hiraeth.covers.audit --json
@@ -49,30 +51,33 @@ mix hiraeth.covers.upload
 
 `covers.sync` first tries a configured durable store, then falls back to the
 same bounded `Covers.req_fetch!/4` source fetch as the weekly worker. It writes
-the cache file atomically, generates the thumbnail, updates `cached_file_path` /
-`thumbnail_file_path` / `cached_at`, and uploads both objects to R2 when
-configured. It exits non-zero if an eligible cover remains uncached; use
+the cache file atomically, generates the thumbnail and responsive variant set,
+updates `cached_file_path` / `thumbnail_file_path` / `responsive_variants` /
+`cached_at`, and uploads every object to R2 when configured. `--variants`
+renders variants from an existing local original without fetching the publisher. It exits non-zero if an eligible cover remains uncached; use
 `--allow-missing` to report only.
 
-Thumbnail generation uses ImageMagick 7 (`magick`) or ImageMagick 6
+Thumbnail and variant generation use ImageMagick 7 (`magick`) or ImageMagick 6
 (`convert`). The Docker runtime installs `imagemagick`; local bare-toolchain
 users can add it with `nix profile add nixpkgs#imagemagick`. If the command is
-missing, originals are still cached and the missing thumbnails are reported so
-the next run can retry.
+missing, originals are still cached and the missing thumbnails/variants are
+reported so the next run can retry.
 
 ## Delivery
 
-- `Plug.Static` serves `/covers/cache/...` with
+- `Plug.Static` serves originals and legacy thumbnails with
   `cache-control: public, max-age=86400` and `x-content-type-options: nosniff`.
+- Responsive variant URLs embed a SHA-256 of their own bytes, so the proxy
+  serves them with `cache-control: public, max-age=31536000, immutable`.
 - The `HiraethWeb.CoverController` refill path checks the database policy,
   fetches from R2, writes the local file atomically, and returns the same
   headers. A local hit never touches R2.
-- Cards use the thumbnail URL; the book hero also prefers the thumbnail and
-  falls back to the original. This is why a browse page no longer downloads
-  multi-megabyte full-size covers.
-- Browser caches can retain a cover for up to 24 hours. Purging removes the
-  local and R2 copies immediately, so the proxy cannot serve it again; an
-  already-cached browser copy expires within the max-age.
+- Cards, shelves, and book heroes render a `<picture>` element with WebP and
+  JPEG `srcset` entries at 200/400/800px. The 400px JPEG remains the fallback
+  and the legacy thumbnail URL stays available for old payloads.
+- Browser caches can retain an original or thumbnail for up to 24 hours.
+  Variants are immutable by URL. Purging removes local and R2 copies
+  immediately, so the proxy cannot serve them again.
 - `Hiraeth.Covers.Policy` is the single cover decision for every public read.
   A work shows exactly one cover, owned by one edition: the newest print
   (paperback/hardcover) cover wins, so a reissued title shows the new printing's
@@ -91,12 +96,13 @@ gap:
   the operator path after a manual seed. With `HIRAETH_COVER_STORE=s3` it
   uploads originals and thumbnails to R2.
 - In production, `Hiraeth.Oban.CoverBackfillWorker` runs once at boot and is
-  scoped to assets with no cached original. It is a no-op when nothing is
-  missing, and its ten-minute unique window collapses restart storms. Set
-  `HIRAETH_COVER_BACKFILL_ON_BOOT=false` to disable it; unlike cron, it is not
-  governed by `HIRAETH_SCHEDULED_INGEST` because it never ingests catalog data,
-  only caches covers already present in the governed dataset. The weekly
-  `CoverRefreshWorker` remains the full-catalog sweep.
+  scoped to assets with no cached original. `Hiraeth.Oban.CoverVariantBackfillWorker`
+  then renders missing responsive variants from those local originals. Both are
+  no-ops when coverage is complete, and their ten-minute unique windows collapse
+  restart storms. Set `HIRAETH_COVER_BACKFILL_ON_BOOT=false` to disable them;
+  unlike cron, they are not governed by `HIRAETH_SCHEDULED_INGEST` because they
+  never ingest catalog data, only cache covers already present in the governed
+  dataset. The weekly `CoverRefreshWorker` remains the full-catalog sweep.
 
 ## Provider refresh and covers
 

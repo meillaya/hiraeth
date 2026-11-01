@@ -69,12 +69,12 @@ defmodule HiraethWeb.RouteShellLiveTest do
   end
 
   test "GET /publishers renders the real publisher directory", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/publishers")
+    {html, _conn} = page(conn, "/publishers")
 
-    assert has_element?(view, "#publishers-shell")
-    assert has_element?(view, "#publisher-deep-vellum")
-    assert has_element?(view, "#publisher-dalkey-archive")
-    assert has_element?(view, "#publisher-archipelago-books")
+    assert page_has?(html, "#publishers-shell")
+    assert page_has?(html, "#publisher-deep-vellum")
+    assert page_has?(html, "#publisher-dalkey-archive")
+    assert page_has?(html, "#publisher-archipelago-books")
   end
 
   test "GET /series renders grouped collection shell even when pilot data has no series", %{
