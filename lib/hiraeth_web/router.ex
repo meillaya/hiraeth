@@ -78,7 +78,7 @@ defmodule HiraethWeb.Router do
     get "/publishers/phoneme-media", RedirectController, :publisher_group
     live "/publishers/:slug", PublishersLive, :show
     get "/series", CatalogPageController, :series
-    live "/series/:slug", SeriesLive, :show
+    get "/series/:slug", CatalogPageController, :series_show
     get "/books/:slug", CatalogPageController, :book
     get "/editions/:slug", CatalogPageController, :edition
   end

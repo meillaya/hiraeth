@@ -78,12 +78,10 @@ defmodule HiraethWeb.CatalogPageController do
       series ->
         editions = List.wrap(series.editions)
 
-        streams = %{
-          series_editions: Enum.map(editions, &{"series-edition-#{&1.work_id}", &1})
-        }
+        series = %{series | editions: editions}
 
         cached_page(conn, {:series, slug}, 300, fn ->
-          render_page(:series_show, page_title: series.title, series: series, streams: streams)
+          render_page(:series_show, page_title: series.title, series: series)
         end)
     end
   end
