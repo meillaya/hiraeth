@@ -20,12 +20,14 @@ defmodule HiraethWeb.SeriesLive do
   @impl true
   def handle_params(%{"slug" => slug}, _uri, socket) do
     series = PublicCatalog.series_by_slug(slug)
+    editions = List.wrap(series && series.editions)
+    series = series && %{series | editions: editions}
 
     {:noreply,
      socket
      |> assign(:page_title, if(series, do: series.title, else: "Collection"))
      |> assign(:series, series)
-     |> stream(:series_editions, (series && series.editions) || [], reset: true)}
+     |> stream(:series_editions, editions, reset: true)}
   end
 
   def handle_params(_params, _uri, socket) do
