@@ -25,6 +25,6 @@ sidecar/uv.lock linguist-generated
 # Deterministic classification for Phoenix templates
 *.heex linguist-language=HTML
 
-# Softbound design references: static prototypes, the formal spec, and its
+# Hiraeth design references: static prototypes, the formal spec, and its
 # document-only CSS. Not application source; exclude from language statistics.
 design/** linguist-documentation

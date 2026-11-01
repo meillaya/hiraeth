@@ -99,7 +99,7 @@ defmodule HiraethWeb.PublishersLive do
       <span class="sb-pressitem__name">{@publisher.name}</span>
       <span class="sb-pressitem__count">{format_count(@publisher.editions_count)} books</span>
       <span class="sb-pressitem__thumb">
-        <CatalogComponents.softbound_cover
+        <CatalogComponents.catalog_cover
           :if={sample_book(@publisher)}
           book={sample_book(@publisher)}
           variant={:thumb}
@@ -126,7 +126,7 @@ defmodule HiraethWeb.PublishersLive do
               <div :if={!sample_book(@publisher)} class="sb-pressmark">
                 {initial(@publisher.name)}
               </div>
-              <CatalogComponents.softbound_cover
+              <CatalogComponents.catalog_cover
                 :if={sample_book(@publisher)}
                 book={sample_book(@publisher)}
                 variant={:record}

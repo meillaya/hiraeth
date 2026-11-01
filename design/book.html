@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Collections — Hiraeth Softbound</title>
-<meta name="description" content="Eight editorial collections and imprints inside the Hiraeth catalogue, grouped by press.">
-<meta property="og:title" content="Collections — Hiraeth Softbound">
-<meta property="og:description" content="Eight editorial collections and imprints inside the Hiraeth catalogue, grouped by press.">
+<title>Book — Hiraeth</title>
+<meta name="description" content="A book record from the Hiraeth catalogue of independent literary presses.">
+<meta property="og:title" content="Book — Hiraeth">
+<meta property="og:description" content="A book record from the Hiraeth catalogue of independent literary presses.">
 <meta property="og:type" content="website">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="../assets/css/softbound.css?v=4">
+<link rel="stylesheet" href="../assets/css/hiraeth.css?v=4">
 </head>
 <body>
 <a class="sb-skip" href="#main">Skip to content</a>
@@ -18,9 +18,9 @@
     <div class="sb-header__in">
       <a class="sb-brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
       <nav class="sb-nav" aria-label="Primary">
-        <a href="browse.html">Books</a>
+        <a href="browse.html" aria-current="page">Books</a>
         <a href="publishers.html">Publishers</a>
-        <a href="series.html" aria-current="page">Collections</a>
+        <a href="series.html">Collections</a>
       </nav>
       <div class="sb-tools">
         <button class="sb-tool" type="button" data-search-open aria-haspopup="dialog">Search</button>
@@ -30,25 +30,16 @@
     </div>
     <div class="sb-mobile" id="mobile-nav" hidden>
       <nav aria-label="Mobile">
-        <a href="browse.html">Books</a>
+        <a href="browse.html" aria-current="page">Books</a>
         <a href="publishers.html">Publishers</a>
-        <a href="series.html" aria-current="page">Collections</a>
+        <a href="series.html">Collections</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <header class="sb-pagehead">
-      <p class="sb-kicker">Collections <span>/</span> 8 series</p>
-      <div class="sb-pagehead__row">
-        <h1>Collections</h1>
-        <p class="sb-pagehead__intro">Editorial series and imprints inside the catalogue, grouped by the press that publishes them. Each collection opens into its records.</p>
-      </div>
-      <p class="sb-pagehead__meta"><span><strong>8</strong> collections</span><span><strong>1,170</strong> volumes</span><span>Grouped by press</span></p>
-    </header>
-
-    <div class="sb-collections" id="series-groups">
-      <p class="sb-loading">Loading collections…</p>
+    <div id="book-root" data-book="new-directions-garden">
+      <p class="sb-loading">Loading record…</p>
     </div>
   </main>
 
@@ -64,7 +55,7 @@
       <p class="sb-footer__counts">112 books / 23 presses / 8 collections</p>
     </div>
     <div class="sb-footer__base">
-      <span>Softbound edition, 2026</span>
+      <span>Hiraeth, 2026</span>
       <span>7,011 volumes indexed</span>
     </div>
   </footer>
@@ -94,6 +85,6 @@
 </dialog>
 
 <script src="../assets/js/data.js?v=4"></script>
-<script src="../assets/js/softbound.js?v=4"></script>
+<script src="../assets/js/hiraeth.js?v=4"></script>
 </body>
 </html>

@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hiraeth Softbound — Design System &amp; Tokens</title>
-<meta name="description" content="Formal UI/UX specification for the Hiraeth Softbound edition: tokens, type scale, responsive grid, components, and pixel rules.">
+<title>Hiraeth — Design System &amp; Tokens</title>
+<meta name="description" content="Formal UI/UX specification for Hiraeth: tokens, type scale, responsive grid, components, and pixel rules.">
 <link rel="stylesheet" href="../assets/css/tokens.css">
-<link rel="stylesheet" href="../assets/css/softbound.css">
+<link rel="stylesheet" href="../assets/css/hiraeth.css">
 <link rel="stylesheet" href="spec.css">
 </head>
 <body class="spec-body">
 <main class="spec">
   <header class="spec-header">
-    <p class="spec-wordmark">Hiraeth<span>.</span> — Softbound design system</p>
+    <p class="spec-wordmark">Hiraeth<span>.</span> — design system</p>
     <h1>One quiet sheet, measured to the pixel.</h1>
     <p class="spec-lede">
-      This document formalises the Softbound edition: the canonical token set, the responsive
+      This document formalises Hiraeth: the canonical token set, the responsive
       type and grid rules, the component contracts, and the device matrix the implementation is
       held to. Every value below is read from the live token stylesheet, so this page cannot drift
       from the running site.
     </p>
     <p class="spec-meta">
-      <span><strong>Version</strong> 4.0 · Softbound</span>
-      <span><strong>Source</strong> design/softbound_index.html</span>
-      <span><strong>Prototypes</strong> <a href="softbound_index.html">home</a> · <a href="softbound_browse.html">books</a> · <a href="softbound_book.html">book</a> · <a href="softbound_publishers.html">publishers</a> · <a href="softbound_press.html">press</a> · <a href="softbound_series.html">collections</a></span>
+      <span><strong>Version</strong> 4.0 · Hiraeth</span>
+      <span><strong>Source</strong> design/home.html</span>
+      <span><strong>Prototypes</strong> <a href="home.html">home</a> · <a href="browse.html">books</a> · <a href="book.html">book</a> · <a href="publishers.html">publishers</a> · <a href="press.html">press</a> · <a href="series.html">collections</a></span>
     </p>
     <div class="spec-viewport" aria-live="polite">
       <span>Viewport <strong id="spec-width">—</strong></span>
@@ -205,7 +205,7 @@
             <nav class="sb-footer__nav"><a href="#components">Books</a><a href="#components">Publishers</a><a href="#components">Collections</a></nav>
             <p class="sb-footer__counts">7,582 books / 19 presses / 8 collections</p>
           </div>
-          <div class="sb-footer__base"><span>Softbound edition, 2026</span><span>7,582 volumes indexed</span></div>
+          <div class="sb-footer__base"><span>Hiraeth, 2026</span><span>7,582 volumes indexed</span></div>
         </footer>
       </div>
     </div>
@@ -348,7 +348,7 @@
       <thead><tr><th>Surface</th><th>File</th><th>Contract</th></tr></thead>
       <tbody>
         <tr><td>Tokens</td><td class="spec-value">assets/css/tokens.css</td><td>Single source; names are stable API.</td></tr>
-        <tr><td>Components</td><td class="spec-value">assets/css/softbound.css</td><td>Ports the prototype rules and adds catalogue-only states.</td></tr>
+        <tr><td>Components</td><td class="spec-value">assets/css/hiraeth.css</td><td>Ports the prototype rules and adds catalogue-only states.</td></tr>
         <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header, mobile menu, colophon footer, flash.</td></tr>
         <tr><td>Home</td><td class="spec-value">lib/hiraeth_web/live/home_live.ex</td><td>Featured forthcoming hero, ledger, four random picks, presses.</td></tr>
         <tr><td>Books</td><td class="spec-value">lib/hiraeth_web/live/browse_live/*</td><td>Filter tray, covers/index views, pager.</td></tr>
@@ -372,8 +372,8 @@
   </section>
 
   <footer class="spec-footer">
-    <span>Hiraeth Softbound · design system 4.0 · tokens read from assets/css/tokens.css</span>
-    <span><a href="softbound_index.html">Open the homepage prototype →</a></span>
+    <span>Hiraeth · design system 4.0 · tokens read from assets/css/tokens.css</span>
+    <span><a href="home.html">Open the homepage prototype →</a></span>
   </footer>
 </main>
 

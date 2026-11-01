@@ -28,41 +28,41 @@
     },
     "c6_bulk_vs_create_10x": {
       "pass": true,
-      "batch_size": 100,
       "rounds": [
         {
           "round": 1,
-          "ratio": 6.4,
-          "bulk_ms": 49,
-          "create_ms": 312
+          "ratio": 7.5,
+          "bulk_ms": 53,
+          "create_ms": 396
         },
         {
           "round": 2,
-          "ratio": 6.6,
-          "bulk_ms": 46,
-          "create_ms": 305
+          "ratio": 9.6,
+          "bulk_ms": 39,
+          "create_ms": 376
         },
         {
           "round": 3,
-          "ratio": 6.4,
-          "bulk_ms": 47,
-          "create_ms": 301
+          "ratio": 6.7,
+          "bulk_ms": 59,
+          "create_ms": 396
         }
       ],
-      "median_ratio": 6.4,
+      "batch_size": 100,
+      "median_ratio": 7.5,
       "ratio_10x_met": false,
       "n_rows_per_round": 1000
     }
   },
   "date": "2026-08-08",
-  "head": "bfca6e3",
+  "head": "3ecbb74",
   "mechanism": {
-    "ash": "3.31.0",
-    "ash_postgres": "2.11.0",
+    "ash": "3.37.2",
+    "ash_postgres": "2.15.2",
     "call": "Ash.bulk_create(inputs, Resource, :create, upsert?: true, upsert_identity: <identity>, upsert_fields: {:replace, [keys]}, transaction: false, batch_size: 100, notify?: false, return_records?: false, authorize?: false)",
     "pg17_merge?": "PG16 -> ON CONFLICT path (merge_upsert? requires >= 17 and :upsert_with_merge? != false)"
   },
-  "postgres_server_version_num": "160014",
+  "postgres_server_version_num": "160015",
   "source_record": {
     "pass": true,
     "rerun_rows": 100,

@@ -1,10 +1,10 @@
 defmodule HiraethWeb.Layouts do
   @moduledoc """
-  Application layout for the Softbound edition.
+  Application layout for Hiraeth.
 
   The shell is a single paper sheet on a sage ground: brand and primary
   navigation in a hairline header, the reading surface in the middle, and a
-  two-line colophon footer. All measurements come from the Softbound tokens in
+  two-line colophon footer. All measurements come from the Hiraeth tokens in
   `assets/css/tokens.css`.
   """
   use HiraethWeb, :html
@@ -87,7 +87,7 @@ defmodule HiraethWeb.Layouts do
         </div>
 
         <div class="sb-footer__base">
-          <span>Softbound edition, {DateTime.utc_now().year}</span>
+          <span>Hiraeth, {DateTime.utc_now().year}</span>
           <span>{colophon_volumes(@catalog_count)}</span>
         </div>
       </footer>

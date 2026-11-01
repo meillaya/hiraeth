@@ -3,7 +3,7 @@
 
 @import "tailwindcss" source(none);
 @import "./tokens.css";
-@import "./softbound.css";
+@import "./hiraeth.css";
 @import "phoenix-colocated/hiraeth/colocated.css";
 @source "../css";
 @source "../js";
@@ -92,7 +92,7 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
-/* Softbound design system: tokens in tokens.css, components in softbound.css. */
+/* Hiraeth design system: tokens in tokens.css, components in hiraeth.css. */
 
 #main {
   scroll-margin-top: 24px;

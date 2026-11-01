@@ -64,7 +64,7 @@ defmodule HiraethWeb.HomeLive do
 
           <div class="sb-hero__cover">
             <.link navigate={~p"/books/#{@spotlight.slug}"} aria-label={"Open #{@spotlight.title}"}>
-              <CatalogComponents.softbound_cover
+              <CatalogComponents.catalog_cover
                 book={@spotlight}
                 variant={:hero}
                 loading="eager"
@@ -152,7 +152,7 @@ defmodule HiraethWeb.HomeLive do
     ~H"""
     <a id={"recent-book-#{@book.work_id}"} class="sb-book" href={~p"/books/#{@book.slug}"}>
       <span class="sb-cover-well">
-        <CatalogComponents.softbound_cover book={@book} variant={:card} />
+        <CatalogComponents.catalog_cover book={@book} variant={:card} />
       </span>
       <span class="sb-book__meta">
         <span class="sb-book__title">{@book.title}</span>

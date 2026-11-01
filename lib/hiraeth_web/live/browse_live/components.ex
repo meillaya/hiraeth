@@ -15,7 +15,7 @@ defmodule HiraethWeb.BrowseLive.Components do
         <div class="sb-pagehead__row">
           <h1>Books</h1>
           <p class="sb-pagehead__intro">
-            Every record in the Softbound index, from {format_count(length(@publishers))} independent
+            Every record in the Hiraeth index, from {format_count(length(@publishers))} independent
             literary presses. Filter by press, format, or collection.
           </p>
         </div>
@@ -89,7 +89,7 @@ defmodule HiraethWeb.BrowseLive.Components do
                 tabindex="-1"
                 aria-hidden="true"
               >
-                <CatalogComponents.softbound_cover book={book} variant={:thumb} />
+                <CatalogComponents.catalog_cover book={book} variant={:thumb} />
               </a>
               <div>
                 <a class="sb-index__title" href={~p"/books/#{book.slug}"}>{book.title}</a>

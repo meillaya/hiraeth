@@ -22,7 +22,7 @@ defmodule HiraethWeb.BookLive.Components do
 
         <article class="sb-record">
           <div class="sb-record__cover">
-            <CatalogComponents.softbound_cover
+            <CatalogComponents.catalog_cover
               book={@book}
               variant={:record}
               loading="eager"

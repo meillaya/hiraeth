@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Publishers — Hiraeth Softbound</title>
-<meta name="description" content="Twenty-three independent literary presses indexed in the Hiraeth catalogue.">
-<meta property="og:title" content="Publishers — Hiraeth Softbound">
-<meta property="og:description" content="Twenty-three independent literary presses indexed in the Hiraeth catalogue.">
+<title>Press — Hiraeth</title>
+<meta name="description" content="A profile of an independent literary press indexed in the Hiraeth catalogue.">
+<meta property="og:title" content="Press — Hiraeth">
+<meta property="og:description" content="A profile of an independent literary press indexed in the Hiraeth catalogue.">
 <meta property="og:type" content="website">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="../assets/css/softbound.css?v=4">
+<link rel="stylesheet" href="../assets/css/hiraeth.css?v=4">
 </head>
 <body>
 <a class="sb-skip" href="#main">Skip to content</a>
@@ -38,27 +38,8 @@
   </header>
 
   <main id="main">
-    <header class="sb-pagehead">
-      <p class="sb-kicker">The presses <span>/</span> 23 imprints</p>
-      <div class="sb-pagehead__row">
-        <h1>Publishers</h1>
-        <p class="sb-pagehead__intro">Twenty-three independent literary presses, from long-established houses to small imprints. Each press has a profile of its records and collections.</p>
-      </div>
-      <p class="sb-pagehead__meta"><span><strong>23</strong> presses</span><span><strong>7,011</strong> volumes</span><span>Indexed by size and A–Z</span></p>
-    </header>
-
-    <div class="sb-toolbar">
-      <p>23 independent presses</p>
-      <label class="sb-sort" for="press-sort">Sort
-        <select id="press-sort">
-          <option value="count">By size</option>
-          <option value="name">Alphabetical</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="sb-pressindex" id="press-list">
-      <p class="sb-loading">Loading presses…</p>
+    <div id="press-root">
+      <p class="sb-loading">Loading press…</p>
     </div>
   </main>
 
@@ -67,14 +48,14 @@
       <a class="sb-footer__brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
       <nav class="sb-footer__nav" aria-label="Footer">
         <a href="browse.html">Books</a>
-        <a href="publishers.html">Publishers</a>
+        <a href="publishers.html" aria-current="page">Publishers</a>
         <a href="series.html">Collections</a>
         <a href="shelf.html">Shelf</a>
       </nav>
       <p class="sb-footer__counts">112 books / 23 presses / 8 collections</p>
     </div>
     <div class="sb-footer__base">
-      <span>Softbound edition, 2026</span>
+      <span>Hiraeth, 2026</span>
       <span>7,011 volumes indexed</span>
     </div>
   </footer>
@@ -104,6 +85,6 @@
 </dialog>
 
 <script src="../assets/js/data.js?v=4"></script>
-<script src="../assets/js/softbound.js?v=4"></script>
+<script src="../assets/js/hiraeth.js?v=4"></script>
 </body>
 </html>

@@ -10,23 +10,23 @@ The running catalog is deployed on Railway at
 <https://web-production-a31e0.up.railway.app>. The Phoenix service, the private
 FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 
-[![Hiraeth home page](docs/screenshots/softbound-home.png)](https://web-production-a31e0.up.railway.app)
+[![Hiraeth home page](docs/screenshots/hiraeth-home.png)](https://web-production-a31e0.up.railway.app)
 
 | Browse the catalog | Book detail |
 | --- | --- |
-| [![Browse page](docs/screenshots/softbound-browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/softbound-book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-carcasse) |
+| [![Browse page](docs/screenshots/hiraeth-browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/hiraeth-book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-carcasse) |
 
 | Publishers | Press dossier |
 | --- | --- |
-| [![Publishers page](docs/screenshots/softbound-publishers.png)](https://web-production-a31e0.up.railway.app/publishers) | [![Coffee House Press page](docs/screenshots/softbound-press.png)](https://web-production-a31e0.up.railway.app/publishers/coffee-house-press) |
+| [![Publishers page](docs/screenshots/hiraeth-publishers.png)](https://web-production-a31e0.up.railway.app/publishers) | [![Coffee House Press page](docs/screenshots/hiraeth-press.png)](https://web-production-a31e0.up.railway.app/publishers/coffee-house-press) |
 
 | Collections | Collection shelf |
 | --- | --- |
-| [![Collections page](docs/screenshots/softbound-collections.png)](https://web-production-a31e0.up.railway.app/series) | [![Dalkey Archive Essentials collection](docs/screenshots/softbound-collection.png)](https://web-production-a31e0.up.railway.app/series/dalkey-archive-essentials) |
+| [![Collections page](docs/screenshots/hiraeth-collections.png)](https://web-production-a31e0.up.railway.app/series) | [![Dalkey Archive Essentials collection](docs/screenshots/hiraeth-collection.png)](https://web-production-a31e0.up.railway.app/series/dalkey-archive-essentials) |
 
 | Contributors | Search |
 | --- | --- |
-| [![Contributors page](docs/screenshots/softbound-contributors.png)](https://web-production-a31e0.up.railway.app/contributors) | [![Search page](docs/screenshots/softbound-search.png)](https://web-production-a31e0.up.railway.app/search?q=the) |
+| [![Contributors page](docs/screenshots/hiraeth-contributors.png)](https://web-production-a31e0.up.railway.app/contributors) | [![Search page](docs/screenshots/hiraeth-search.png)](https://web-production-a31e0.up.railway.app/search?q=the) |
 
 ## What is in the app
 

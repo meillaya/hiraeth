@@ -1,7 +1,7 @@
 /*
- * Hiraeth Softbound — component layer.
+ * Hiraeth — component layer.
  *
- * Ported from design/softbound_index.html (Softbound edition, 2026) and
+ * Ported from design/home.html (Hiraeth, 2026) and
  * extended for the LiveView catalogue. Tokens live in tokens.css; this file
  * only maps them to components. Keep measurements in sync with
  * design/index.html, which documents the responsive grid.
@@ -3374,7 +3374,7 @@ ol {
   font-size: 11px;
 }
 
-/* Softbound cover image and fallback primitives shared by cards/records. */
+/* Hiraeth cover image and fallback primitives shared by cards/records. */
 
 .sb-cover-image {
   display: block;
@@ -3422,7 +3422,7 @@ ol {
 
 /* -------------------------------------------------------------------------
    Legacy component aliases. These keep the not-yet-rewritten catalogue
-   surfaces on the Softbound palette instead of the retired archive skin.
+   surfaces on the Hiraeth palette instead of the retired archive skin.
    ------------------------------------------------------------------------- */
 
 .qi-page {
@@ -3546,7 +3546,7 @@ ol {
 .font-sans { font-family: var(--sb-sans); }
 .font-mono { font-family: var(--sb-sans); }
 
-/* Softbound cover component wrappers */
+/* Hiraeth cover component wrappers */
 
 .sb-cover-figure {
   display: flex;
@@ -3625,7 +3625,7 @@ ol {
   .sb-hero__title--xlong { --sb-hero-title: clamp(30px, 7.4vw, 44px); }
 }
 
-/* Softbound pagination links */
+/* Hiraeth pagination links */
 
 .sb-pager__page {
   min-width: 26px;

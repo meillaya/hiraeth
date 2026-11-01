@@ -1,7 +1,7 @@
 /*
- * Hiraeth Softbound — canonical design tokens.
+ * Hiraeth — canonical design tokens.
  *
- * Single source of truth for the Softbound edition UI. Every colour, type
+ * Single source of truth for the Hiraeth UI. Every colour, type
  * family, radius, gutter, and layout measurement used by the public site lives
  * here; component rules consume these variables and the design specification at
  * design/index.html reads them back from the live stylesheet.
@@ -18,7 +18,7 @@
 :root {
   color-scheme: light;
 
-  /* Palette (prototype: Softbound edition, 2026) */
+  /* Palette (prototype, 2026) */
   --sb-sage: #dfe7de; /* page ground */
   --sb-tray: #e7eee4; /* inset panels, shelf tray, filters */
   --sb-paper: #f8f8f3; /* sheet, raised reading surface */

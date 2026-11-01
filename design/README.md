@@ -1,11 +1,12 @@
-# Softbound design assets
+# Hiraeth design assets
 
 - `index.html` — the formal design-system specification: canonical tokens, type
   scale, responsive matrix, component contracts, and the pixel acceptance
   checklist. Open it directly in a browser; it reads values from
   `../assets/css/tokens.css`, so it cannot drift from the running site.
-- `softbound_*.html` — static page prototypes for the Softbound edition. They
-  are reference compositions (and some depend on a prototype-only data/JS
+- `home.html`, `browse.html`, `book.html`, `press.html`, `publishers.html`,
+  `series.html`, and `shelf.html` — static page prototypes. They are reference
+  compositions (and some depend on a prototype-only data/JS
   bundle that is not shipped); the production implementation is the Phoenix
   LiveView app in `lib/hiraeth_web/`.
 - `spec.css` — document-only styling for the specification page.
@@ -13,7 +14,7 @@
 Runtime sources of truth:
 
 - `assets/css/tokens.css` — tokens
-- `assets/css/softbound.css` — component layer
+- `assets/css/hiraeth.css` — component layer
 - `lib/hiraeth_web/components/layouts.ex` — sheet/header/footer shell
 - `lib/hiraeth_web/live/` — page implementations
 

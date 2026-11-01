@@ -1,4 +1,4 @@
-// Softbound responsive QA: captures every public surface at the nine
+// Hiraeth responsive QA: captures every public surface at the nine
 // acceptance widths and asserts the layout contract (no horizontal overflow,
 // sheet inset by band, header mode by breakpoint). Usage:
 //

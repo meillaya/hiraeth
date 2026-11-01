@@ -27,14 +27,14 @@ OFL 1.1 text with the family's copyright header.
   - `newsreader-variable-normal.woff2` (`newsreader-latin-wght-normal.woff2`, latin subset)
   - `newsreader-variable-italic.woff2` (`newsreader-latin-wght-italic.woff2`, latin subset)
 
-## Archivo (Softbound UI sans — `--sb-sans`)
+## Archivo (UI sans — `--sb-sans`)
 
 - Font version: variable, `wght` axis 400–700, normal
 - Copyright: Copyright 2020 The Archivo Project Authors
   (https://github.com/Omnibus-Type/Archivo)
 - License: SIL Open Font License 1.1
-- Source: embedded Fontsource `Archivo` (latin subset) in the Softbound design
-  prototype (`design/softbound_index.html`); extracted byte-for-byte into
+- Source: embedded Fontsource `Archivo` (latin subset) in the Hiraeth design
+  prototype (`design/home.html`); extracted byte-for-byte into
   `archivo-variable-normal.woff2` and verified `wOF2` on placement.
 - Upstream: https://fonts.google.com/specimen/Archivo
 - Files:

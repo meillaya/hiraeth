@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Press — Hiraeth Softbound</title>
-<meta name="description" content="A profile of an independent literary press indexed in the Hiraeth catalogue.">
-<meta property="og:title" content="Press — Hiraeth Softbound">
-<meta property="og:description" content="A profile of an independent literary press indexed in the Hiraeth catalogue.">
+<title>Shelf — Hiraeth</title>
+<meta name="description" content="Books saved from the Hiraeth catalogue, kept in this browser and ready to export as a reading list.">
+<meta property="og:title" content="Shelf — Hiraeth">
+<meta property="og:description" content="Books saved from the Hiraeth catalogue, kept in this browser and ready to export as a reading list.">
 <meta property="og:type" content="website">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="../assets/css/softbound.css?v=4">
+<link rel="stylesheet" href="../assets/css/hiraeth.css?v=4">
 </head>
 <body>
 <a class="sb-skip" href="#main">Skip to content</a>
@@ -19,7 +19,7 @@
       <a class="sb-brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
       <nav class="sb-nav" aria-label="Primary">
         <a href="browse.html">Books</a>
-        <a href="publishers.html" aria-current="page">Publishers</a>
+        <a href="publishers.html">Publishers</a>
         <a href="series.html">Collections</a>
       </nav>
       <div class="sb-tools">
@@ -31,16 +31,46 @@
     <div class="sb-mobile" id="mobile-nav" hidden>
       <nav aria-label="Mobile">
         <a href="browse.html">Books</a>
-        <a href="publishers.html" aria-current="page">Publishers</a>
+        <a href="publishers.html">Publishers</a>
         <a href="series.html">Collections</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <div id="press-root">
-      <p class="sb-loading">Loading press…</p>
-    </div>
+    <header class="sb-pagehead sb-shelf-head">
+      <p class="sb-kicker">Your books <span>/</span> saved in this browser</p>
+      <div class="sb-pagehead__row">
+        <h1>Shelf</h1>
+        <p class="sb-pagehead__intro">Books you have saved from the catalogue. Keep a reading list here, or export it as a plain-text file.</p>
+      </div>
+      <div class="sb-shelf-tools">
+        <p><strong data-shelf-total>0</strong> <span data-shelf-total-label>books</span> saved</p>
+        <button class="sb-button" id="export-shelf" type="button" hidden>Export reading list <span aria-hidden="true">↓</span></button>
+      </div>
+    </header>
+
+    <section class="sb-shelf-page" aria-label="Reading list">
+      <div class="sb-listbar" id="shelf-listbar">
+        <p>Reading list</p>
+        <p>Newest saved first</p>
+      </div>
+      <div id="shelf-page-list">
+        <p class="sb-loading">Loading shelf…</p>
+      </div>
+      <div class="sb-empty sb-empty--shelf" id="shelf-page-empty" hidden>
+        <p class="sb-kicker">Nothing saved yet</p>
+        <h2>A shelf waiting to be filled.</h2>
+        <p>Save any record with “Save to shelf” and it will keep here, in this browser, ready to export as a reading list.</p>
+        <div class="sb-start">
+          <div class="sb-start__head">
+            <p class="sb-kicker">A place to start</p>
+            <a class="sb-link" href="browse.html">All 112 books →</a>
+          </div>
+          <div class="sb-start__grid" id="shelf-start-grid"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="sb-footer">
@@ -48,14 +78,14 @@
       <a class="sb-footer__brand" href="index.html" aria-label="Hiraeth — home">Hiraeth<span class="sb-brand__dot">.</span></a>
       <nav class="sb-footer__nav" aria-label="Footer">
         <a href="browse.html">Books</a>
-        <a href="publishers.html" aria-current="page">Publishers</a>
+        <a href="publishers.html">Publishers</a>
         <a href="series.html">Collections</a>
-        <a href="shelf.html">Shelf</a>
+        <a href="shelf.html" aria-current="page">Shelf</a>
       </nav>
       <p class="sb-footer__counts">112 books / 23 presses / 8 collections</p>
     </div>
     <div class="sb-footer__base">
-      <span>Softbound edition, 2026</span>
+      <span>Hiraeth, 2026</span>
       <span>7,011 volumes indexed</span>
     </div>
   </footer>
@@ -80,11 +110,10 @@
     <button class="sb-dialog__close" type="button" data-shelf-close>Close</button>
   </div>
   <div class="sb-shelf-list" id="shelf-list"></div>
-  <a class="sb-shelf-page-link" href="shelf.html">Open the shelf page →</a>
   <p class="sb-dialog__hint">Saved in this browser.</p>
 </dialog>
 
 <script src="../assets/js/data.js?v=4"></script>
-<script src="../assets/js/softbound.js?v=4"></script>
+<script src="../assets/js/hiraeth.js?v=4"></script>
 </body>
 </html>

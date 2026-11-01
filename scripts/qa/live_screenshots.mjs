@@ -69,7 +69,7 @@ for (const [name, path, selector] of shots) {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(1200);
-  await page.screenshot({ path: `${outDir}/softbound-${name}.png`, fullPage: false });
+  await page.screenshot({ path: `${outDir}/hiraeth-${name}.png`, fullPage: false });
   routes[name] = path;
   console.log(`captured ${name} ${path}`);
 }

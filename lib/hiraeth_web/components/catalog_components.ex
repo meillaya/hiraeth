@@ -62,7 +62,7 @@ defmodule HiraethWeb.CatalogComponents do
   end
 
   @doc """
-  Renders a Softbound catalogue card: cover well, serif title, byline, and a
+  Renders a Hiraeth catalogue card: cover well, serif title, byline, and a
   press/year footer. `h4` keeps the established catalogue heading contract.
   """
   attr :book, :map, required: true
@@ -78,7 +78,7 @@ defmodule HiraethWeb.CatalogComponents do
     ~H"""
     <article id={@id} class="sb-card">
       <a class="sb-card__well" href={~p"/books/#{@book.slug}"} aria-label={"Open #{@book.title}"}>
-        <.softbound_cover book={@book} variant={:card} />
+        <.catalog_cover book={@book} variant={:card} />
       </a>
       <div class="sb-card__meta">
         <h4 class="sb-card__title">
@@ -111,7 +111,7 @@ defmodule HiraethWeb.CatalogComponents do
   defp book_year(_book), do: "—"
 
   @doc """
-  Renders a Softbound cover: the same-origin cache image when available, or the
+  Renders a Hiraeth cover: the same-origin cache image when available, or the
   typographic fallback used by the design. The `id` contract stays stable for
   tests and QA (`public-cover-<slug>` / `missing-cover-<slug>`).
   """
@@ -120,10 +120,10 @@ defmodule HiraethWeb.CatalogComponents do
   attr :loading, :string, default: "lazy"
   attr :fetchpriority, :string, default: "auto"
 
-  def softbound_cover(assigns) do
+  def catalog_cover(assigns) do
     assigns =
       assigns
-      |> assign(:cover_image_src, softbound_cover_src(assigns.book, assigns.variant))
+      |> assign(:cover_image_src, catalog_cover_src(assigns.book, assigns.variant))
       |> assign(:cover_authors, role_names(assigns.book[:authors]))
 
     ~H"""
@@ -148,7 +148,7 @@ defmodule HiraethWeb.CatalogComponents do
     """
   end
 
-  defp softbound_cover_src(book, variant) do
+  defp catalog_cover_src(book, variant) do
     cover = Map.get(book, :cover)
 
     url =

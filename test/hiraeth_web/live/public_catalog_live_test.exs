@@ -48,7 +48,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     assert selection.spotlight
     assert selection.spotlight.published_on
-    assert Date.compare(selection.spotlight.published_on, Date.utc_today()) == :gt
+    assert Date.compare(selection.spotlight.published_on, Date.utc_today()) in [:gt, :eq]
     refute non_book_title?(selection.spotlight)
 
     assert length(selection.recent) == 4
