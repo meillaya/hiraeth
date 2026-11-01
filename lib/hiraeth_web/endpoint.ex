@@ -72,11 +72,21 @@ defmodule HiraethWeb.Endpoint do
   def static_headers(conn) do
     if String.starts_with?(conn.request_path, "/covers/cache/") do
       [
-        {"cache-control", "public, max-age=86400"},
+        {"cache-control", cover_cache_control(conn.request_path)},
         {"x-content-type-options", "nosniff"}
       ]
     else
       []
+    end
+  end
+
+  # Responsive variants carry a content hash in their filename, so a cached
+  # copy can never go stale. Originals and thumbnails keep the day-long cache.
+  defp cover_cache_control(path) do
+    if Hiraeth.Covers.responsive_variant_path?(path) do
+      "public, max-age=31536000, immutable"
+    else
+      "public, max-age=86400"
     end
   end
 end

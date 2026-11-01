@@ -67,11 +67,17 @@ reported so the next run can retry.
 
 - `Plug.Static` serves originals and legacy thumbnails with
   `cache-control: public, max-age=86400` and `x-content-type-options: nosniff`.
-- Responsive variant URLs embed a SHA-256 of their own bytes, so the proxy
-  serves them with `cache-control: public, max-age=31536000, immutable`.
+- Responsive variant URLs embed a SHA-256 of their own bytes, so both static
+  delivery and the proxy serve them with
+  `cache-control: public, max-age=31536000, immutable`.
 - The `HiraethWeb.CoverController` refill path checks the database policy,
   fetches from R2, writes the local file atomically, and returns the same
   headers. A local hit never touches R2.
+- An object the durable store reports missing is remembered for 60 seconds in
+  `Hiraeth.Covers.MissCache`, and the response is a `404` with
+  `cache-control: public, max-age=60`. Without that, a cold replica pays a
+  store round trip for the same absent cover on every page view. A later
+  `put`, `delete`, or cache expiry clears the memory.
 - Cards, shelves, and book heroes render a `<picture>` element with WebP and
   JPEG `srcset` entries at 200/400/800px. The 400px JPEG remains the fallback
   and the legacy thumbnail URL stays available for old payloads.
@@ -97,7 +103,9 @@ gap:
   uploads originals and thumbnails to R2.
 - In production, `Hiraeth.Oban.CoverBackfillWorker` runs once at boot and is
   scoped to assets with no cached original. `Hiraeth.Oban.CoverVariantBackfillWorker`
-  then renders missing responsive variants from those local originals. Both are
+  then renders missing responsive variants from those local originals and
+  uploads them to the durable store, so a cold replica can refill a variant the
+  same way it refills an original. Both are
   no-ops when coverage is complete, and their ten-minute unique windows collapse
   restart storms. Set `HIRAETH_COVER_BACKFILL_ON_BOOT=false` to disable them;
   unlike cron, they are not governed by `HIRAETH_SCHEDULED_INGEST` because they

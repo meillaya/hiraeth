@@ -7,7 +7,10 @@ defmodule HiraethWeb.BrowseLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    publishers = PublicCatalog.publishers()
+    # handle_params/3 always follows mount/3 with the real query string, so mount
+    # only needs the cheap plumbing: an empty page and the filter labels.
+    publishers = PublicCatalog.publisher_options()
+    series = PublicCatalog.series_options()
 
     {:ok,
      socket
@@ -17,9 +20,9 @@ defmodule HiraethWeb.BrowseLive do
      |> assign(:filter_form, to_form(CatalogFilterParams.blank(), as: :filters))
      |> assign(:publishers, publishers)
      |> assign(:press_count, length(publishers))
-     |> assign(:series, PublicCatalog.series())
+     |> assign(:series, series)
      |> assign(:view, "covers")
-     |> assign(:pagination, PublicCatalog.book_page(nil, 1))
+     |> assign(:pagination, PublicCatalog.paginate([], 1))
      |> assign(:page_books, [])
      |> stream(:books, [])}
   end

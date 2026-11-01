@@ -19,7 +19,7 @@ defmodule HiraethWeb.CatalogPageController do
 
     assigns = %{
       page_title: "Independent literary presses",
-      catalog_count: PublicCatalog.book_page(%{"sort" => "recently_added"}, 1, 1).total_count,
+      catalog_count: PublicCatalog.book_count(),
       press_count: length(publishers),
       series_count: length(series),
       spotlight: selection.spotlight,

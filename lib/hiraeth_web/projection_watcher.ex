@@ -11,6 +11,7 @@ defmodule HiraethWeb.ProjectionWatcher do
 
   alias Hiraeth.Catalog.PublicWorkProjection
   alias HiraethWeb.PageCache
+  alias HiraethWeb.PublicCatalog
 
   @interval :timer.seconds(2)
 
@@ -29,6 +30,7 @@ defmodule HiraethWeb.ProjectionWatcher do
     state =
       if revision != state.revision do
         PageCache.clear()
+        PublicCatalog.clear_cache()
         %{state | revision: revision}
       else
         state

@@ -14,4 +14,12 @@ defmodule HiraethWeb.CoverCacheHeadersTest do
     assert get_resp_header(conn, "cache-control") == ["public, max-age=86400"]
     assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
   end
+
+  test "a cover the cache cannot serve answers a cacheable 404", %{conn: conn} do
+    conn = get(conn, "/covers/cache/missing-#{System.unique_integer([:positive])}.jpg")
+
+    assert conn.status == 404
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=60"]
+    assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
+  end
 end

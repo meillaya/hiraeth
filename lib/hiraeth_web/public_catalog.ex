@@ -97,6 +97,13 @@ defmodule HiraethWeb.PublicCatalog do
     PublicWorks.book_page(query, page, page_size)
   end
 
+  @doc """
+  Returns the number of public books matching the filters.
+  """
+  @spec book_count() :: non_neg_integer()
+  @spec book_count(book_query()) :: non_neg_integer()
+  def book_count(query \\ nil), do: PublicWorks.count(query)
+
   @spec book(String.t()) :: PublicProjection.Book.t() | nil
   def book(slug), do: PublicWorks.get(slug)
 
@@ -269,6 +276,10 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec publishers() :: [PublicProjection.Publisher.t()]
   def publishers do
+    cached({:publishers}, fn -> load_publishers() end)
+  end
+
+  defp load_publishers do
     PublicWorks.publisher_summaries()
     |> Enum.map(&publisher_summary_projection/1)
     |> Enum.sort_by(&String.downcase(&1.name))
@@ -492,8 +503,15 @@ defmodule HiraethWeb.PublicCatalog do
     |> Enum.uniq_by(& &1.path)
   end
 
+  @doc """
+  Lists collections that hold public books, with up to four preview books each.
+  """
   @spec series() :: [PublicProjection.Series.t()]
   def series do
+    cached({:series}, fn -> load_series() end)
+  end
+
+  defp load_series do
     PublicWorks.series_list()
     |> Enum.filter(&(&1.books != []))
     |> Enum.map(&series_projection_from_read_model(&1, :index))
@@ -503,7 +521,11 @@ defmodule HiraethWeb.PublicCatalog do
   @spec series_with_preview_editions() :: [PublicProjection.Series.t()]
   @spec series_with_preview_editions(pos_integer()) :: [PublicProjection.Series.t()]
   def series_with_preview_editions(limit \\ 4) do
-    PublicWorks.series_list()
+    cached({:series_previews, limit}, fn -> load_series_previews(limit) end)
+  end
+
+  defp load_series_previews(limit) do
+    PublicWorks.series_list(limit)
     |> Enum.filter(&(&1.books != []))
     |> Enum.map(&series_projection_from_read_model(&1, {:preview, limit}))
     |> Enum.sort_by(&String.downcase(&1.title))
@@ -511,11 +533,29 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec series_by_slug(String.t()) :: PublicProjection.Series.t() | nil
   def series_by_slug(slug) do
-    case PublicWorks.series(slug) do
+    case PublicWorks.series_detail(slug) do
       nil -> nil
       %{books: []} -> nil
       summary -> series_projection_from_read_model(summary, :detail)
     end
+  end
+
+  @doc """
+  Returns the collection labels used by filter controls.
+
+  The filter tray needs a slug and a title per collection, not its books.
+  """
+  @spec series_options() :: [map()]
+  def series_options do
+    cached({:series_options}, fn -> PublicWorks.series_options() end)
+  end
+
+  @doc """
+  Returns the press labels used by filter controls and counters.
+  """
+  @spec publisher_options() :: [map()]
+  def publisher_options do
+    cached({:publisher_options}, fn -> PublicWorks.publisher_options() end)
   end
 
   @spec edition(String.t()) :: PublicProjection.Edition.t() | nil
@@ -804,6 +844,7 @@ defmodule HiraethWeb.PublicCatalog do
 
   defp series_projection_from_read_model(summary, mode) do
     books = List.wrap(summary.books)
+    books_count = summary[:books_count] || length(books)
 
     {editions, preview_editions} =
       case mode do
@@ -820,7 +861,7 @@ defmodule HiraethWeb.PublicCatalog do
         slug: summary.slug,
         publisher: summary.publisher,
         publisher_slug: summary.publisher_slug,
-        editions_count: length(books),
+        editions_count: books_count,
         unknown_order?: summary.unknown_order?,
         editions: [],
         memberships: [],

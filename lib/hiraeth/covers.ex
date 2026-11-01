@@ -268,6 +268,11 @@ defmodule Hiraeth.Covers do
               variant_timeout
             )
 
+          # Variants rendered on a warm node are the only copies of those files.
+          # Uploading them keeps a cold replica, or this node after a local
+          # prune, from requesting an object the durable store never received.
+          upload_cached_paths(variant_paths(variants))
+
           summary
           |> count_variants(variants)
           |> Map.update!(:assets, &[variant_asset | &1])

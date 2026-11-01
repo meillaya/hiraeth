@@ -40,7 +40,8 @@ defmodule Hiraeth.Application do
       Hiraeth.Repo,
       {DNSCluster, query: Application.get_env(:hiraeth, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Hiraeth.PubSub},
-      HiraethWeb.PageCache
+      HiraethWeb.PageCache,
+      Hiraeth.Covers.MissCache
     ] ++ worker_children(role) ++ web_children(role)
   end
 

@@ -247,6 +247,33 @@ defmodule HiraethWeb.PublicCatalogPerformanceTest do
     assert measurement.elapsed_microseconds <= @warm_elapsed_budget_microseconds
   end
 
+  test "collection and press directories count members without streaming them" do
+    series = PublicCatalog.series()
+    series_options = PublicCatalog.series_options()
+    publishers = PublicCatalog.publishers()
+    publisher_options = PublicCatalog.publisher_options()
+
+    assert series != []
+    assert Enum.map(series, & &1.slug) == Enum.map(series_options, & &1.slug)
+    assert Enum.map(publishers, & &1.slug) == Enum.map(publisher_options, & &1.slug)
+
+    for entry <- series do
+      assert length(entry.preview_editions) <= 4
+      assert entry.editions_count >= length(entry.preview_editions)
+
+      assert %{books_count: options_count} =
+               Enum.find(series_options, &(&1.slug == entry.slug))
+
+      assert options_count == entry.editions_count
+    end
+
+    largest = Enum.max_by(series, & &1.editions_count)
+    detail = PublicCatalog.series_by_slug(largest.slug)
+
+    assert detail.editions_count == largest.editions_count
+    assert length(detail.editions) == largest.editions_count
+  end
+
   test "publisher and series directories have bounded query count" do
     publisher_index = warm_measure(fn -> PublicCatalog.publishers() end)
     publisher_detail = warm_measure(fn -> PublicCatalog.publisher("deep-vellum") end)

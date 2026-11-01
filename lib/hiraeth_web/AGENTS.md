@@ -31,6 +31,7 @@ Phoenix LiveView browser boundary for public discovery pages.
 - Use LiveView streams for large or changing collections: parent `phx-update="stream"`, child stream IDs, and re-stream when assigns affect items.
 - Forms are driven by `to_form` assigns and `<.input>`; icons use `<.icon>`.
 - `PublicCatalog` re-implements the Covers symlink/path guard for the read path (`safe_cached_file_path?`/`no_symlink_components?`); keep cache-path rules in sync across both files.
+- Directory and filter-tray reads stay bounded: `publisher_options/0` and `series_options/0` return labels and counts only, and `PublicWorks.series_list/1` ranks previews in SQL. Every `catalog_public_works` payload is about 16 kB, so a directory query that pulls every member across the wire costs most of a second on a remote database; select the winning rows first, then decode only those payloads.
 - The cover proxy in `CoverController` serves a local miss from `Hiraeth.Covers.Store`, checks `Covers.proxyable_cover_asset?/1` for takedown and policy state, and writes the local file atomically. Do not serve an arbitrary object key without that database check.
 
 ## ANTI-PATTERNS

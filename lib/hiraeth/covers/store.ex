@@ -15,17 +15,44 @@ defmodule Hiraeth.Covers.Store do
   @callback delete(key()) :: result()
   @callback configured?() :: boolean()
 
+  alias Hiraeth.Covers.MissCache
+
   @doc "Stores one object under a content-addressed key."
   @spec put(key(), binary(), String.t()) :: result()
-  def put(key, body, content_type), do: impl().put(key, body, content_type)
+  def put(key, body, content_type) do
+    MissCache.forget(key)
+    impl().put(key, body, content_type)
+  end
 
-  @doc "Returns an object body and its content type, or `:missing`."
+  @doc """
+  Returns an object body and its content type, or `:missing`.
+
+  A miss the durable store already reported is answered from
+  `Hiraeth.Covers.MissCache` until the entry expires, so a cold replica does not
+  pay for the same absent object on every page view.
+  """
   @spec get(key()) :: {:ok, binary(), String.t() | nil} | :missing | {:error, term()}
-  def get(key), do: impl().get(key)
+  def get(key) do
+    if MissCache.known_missing?(key), do: :missing, else: fetch_or_remember_miss(key)
+  end
+
+  defp fetch_or_remember_miss(key) do
+    case impl().get(key) do
+      :missing ->
+        if configured?(), do: MissCache.remember_missing(key)
+        :missing
+
+      other ->
+        other
+    end
+  end
 
   @doc "Deletes one object. Missing objects are not an error."
   @spec delete(key()) :: result()
-  def delete(key), do: impl().delete(key)
+  def delete(key) do
+    MissCache.forget(key)
+    impl().delete(key)
+  end
 
   @doc "Returns true when a durable store is configured."
   @spec configured?() :: boolean()

@@ -15,8 +15,24 @@ defmodule Hiraeth.Catalog.PublicWorks do
 
   @page_size 24
   @max_page 10_000
+  @series_preview_limit 4
 
   @type filters :: %{optional(atom() | String.t()) => term()}
+
+  @doc """
+  Counts the public works that match the filters without decoding a payload.
+
+  Header counters only need the number; going through `book_page/3` would also
+  fetch and decode a page of books that is thrown away.
+  """
+  @spec count() :: non_neg_integer()
+  @spec count(filters() | String.t() | nil) :: non_neg_integer()
+  def count(filters \\ nil) do
+    filters
+    |> normalize_filters()
+    |> then(fn normalized -> from(work in PublicWork) |> apply_filters(normalized) end)
+    |> Repo.aggregate(:count, :work_id)
+  end
 
   @spec book_page(filters() | String.t() | nil, pos_integer() | String.t(), pos_integer()) ::
           PublicProjection.Page.t(PublicProjection.Book.t())
@@ -78,41 +94,54 @@ defmodule Hiraeth.Catalog.PublicWorks do
 
   @spec publisher_summaries() :: [map()]
   def publisher_summaries do
-    summaries =
-      Repo.all(
-        from(work in PublicWork,
-          where: not is_nil(work.publisher_slug),
-          group_by: [work.publisher_slug, work.publisher_name],
-          select: %{
-            id: work.publisher_slug,
-            slug: work.publisher_slug,
-            name: work.publisher_name,
-            editions_count: count(work.work_id)
-          },
-          order_by: [asc: work.publisher_name]
-        )
-      )
-
     samples = cover_samples_by_publisher()
 
-    Enum.map(summaries, &Map.put(&1, :cover_sample, Map.get(samples, &1.slug)))
+    Enum.map(publisher_options(), fn publisher ->
+      Map.merge(publisher, %{
+        id: publisher.slug,
+        cover_sample: Map.get(samples, publisher.slug)
+      })
+    end)
   end
 
-  # One cover query replaces a per-publisher lookup. Only the newest covered
-  # work for each publisher is decoded.
-  defp cover_samples_by_publisher do
+  @doc """
+  Lists the presses that own public works, without cover samples.
+
+  Filter controls and press counters only need the slug and name; returning the
+  directory projection would decode one book payload per press for nothing.
+  """
+  @spec publisher_options() :: [map()]
+  def publisher_options do
     Repo.all(
       from(work in PublicWork,
-        where: work.has_cover == true and not is_nil(work.publisher_slug),
-        order_by: [
-          asc: work.publisher_slug,
-          desc_nulls_last: work.published_on,
-          asc: work.title_sort
-        ]
+        where: not is_nil(work.publisher_slug),
+        group_by: [work.publisher_slug, work.publisher_name],
+        select: %{
+          slug: work.publisher_slug,
+          name: work.publisher_name,
+          editions_count: count(work.work_id)
+        }
       )
     )
-    |> Enum.uniq_by(& &1.publisher_slug)
-    |> Map.new(&{&1.publisher_slug, decode!(&1)})
+    |> Enum.sort_by(&String.downcase(&1.name))
+  end
+
+  # One cover sample per press. The winning row is chosen in SQL and only those
+  # payloads cross the wire; streaming every covered work (the previous shape)
+  # moved tens of megabytes for a directory of a few dozen rows.
+  defp cover_samples_by_publisher do
+    rows =
+      Repo.query!("""
+      select distinct on (publisher_slug) publisher_slug, work_id::text
+      from catalog_public_works
+      where has_cover = true and publisher_slug is not null
+      order by publisher_slug, published_on desc nulls last, title_sort asc
+      """).rows
+
+    books = books_by_work_ids(Enum.map(rows, &List.last/1))
+
+    Map.new(rows, fn [slug, work_id] -> {slug, Map.get(books, work_id)} end)
+    |> Map.reject(fn {_slug, book} -> is_nil(book) end)
   end
 
   @spec publisher_has_editions?(String.t()) :: boolean()
@@ -165,25 +194,25 @@ defmodule Hiraeth.Catalog.PublicWorks do
     end
   end
 
+  @doc """
+  Lists collections with their public book count and preview books.
+
+  Previews are ranked and capped in SQL, so a directory page transfers a
+  handful of payloads per collection instead of every work in every collection.
+  """
   @spec series_list() :: [map()]
-  def series_list do
-    rows =
-      Repo.query!("""
-      select s.id, s.title, s.slug, p.name, p.slug,
-             count(sm.id) filter (where sm.position is null) as unknown_positions
-      from series s
-      left join publishers p on p.id = s.publisher_id
-      left join series_memberships sm on sm.series_id = s.id
-      group by s.id, s.title, s.slug, p.name, p.slug
-      order by lower(s.title)
-      """).rows
+  @spec series_list(pos_integer()) :: [map()]
+  def series_list(preview_limit \\ @series_preview_limit) do
+    rows = series_rows()
 
-    slugs =
-      Enum.map(rows, fn [_id, _title, slug, _publisher, _publisher_slug, _positions] -> slug end)
-
-    books_by_slug = series_books_by_slug(slugs)
+    previews =
+      rows
+      |> Enum.map(fn [_id, _title, slug, _publisher, _publisher_slug, _unknown] -> slug end)
+      |> series_previews(preview_limit)
 
     Enum.map(rows, fn [id, title, slug, publisher, publisher_slug, unknown_positions] ->
+      preview = Map.get(previews, slug, %{books_count: 0, books: []})
+
       %{
         id: id,
         title: title,
@@ -191,35 +220,125 @@ defmodule Hiraeth.Catalog.PublicWorks do
         publisher: publisher,
         publisher_slug: publisher_slug,
         unknown_order?: unknown_positions > 0,
-        books: Map.get(books_by_slug, slug, [])
+        books_count: preview.books_count,
+        books: preview.books
       }
     end)
   end
 
-  # One overlap query replaces a per-series book query. This keeps the series
-  # directory to two SQL statements regardless of how many series exist.
-  defp series_books_by_slug([]), do: %{}
+  @doc """
+  Returns one collection with every public book it holds.
+  """
+  @spec series_detail(String.t()) :: map() | nil
+  def series_detail(slug) when is_binary(slug) do
+    case Enum.find(series_rows(), fn [_id, _title, row_slug | _rest] -> row_slug == slug end) do
+      nil ->
+        nil
 
-  defp series_books_by_slug(slugs) do
-    Repo.all(
-      from(work in PublicWork,
-        where: fragment("? && ?", work.series_slugs, ^slugs),
-        order_by: [desc_nulls_last: work.newest_sort, asc: work.title_sort]
-      )
-    )
-    |> Enum.reduce(%{}, fn work, grouped ->
-      book = decode!(work)
+      [id, title, series_slug, publisher, publisher_slug, unknown_positions] ->
+        books = books_for_series(series_slug)
 
-      Enum.reduce(work.series_slugs, grouped, fn slug, acc ->
-        Map.update(acc, slug, [book], &[book | &1])
-      end)
-    end)
-    |> Map.new(fn {slug, books} -> {slug, Enum.reverse(books)} end)
+        %{
+          id: id,
+          title: title,
+          slug: series_slug,
+          publisher: publisher,
+          publisher_slug: publisher_slug,
+          unknown_order?: unknown_positions > 0,
+          books_count: length(books),
+          books: books
+        }
+    end
   end
 
-  @spec series(String.t()) :: map() | nil
-  def series(slug) do
-    Enum.find(series_list(), &(&1.slug == slug))
+  def series_detail(_slug), do: nil
+
+  @doc """
+  Lists collections that hold at least one public work, without book payloads.
+  """
+  @spec series_options() :: [map()]
+  def series_options do
+    Repo.query!("""
+    select s.slug, s.title, count(work.work_id) as books_count
+    from series s
+    left join catalog_public_works work on work.series_slugs @> array[s.slug]::text[]
+    group by s.slug, s.title
+    having count(work.work_id) > 0
+    """).rows
+    |> Enum.map(fn [slug, title, books_count] ->
+      %{slug: slug, title: title, books_count: books_count}
+    end)
+    |> Enum.sort_by(&String.downcase(&1.title))
+  end
+
+  defp series_rows do
+    Repo.query!("""
+    select s.id, s.title, s.slug, p.name, p.slug,
+           count(sm.id) filter (where sm.position is null) as unknown_positions
+    from series s
+    left join publishers p on p.id = s.publisher_id
+    left join series_memberships sm on sm.series_id = s.id
+    group by s.id, s.title, s.slug, p.name, p.slug
+    order by lower(s.title)
+    """).rows
+  end
+
+  # One grouped pass ranks every public work inside its collections and returns
+  # the count plus the leading work ids per collection. Only those payloads are
+  # decoded afterwards.
+  defp series_previews([], _limit), do: %{}
+
+  defp series_previews(slugs, limit) when is_integer(limit) and limit > 0 do
+    rows =
+      Repo.query!(
+        """
+        with ranked as (
+          select series_slug, work_id,
+                 row_number() over (
+                   partition by series_slug
+                   order by newest_sort desc nulls last, title_sort asc
+                 ) as rank
+          from catalog_public_works work, unnest(work.series_slugs) as series_slug
+          where work.series_slugs && $1::text[]
+        )
+        select series_slug,
+               count(*) as books_count,
+               coalesce(
+                 array_agg(work_id::text order by rank) filter (where rank <= $2),
+                 '{}'::text[]
+               ) as preview_work_ids
+        from ranked
+        group by series_slug
+        """,
+        [slugs, limit]
+      ).rows
+
+    books = books_by_work_ids(Enum.flat_map(rows, &List.last/1) |> Enum.uniq())
+
+    Map.new(rows, fn [slug, books_count, work_ids] ->
+      previews =
+        work_ids
+        |> Enum.map(&Map.get(books, &1))
+        |> Enum.reject(&is_nil/1)
+
+      {slug, %{books_count: books_count, books: previews}}
+    end)
+  end
+
+  defp series_previews(slugs, _limit), do: series_previews(slugs, @series_preview_limit)
+
+  # Fetches only the payload column for the requested works, then decodes each
+  # one once. Directory queries resolve a handful of ids at a time.
+  defp books_by_work_ids([]), do: %{}
+
+  defp books_by_work_ids(work_ids) do
+    Repo.all(
+      from(work in PublicWork,
+        where: work.work_id in ^work_ids,
+        select: %{work_id: work.work_id, payload: work.payload}
+      )
+    )
+    |> Map.new(&{&1.work_id, decode_payload!(&1.payload)})
   end
 
   @spec home_candidates(pos_integer()) :: [PublicProjection.Book.t()]
@@ -393,7 +512,9 @@ defmodule Hiraeth.Catalog.PublicWorks do
   defp normalize_sort(sort) when sort in ["newest", "title", "author", "recently_added"], do: sort
   defp normalize_sort(_sort), do: "newest"
 
-  defp decode!(%PublicWork{payload: payload}) do
+  defp decode!(%PublicWork{payload: payload}), do: decode_payload!(payload)
+
+  defp decode_payload!(payload) when is_binary(payload) do
     payload |> :erlang.binary_to_term() |> PublicProjection.book!()
   rescue
     exception in ArgumentError ->

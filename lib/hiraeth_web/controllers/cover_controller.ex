@@ -34,7 +34,13 @@ defmodule HiraethWeb.CoverController do
         |> send_resp(200, body)
 
       :not_found ->
-        send_resp(conn, 404, "")
+        # A cover the durable store does not hold is a cold miss nothing will
+        # fix mid-session. Telling the browser and any intermediary keeps the
+        # next navigation from paying for the lookup again.
+        conn
+        |> put_resp_header("x-content-type-options", "nosniff")
+        |> put_resp_header("cache-control", "public, max-age=60")
+        |> send_resp(404, "")
     end
   end
 
