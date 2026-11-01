@@ -32,6 +32,8 @@ FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 
 - Curated catalog for the approved indie publisher corpus, currently 9,415 deterministic source records across providers such as New Directions, Deep Vellum, Pushkin Press, and more. Fum d'Estampa, Phoneme Media, La Reunion, and A Strange Object are catalogued as Deep Vellum imprints while retaining their original provider provenance.
 - Provenance-aware imports, cover attribution, source artifact reports, and gap states instead of fabricated metadata.
+- Materialized public read model: public pages and `/api/v1` read one derived `catalog_public_works` row per work (filter/search columns plus an encoded book payload), rebuilt by an Oban worker after imports and cover changes.
+- Server-rendered home, book, collection, and contributor pages with ETS caching and ETag/304 handling; browse and search remain LiveView for interaction.
 - R2-backed public cover display served same-origin from `/covers/cache/...`; cards and book heroes use generated thumbnails, and unsafe or missing covers render typographic fallbacks.
 - Ash-backed ingestion control plane for provider sources, provider runs, source snapshots, record candidates, diffs, quarantine, replay, and ingestion events.
 - Oban-backed autonomous ingestion phases: plan, fetch, normalize, validate, diff, cover-cache, apply, audit, quarantine, replay, and retention cleanup.

@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
 **Generated:** 2026-10-31
-**Commit:** 3ecbb74
+**Commit:** b27645d
 **Branch:** main
 
 ## OVERVIEW
@@ -18,7 +18,6 @@ lib/hiraeth_web/api      # OpenAPI document, v1 controller, schemas, serializer
 assets/css/              # Tailwind entry, Hiraeth tokens, and component layer
 design/                  # formal Hiraeth spec + static page prototypes (docs-only)
 docs/screenshots/        # versioned README captures + routes manifest
-catalog_public_works     # derived read table; built by PublicWorkProjection, read by PublicWorks
 lib/mix/tasks/           # operator Mix tasks: ingest, scrape, covers, audits
 test/                    # ExUnit, LiveView, fixture, and contract suites
 test/support             # data_case, factories, contract fixtures
@@ -68,7 +67,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 ## CODE MAP
 | Symbol / file | Type | Location | Role |
 |---|---|---|---|
-| `Hiraeth.Application` | OTP app | `lib/hiraeth/application.ex` | starts Repo, PubSub, Oban, Endpoint |
+| `Hiraeth.Application` | OTP app | `lib/hiraeth/application.ex` | starts Repo, PubSub, then role-gated Oban/Endpoint |
 | `HiraethWeb.Router` | router | `lib/hiraeth_web/router.ex` | public route boundary; hard CSP + `:ops` probe pipeline |
 | `HiraethWeb.HealthController` | controller | `lib/hiraeth_web/controllers/health_controller.ex` | `/health` + `/ready` (DB + optional sidecar check) |
 | `HiraethWeb.PublicCatalog` | query facade | `lib/hiraeth_web/public_catalog.ex` | typed projection/filtering; home spotlight and four-title shelf selection; cover projection |
@@ -98,7 +97,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.Oban.CoverBackfillWorker` | Oban worker | `lib/hiraeth/oban/cover_backfill_worker.ex` | boot-time cache fill for assets with no cached original |
 | `Hiraeth.Oban.PublicProjectionWorker` | Oban worker | `lib/hiraeth/oban/public_projection_worker.ex` | rebuilds the public read model after imports/cover changes |
 | `HiraethWeb.CatalogText` | text boundary | `lib/hiraeth_web/catalog_text.ex` | strips publisher markup/shortcodes; placeholder-name guard for contributor display |
-| `HiraethWeb` public LiveViews | browser surfaces | `lib/hiraeth_web/live` | Hiraeth home, browse, book, publishers, press, collections, contributors, search |
+| `HiraethWeb` public pages | browser surfaces | `lib/hiraeth_web/live`, `lib/hiraeth_web/controllers/catalog_page_controller.ex` | controller-rendered home/book/collections/contributors; LiveView browse/search and publisher pages |
 | `Hiraeth.Oban.ProviderIngestionWorker` | Oban worker | `lib/hiraeth/oban/provider_ingestion_worker.ex` | per-provider fetch/normalize/apply pipeline |
 | `Hiraeth.Oban.ProviderSchedulerWorker` | Oban worker | `lib/hiraeth/oban/provider_scheduler_worker.ex` | triggers provider runs on plan schedule |
 | `Hiraeth.Oban.CoverRefreshWorker` | Oban worker | `lib/hiraeth/oban/cover_refresh_worker.ex` | weekly scheduled cover cache refresh |
@@ -158,6 +157,7 @@ mix hiraeth.covers.sync --all --missing --json    # fill missing originals + thu
 mix hiraeth.covers.audit --json                   # cover coverage report
 mix hiraeth.real_catalog.sync --check             # authority/artifact/coverage drift gate
 mix hiraeth.catalog.refresh --all --dry-run --json
+mix hiraeth.public_projection.rebuild --json
 node scripts/qa/design_screenshots.mjs http://127.0.0.1:4000 [outDir]
 node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app
 cd sidecar && uv run --extra dev pytest -q

@@ -732,14 +732,7 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp publisher_summary_projection(summary) do
-    cover_sample =
-      case summary.cover_sample do
-        %{cover: cover, title: title} when not is_nil(cover) ->
-          PublicProjection.cover_sample!(%{title: title, cover: cover})
-
-        _ ->
-          nil
-      end
+    cover_sample = summary.cover_sample |> cover_sample_for_book()
 
     PublicProjection.publisher!(%{
       id: uuid_text(summary.id),
@@ -1416,7 +1409,7 @@ defmodule HiraethWeb.PublicCatalog do
   end
 
   defp series_projection_from_read_model(summary, mode) do
-    books = summary.books
+    books = List.wrap(summary.books)
 
     {editions, preview_editions} =
       case mode do

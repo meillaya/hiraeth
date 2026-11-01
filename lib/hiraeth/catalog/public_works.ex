@@ -83,6 +83,7 @@ defmodule Hiraeth.Catalog.PublicWorks do
         where: not is_nil(work.publisher_slug),
         group_by: [work.publisher_slug, work.publisher_name],
         select: %{
+          id: work.publisher_slug,
           slug: work.publisher_slug,
           name: work.publisher_name,
           editions_count: count(work.work_id)
