@@ -1,0 +1,34 @@
+<HiraethWeb.Layouts.app flash={%{}} current_scope={%{}}>
+  <div id="ops-shell" class="sb-pagehead">
+    <p class="sb-kicker">Operations</p>
+    <div class="sb-pagehead__row">
+      <h1>Hiraeth health</h1>
+    </div>
+    <p class="sb-pagehead__meta">
+      <span>Role <strong>{@role}</strong></span>
+      <span>Projection <strong>{@projection_count}</strong></span>
+      <span>Covers missing <strong>{@covers.missing_cache}</strong></span>
+      <span>Pending candidates <strong>{@pending_candidates}</strong></span>
+      <span>Discarded jobs <strong>{@failed_jobs}</strong></span>
+    </p>
+    <table class="spec-table">
+      <tbody>
+        <tr>
+          <td>Projection status</td><td>{@state && @state.status}</td>
+        </tr>
+        <tr>
+          <td>Projection revision</td><td>{@state && @state.revision}</td>
+        </tr>
+        <tr>
+          <td>Projection rows</td><td>{@state && @state.row_count}</td>
+        </tr>
+        <tr>
+          <td>Last finished</td><td>{@state && @state.finished_at}</td>
+        </tr>
+        <tr>
+          <td>Last error</td><td>{@state && @state.error}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</HiraethWeb.Layouts.app>

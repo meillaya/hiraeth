@@ -3802,3 +3802,38 @@ ol {
 .sb-pressitem__thumb {
   overflow: hidden;
 }
+
+/* Native mobile menu: works on dead views and LiveViews alike. */
+.sb-menu {
+  display: none;
+  position: static;
+}
+
+.sb-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.sb-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sb-menu .sb-mobile {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--sb-z-header);
+  background: var(--sb-paper);
+  box-shadow: 0 16px 24px rgba(23, 25, 22, 0.06);
+}
+
+.sb-menu[open] .sb-mobile {
+  display: block;
+}
+
+@media (max-width: 1040px) {
+  .sb-menu {
+    display: block;
+  }
+}

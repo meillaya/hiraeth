@@ -5,6 +5,7 @@ defmodule Hiraeth.Ingestion.Phases.ApplyCandidates do
   ingestion state instead of mutating public catalog rows.
   """
 
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.Imports.ImportRun
   alias Hiraeth.Ingestion.Phases.{RunState, TombstoneCandidates}
   alias Hiraeth.Ingestion.RecordCandidate
@@ -93,6 +94,7 @@ defmodule Hiraeth.Ingestion.Phases.ApplyCandidates do
     case seed_provider(dataset, import_run) do
       {:ok, import_summary} ->
         mark_applied!(candidates)
+        PublicWorkProjection.enqueue_safe("apply_candidates")
 
         {:ok, %{source_count: length(records), import: import_summary}}
 

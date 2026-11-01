@@ -5,6 +5,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
   @moduletag :slow
 
   import Phoenix.LiveViewTest
+  import HiraethWeb.PageTestHelpers
 
   alias Hiraeth.Catalog.{
     Contribution,
@@ -59,33 +60,31 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     refute Enum.any?(selection.recent, &non_book_title?/1)
 
-    {:ok, home, _html} = live(conn, ~p"/")
+    {home, _html} = page(conn, "/")
 
-    assert has_element?(home, "#home-spotlight", selection.spotlight.title)
-    assert has_element?(home, "#recent-acquisitions", "Four more")
+    assert page_has?(home, "#home-spotlight", selection.spotlight.title)
+    assert page_has?(home, "#recent-acquisitions", "Four more")
 
-    doc = home |> render() |> LazyHTML.from_fragment()
+    doc = home |> LazyHTML.from_fragment()
 
     assert doc
            |> LazyHTML.query("#recent-books .sb-book")
            |> LazyHTML.to_tree()
            |> length() == 4
 
-    home_html = render(home)
-    refute home_html =~ ~r/NORTH AMERICAN DIGITAL SUBSCRIPTION|2023 print bundle/i
+    refute home =~ ~r/NORTH AMERICAN DIGITAL SUBSCRIPTION|2023 print bundle/i
   end
 
   test "home and browse render real publisher catalog with pagination and filtering", %{
     conn: conn
   } do
-    {:ok, home, _html} = live(conn, ~p"/")
+    {home, _html} = page(conn, "/")
 
-    assert has_element?(home, "#home-shell")
-    assert has_element?(home, "#home-spotlight")
-    assert has_element?(home, "#recent-acquisitions", "Four more")
-    home_html = render(home)
-    refute home_html =~ "Spotlight Volume"
-    refute home_html =~ "Traceable metadata for independent presses."
+    assert page_has?(home, "#home-shell")
+    assert page_has?(home, "#home-spotlight")
+    assert page_has?(home, "#recent-acquisitions", "Four more")
+    refute home =~ "Spotlight Volume"
+    refute home =~ "Traceable metadata for independent presses."
 
     {:ok, browse, _html} = live(conn, ~p"/browse")
 
@@ -455,24 +454,24 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
   end
 
   test "contributor index/detail routes render author and translator discovery", %{conn: conn} do
-    {:ok, contributors, _html} = live(conn, ~p"/contributors")
+    {contributors, _html} = page(conn, "/contributors")
 
-    assert has_element?(contributors, "#contributors-shell")
-    assert has_element?(contributors, "#contributor-david-bowles", "David Bowles")
-    assert has_element?(contributors, "#contributor-joaquin-zihuatanejo", "Joaquín Zihuatanejo")
-    refute render(contributors) =~ "/authors"
-    refute render(contributors) =~ "/translators"
+    assert page_has?(contributors, "#contributors-shell")
+    assert page_has?(contributors, "#contributor-david-bowles", "David Bowles")
+    assert page_has?(contributors, "#contributor-joaquin-zihuatanejo", "Joaquín Zihuatanejo")
+    refute contributors =~ "/authors"
+    refute contributors =~ "/translators"
 
-    {:ok, translators, _html} = live(conn, ~p"/contributors?role=translator")
-    assert has_element?(translators, "#contributors-shell", "Translators")
-    assert has_element?(translators, "#contributor-david-bowles", "translator")
-    refute has_element?(translators, "#contributor-joaquin-zihuatanejo")
+    {translators, _html} = page(conn, "/contributors?role=translator")
+    assert page_has?(translators, "#contributors-shell", "Translators")
+    assert page_has?(translators, "#contributor-david-bowles", "translator")
+    refute page_has?(translators, "#contributor-joaquin-zihuatanejo")
 
-    {:ok, contributor, _html} = live(conn, ~p"/contributors/david-bowles")
-    assert has_element?(contributor, "#contributor-detail-shell")
-    assert has_element?(contributor, "#contributor-title", "David Bowles")
-    assert has_element?(contributor, "#contributor-roles", "translator")
-    assert has_element?(contributor, "#contributor-books", "Immigrant")
+    {contributor, _html} = page(conn, "/contributors/david-bowles")
+    assert page_has?(contributor, "#contributor-detail-shell")
+    assert page_has?(contributor, "#contributor-title", "David Bowles")
+    assert page_has?(contributor, "#contributor-roles", "translator")
+    assert page_has?(contributor, "#contributor-books", "Immigrant")
   end
 
   test "edition route redirects to canonical book detail without public provenance panels", %{
@@ -486,41 +485,41 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       "Cover via Deep Vellum official source"
     )
 
-    assert {:error, {:live_redirect, %{to: "/books/deep-vellum-immigrant"}}} =
-             live(conn, ~p"/editions/#{@immigrant_slug}")
+    assert redirected_to(get(conn, ~p"/editions/#{@immigrant_slug}")) ==
+             "/books/deep-vellum-immigrant"
 
-    {:ok, view, html} = live(conn, ~p"/books/deep-vellum-immigrant")
+    {view, _conn} = page(conn, "/books/deep-vellum-immigrant")
 
-    assert has_element?(view, "#book-detail-shell")
-    assert has_element?(view, "#book-title", "Immigrant")
-    assert has_element?(view, "#book-authors", "by Joaquín Zihuatanejo")
-    assert has_element?(view, "#book-translators", "translated by David Bowles")
-    assert has_element?(view, "#book-identifiers", "9781646054541")
-    refute has_element?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
-    refute render(view) =~ "Source provenance"
-    refute render(view) =~ "Field-level provenance"
+    assert page_has?(view, "#book-detail-shell")
+    assert page_has?(view, "#book-title", "Immigrant")
+    assert page_has?(view, "#book-authors", "by Joaquín Zihuatanejo")
+    assert page_has?(view, "#book-translators", "translated by David Bowles")
+    assert page_has?(view, "#book-identifiers", "9781646054541")
+    refute page_has?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
+    refute view =~ "Source provenance"
+    refute view =~ "Field-level provenance"
 
     assert HiraethWeb.PublicCatalog.book("deep-vellum-immigrant").source.provider ==
              "deep_vellum_official_store"
 
-    refute has_element?(view, "#cover-attribution-deep-vellum-immigrant")
+    refute page_has?(view, "#cover-attribution-deep-vellum-immigrant")
 
-    assert has_element?(view, "#publication-date", "2027-02-16")
-    assert has_element?(view, "#book-description", "trilingual collection")
-    assert has_element?(view, "#book-format-summary", "Paperback, Ebook")
+    assert page_has?(view, "#publication-date", "2027-02-16")
+    assert page_has?(view, "#book-description", "trilingual collection")
+    assert page_has?(view, "#book-format-summary", "Paperback, Ebook")
 
-    assert has_element?(
+    assert page_has?(
              view,
              ~s|#public-cover-deep-vellum-immigrant img[src="/covers/cache/live-test-immigrant.jpg"]|
            )
 
-    assert has_element?(view, "#book-formats", "Paperback")
-    assert has_element?(view, "#book-format-deep-vellum-immigrant-paperback-9781646054541")
-    assert has_element?(view, "#book-format-deep-vellum-immigrant-ebook-9781646054558")
+    assert page_has?(view, "#book-formats", "Paperback")
+    assert page_has?(view, "#book-format-deep-vellum-immigrant-paperback-9781646054541")
+    assert page_has?(view, "#book-format-deep-vellum-immigrant-ebook-9781646054558")
 
-    refute html =~ "jacket copy"
-    refute html =~ "price"
-    refute html =~ "inventory"
+    refute view =~ "jacket copy"
+    refute view =~ "price"
+    refute view =~ "inventory"
   end
 
   test "book detail displays sourced prose, editorial praise, review links, and publisher storefront CTA",
@@ -541,25 +540,26 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
       "Cover via Archipelago Books official source"
     )
 
-    assert {:error, {:live_redirect, %{to: "/books/archipelago-books-bob-and-hilbert"}}} =
-             live(conn, ~p"/editions/archipelago-books-bob-and-hilbert-hardcover-9781962770651")
+    assert redirected_to(
+             get(conn, ~p"/editions/archipelago-books-bob-and-hilbert-hardcover-9781962770651")
+           ) == "/books/archipelago-books-bob-and-hilbert"
 
-    {:ok, view, _html} = live(conn, ~p"/books/archipelago-books-bob-and-hilbert")
+    {view, _html} = page(conn, "/books/archipelago-books-bob-and-hilbert")
 
-    assert has_element?(view, "#book-description", "Sourced publisher synopsis")
-    assert has_element?(view, "#book-editorial-praise", "Publisher official page")
-    refute has_element?(view, "#book-editorial-praise", "sourced quote")
-    refute has_element?(view, "#book-review-links", "Review provenance")
-    assert has_element?(view, "#book-review-links", "Reviews")
-    assert has_element?(view, "#book-review-links", "A sourced review excerpt")
-    refute has_element?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
-    refute render(view) =~ "Source provenance"
-    refute render(view) =~ "Field-level provenance"
-    refute render(view) =~ "approved rights basis"
-    refute render(view) =~ "test source fixture"
-    refute has_element?(view, "#book-review-gap")
+    assert page_has?(view, "#book-description", "Sourced publisher synopsis")
+    assert page_has?(view, "#book-editorial-praise", "Publisher official page")
+    refute page_has?(view, "#book-editorial-praise", "sourced quote")
+    refute page_has?(view, "#book-review-links", "Review provenance")
+    assert page_has?(view, "#book-review-links", "Reviews")
+    assert page_has?(view, "#book-review-links", "A sourced review excerpt")
+    refute page_has?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
+    refute view =~ "Source provenance"
+    refute view =~ "Field-level provenance"
+    refute view =~ "approved rights basis"
+    refute view =~ "test source fixture"
+    refute page_has?(view, "#book-review-gap")
 
-    assert has_element?(
+    assert page_has?(
              view,
              ~s|a#book-storefront-cta[href="https://archipelagobooks.org/book/bob-and-hilbert/"]|,
              "Publisher page"
@@ -574,12 +574,12 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     assert {:ok, _summary} = Importer.seed!(tmp)
 
     slug = "archipelago-books-bob-and-hilbert-hardcover-source-57168-9781962770651"
-    {:ok, view, _html} = live(conn, ~p"/books/#{slug}")
+    {view, _html} = page(conn, "/books/#{slug}")
 
-    assert has_element?(view, "#book-format-#{slug}", "ISBN not listed")
-    refute has_element?(view, "#book-review-gap")
-    refute has_element?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
-    refute render(view) =~ "Source provenance"
+    assert page_has?(view, "#book-format-#{slug}", "ISBN not listed")
+    refute page_has?(view, "#book-review-gap")
+    refute page_has?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
+    refute view =~ "Source provenance"
 
     assert HiraethWeb.PublicCatalog.book(slug).source.provider ==
              "archipelago_books_official_store"
@@ -595,32 +595,31 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
 
     expected_path = "/books/#{slug}"
 
-    assert {:error, {:live_redirect, %{to: ^expected_path}}} =
-             live(conn, ~p"/editions/#{slug}")
+    assert redirected_to(get(conn, ~p"/editions/#{slug}")) == expected_path
   end
 
   test "book, publisher, and series pages render sourced rich metadata", %{conn: conn} do
     fixture = create_rich_metadata_book!()
 
-    {:ok, book, _html} = live(conn, ~p"/books/#{fixture.book_slug}")
+    {book, _html} = page(conn, "/books/#{fixture.book_slug}")
 
-    assert has_element?(book, "#book-original-title", "Roman de métadonnées")
-    assert has_element?(book, "#book-original-language", "fra")
-    assert has_element?(book, "#book-subjects", "metadata")
-    assert has_element?(book, "#book-format-#{fixture.edition_slug}", "321 pages")
-    assert has_element?(book, "#book-format-#{fixture.edition_slug}", "eng")
-    assert has_element?(book, "#book-format-#{fixture.edition_slug}", "203 × 127 × 24 mm")
-    refute has_element?(book, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
-    refute render(book) =~ "Source provenance"
+    assert page_has?(book, "#book-original-title", "Roman de métadonnées")
+    assert page_has?(book, "#book-original-language", "fra")
+    assert page_has?(book, "#book-subjects", "metadata")
+    assert page_has?(book, "#book-format-#{fixture.edition_slug}", "321 pages")
+    assert page_has?(book, "#book-format-#{fixture.edition_slug}", "eng")
+    assert page_has?(book, "#book-format-#{fixture.edition_slug}", "203 × 127 × 24 mm")
+    refute page_has?(book, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
+    refute book =~ "Source provenance"
     assert HiraethWeb.PublicCatalog.book(fixture.book_slug).source.field_sources != %{}
 
     {:ok, publisher, _html} = live(conn, ~p"/publishers/#{fixture.publisher_slug}")
     refute has_element?(publisher, "#publisher-context")
     assert has_element?(publisher, "#publisher-editions", "Rich Metadata Novel")
 
-    {:ok, series, _html} = live(conn, ~p"/series/#{fixture.series_slug}")
-    assert has_element?(series, "#series-context", "Metadata Series")
-    assert has_element?(series, "#series-editions", "Rich Metadata Novel")
+    {series, _html} = page(conn, "/series/#{fixture.series_slug}")
+    assert page_has?(series, "#series-context", "Metadata Series")
+    assert page_has?(series, "#series-editions", "Rich Metadata Novel")
   end
 
   test "series detail groups multiple formats under one sourced book", %{conn: conn} do
@@ -663,11 +662,10 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     assert [%{title: "Rich Metadata Novel", formats: formats}] = series_projection.editions
     assert Enum.map(formats, & &1.format_label) |> Enum.sort() == ["Ebook", "Paperback"]
 
-    {:ok, series, _html} = live(conn, ~p"/series/#{fixture.series_slug}")
-    html = render(series)
-    document = LazyHTML.from_fragment(html)
+    {series, _html} = page(conn, "/series/#{fixture.series_slug}")
+    document = LazyHTML.from_fragment(series)
 
-    assert has_element?(series, "#series-editions", "Paperback, Ebook")
+    assert page_has?(series, "#series-editions", "Paperback, Ebook")
 
     assert document
            |> LazyHTML.query("#series-editions h4")

@@ -7,21 +7,12 @@ defmodule Hiraeth.Application do
 
   require Logger
 
-  alias Hiraeth.Oban.CoverBackfillWorker
+  alias Hiraeth.Oban.{CoverBackfillWorker, PublicProjectionWorker}
+  alias Hiraeth.ServiceRole
 
   @impl true
   def start(_type, _args) do
-    children = [
-      HiraethWeb.Telemetry,
-      Hiraeth.Repo,
-      {DNSCluster, query: Application.get_env(:hiraeth, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Hiraeth.PubSub},
-      {Oban, Application.fetch_env!(:hiraeth, Oban)},
-      # Start a worker by calling: Hiraeth.Worker.start_link(arg)
-      # {Hiraeth.Worker, arg},
-      # Start to serve requests, typically the last entry
-      HiraethWeb.Endpoint
-    ]
+    children = children_for(ServiceRole.current())
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
@@ -29,12 +20,48 @@ defmodule Hiraeth.Application do
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
-        enqueue_cover_backfill()
+        if ServiceRole.worker?(), do: enqueue_worker_boot_jobs()
         {:ok, pid}
 
       other ->
         other
     end
+  end
+
+  @doc false
+  def children_for(role) do
+    [
+      HiraethWeb.Telemetry,
+      Hiraeth.Repo,
+      {DNSCluster, query: Application.get_env(:hiraeth, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: Hiraeth.PubSub},
+      HiraethWeb.PageCache
+    ] ++ worker_children(role) ++ web_children(role)
+  end
+
+  defp worker_children(role) when role in [:all, :worker] do
+    [{Oban, Application.fetch_env!(:hiraeth, Oban)}]
+  end
+
+  defp worker_children(_role), do: []
+
+  defp web_children(role) when role in [:all, :web] do
+    [HiraethWeb.ProjectionWatcher, HiraethWeb.Endpoint]
+  end
+
+  defp web_children(_role), do: []
+
+  defp enqueue_worker_boot_jobs do
+    enqueue_cover_backfill()
+
+    if Application.get_env(:hiraeth, :public_projection_on_boot, true) do
+      %{"trigger" => "boot"}
+      |> PublicProjectionWorker.new()
+      |> Oban.insert()
+    end
+  rescue
+    exception ->
+      Logger.warning("worker boot jobs skipped: #{Exception.message(exception)}")
   end
 
   # A fresh deploy has an empty local cover cache and an import can add cover

@@ -18,36 +18,6 @@
 // To load it, simply add a second `<link>` to your `root.html.heex` file.
 
 
-const systemTheme = () => window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-
-const setTheme = (theme) => {
-  if (theme === "system") {
-    localStorage.removeItem("phx:theme")
-    document.documentElement.setAttribute("data-theme", systemTheme())
-    document.documentElement.setAttribute("data-theme-source", "system")
-  } else {
-    localStorage.setItem("phx:theme", theme)
-    document.documentElement.setAttribute("data-theme", theme)
-    document.documentElement.setAttribute("data-theme-source", "user")
-  }
-}
-
-if (!document.documentElement.hasAttribute("data-theme")) {
-  setTheme(localStorage.getItem("phx:theme") || "light")
-}
-
-window.addEventListener("storage", (event) => {
-  if (event.key === "phx:theme") setTheme(event.newValue || "light")
-})
-
-window.addEventListener("phx:set-theme", (event) => setTheme(event.target.dataset.phxTheme))
-
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if (document.documentElement.getAttribute("data-theme-source") === "system") {
-    document.documentElement.setAttribute("data-theme", systemTheme())
-  }
-})
-
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.

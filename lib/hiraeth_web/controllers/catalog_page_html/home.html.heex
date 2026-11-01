@@ -1,0 +1,17 @@
+<HiraethWeb.Layouts.app
+  flash={%{}}
+  current_scope={%{}}
+  catalog_count={@catalog_count}
+  press_count={@press_count}
+  series_count={@series_count}
+>
+  <HiraethWeb.CatalogPages.home
+    spotlight={@spotlight}
+    spotlight_upcoming?={@spotlight_upcoming?}
+    presses={@presses}
+    recent={@recent}
+    catalog_count={@catalog_count}
+    press_count={@press_count}
+    series_count={@series_count}
+  />
+</HiraethWeb.Layouts.app>

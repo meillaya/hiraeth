@@ -4,6 +4,7 @@ defmodule HiraethWeb.RouteShellLiveTest do
   @moduletag :public_catalog_full
 
   import Phoenix.LiveViewTest
+  import HiraethWeb.PageTestHelpers
   alias HiraethWeb.PublicCatalog
 
   setup_all do
@@ -12,11 +13,11 @@ defmodule HiraethWeb.RouteShellLiveTest do
   end
 
   test "GET / renders the editorial home shell", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/")
+    {view, _html} = page(conn, "/")
 
-    assert has_element?(view, "#home-shell")
-    assert has_element?(view, "#home-spotlight")
-    assert has_element?(view, "#recent-acquisitions")
+    assert page_has?(view, "#home-shell")
+    assert page_has?(view, "#home-spotlight")
+    assert page_has?(view, "#recent-acquisitions")
   end
 
   test "GET /browse filters real books and displays details on selection", %{conn: conn} do
@@ -79,21 +80,26 @@ defmodule HiraethWeb.RouteShellLiveTest do
   test "GET /series renders grouped collection shell even when pilot data has no series", %{
     conn: conn
   } do
-    {:ok, view, _html} = live(conn, ~p"/series")
-    assert has_element?(view, "#series-shell")
+    {view, _html} = page(conn, "/series")
+    assert page_has?(view, "#series-shell")
   end
 
-  test "Todo 7 route shells do not nest main landmarks inside the app layout", %{conn: conn} do
-    assert_single_main(conn, ~p"/search", "#search-shell")
-    assert_single_main(conn, ~p"/contributors", "#contributors-shell")
-    assert_single_main(conn, ~p"/contributors/david-bowles", "#contributor-detail-shell")
-    assert_single_main(conn, ~p"/series", "#series-shell")
-    assert_single_main(conn, ~p"/books/deep-vellum-immigrant", "#book-detail-shell")
-    assert_single_main(conn, ~p"/editions/not-a-real-edition", "#edition-detail-shell")
+  test "route shells do not nest main landmarks inside the app layout", %{conn: conn} do
+    assert_static_single_main(conn, "/contributors", "#contributors-shell")
+    assert_static_single_main(conn, "/contributors/david-bowles", "#contributor-detail-shell")
+    assert_static_single_main(conn, "/series", "#series-shell")
+    assert_static_single_main(conn, "/books/deep-vellum-immigrant", "#book-detail-shell")
+
+    {:ok, _view, html} = live(conn, ~p"/search")
+    assert_single_main_html(html, "#search-shell")
   end
 
-  defp assert_single_main(conn, path, shell_selector) do
-    {:ok, _view, html} = live(conn, path)
+  defp assert_static_single_main(conn, path, shell_selector) do
+    {html, _conn} = page(conn, path)
+    assert_single_main_html(html, shell_selector)
+  end
+
+  defp assert_single_main_html(html, shell_selector) do
     document = LazyHTML.from_fragment(html)
 
     assert document |> LazyHTML.query(shell_selector) |> LazyHTML.to_tree() |> length() == 1

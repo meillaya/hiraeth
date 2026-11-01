@@ -80,6 +80,28 @@ cover_cache_max_bytes =
 
 config :hiraeth, :cover_cache_max_bytes, cover_cache_max_bytes
 
+public_read_model =
+  case System.get_env("HIRAETH_PUBLIC_READ_MODEL", "legacy") do
+    "on" -> :on
+    "shadow" -> :shadow
+    _ -> :legacy
+  end
+
+config :hiraeth, :public_read_model, public_read_model
+
+service_role =
+  case System.get_env("HIRAETH_SERVICE_ROLE", "all") do
+    "worker" -> :worker
+    "all" -> :all
+    _ -> :web
+  end
+
+config :hiraeth, :service_role, service_role
+
+config :hiraeth,
+       :public_projection_on_boot,
+       System.get_env("HIRAETH_PROJECTION_ON_BOOT", "true") in ~w(true 1)
+
 # Autonomous ingestion kill-switch: HIRAETH_SCHEDULED_INGEST=false drops ALL
 # autonomous cron entries (scheduler tick, weekly cover refresh, weekly
 # provenance audit) so autonomy is fully off; manual mix tasks are unaffected.

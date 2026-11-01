@@ -65,21 +65,22 @@ defmodule HiraethWeb.Router do
   scope "/", HiraethWeb do
     pipe_through :browser
 
-    live "/", HomeLive, :index
+    get "/ops", OpsController, :index
+    get "/", CatalogPageController, :home
     live "/browse", BrowseLive, :index
     live "/search", SearchLive, :index
-    live "/contributors", ContributorsLive, :index
-    live "/contributors/:slug", ContributorsLive, :show
+    get "/contributors", CatalogPageController, :contributors
+    get "/contributors/:slug", CatalogPageController, :contributor
     live "/publishers", PublishersLive, :index
     get "/publishers/a-strange-object", RedirectController, :publisher_group
     get "/publishers/fum-destampa", RedirectController, :publisher_group
     get "/publishers/la-reunion", RedirectController, :publisher_group
     get "/publishers/phoneme-media", RedirectController, :publisher_group
     live "/publishers/:slug", PublishersLive, :show
-    live "/series", SeriesLive, :index
-    live "/series/:slug", SeriesLive, :show
-    live "/books/:slug", BookLive, :show
-    live "/editions/:slug", EditionLive, :show
+    get "/series", CatalogPageController, :series
+    get "/series/:slug", CatalogPageController, :series_show
+    get "/books/:slug", CatalogPageController, :book
+    get "/editions/:slug", CatalogPageController, :edition
   end
 
   # Enable LiveDashboard in development

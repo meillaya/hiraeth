@@ -2,6 +2,7 @@ defmodule HiraethWeb.UiStatesLiveTest do
   use HiraethWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import HiraethWeb.PageTestHelpers
 
   alias Hiraeth.Catalog.{Edition, Identifier, Publisher, Series, SeriesMembership, Work}
   alias Hiraeth.Sources.SourceRecord
@@ -33,16 +34,14 @@ defmodule HiraethWeb.UiStatesLiveTest do
     assert has_element?(publisher, "#publisher-not-found", "No publisher matches")
     assert has_element?(publisher, "a[href='/publishers']", "Back to publishers")
 
-    assert {:error, {:live_redirect, %{to: "/books/the-orchard-of-minor-moons-paperback"}}} =
-             live(conn, ~p"/editions/the-orchard-of-minor-moons-paperback")
+    assert redirected_to(get(conn, ~p"/editions/the-orchard-of-minor-moons-paperback")) ==
+             "/books/the-orchard-of-minor-moons-paperback"
 
-    {:ok, book, _html} = live(conn, ~p"/books/the-orchard-of-minor-moons-paperback")
-    assert has_element?(book, "#missing-cover-note", "Cover unavailable")
-    assert has_element?(book, "#missing-cover-the-orchard-of-minor-moons-paperback")
+    {book, _html} = page(conn, "/books/the-orchard-of-minor-moons-paperback")
+    assert page_has?(book, "#missing-cover-note", "Cover unavailable")
+    assert page_has?(book, "#missing-cover-the-orchard-of-minor-moons-paperback")
 
-    {:ok, missing, _html} = live(conn, ~p"/editions/not-an-edition")
-    assert has_element?(missing, "#edition-not-found", "No edition matches")
-    assert has_element?(missing, "a[href='/browse']", "Back to browse")
+    assert redirected_to(get(conn, ~p"/editions/not-an-edition")) == "/browse"
   end
 
   test "publisher with no editions and series with unknown order explain their state", %{
@@ -95,9 +94,9 @@ defmodule HiraethWeb.UiStatesLiveTest do
       admin
     )
 
-    {:ok, series_view, _html} = live(conn, ~p"/series/#{series.slug}")
-    refute has_element?(series_view, "#series-unknown-order")
-    assert has_element?(series_view, "#series-editions", "Loose Leaf Noon")
+    {series_view, _html} = page(conn, "/series/#{series.slug}")
+    refute page_has?(series_view, "#series-unknown-order")
+    assert page_has?(series_view, "#series-editions", "Loose Leaf Noon")
   end
 
   defp create!(resource, attrs, actor) do

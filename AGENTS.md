@@ -18,6 +18,7 @@ lib/hiraeth_web/api      # OpenAPI document, v1 controller, schemas, serializer
 assets/css/              # Tailwind entry, Hiraeth tokens, and component layer
 design/                  # formal Hiraeth spec + static page prototypes (docs-only)
 docs/screenshots/        # versioned README captures + routes manifest
+catalog_public_works     # derived read table; built by PublicWorkProjection, read by PublicWorks
 lib/mix/tasks/           # operator Mix tasks: ingest, scrape, covers, audits
 test/                    # ExUnit, LiveView, fixture, and contract suites
 test/support             # data_case, factories, contract fixtures
@@ -45,6 +46,9 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | Ingestion/provenance | `lib/hiraeth/ingestion`, `lib/hiraeth/sources`, `lib/hiraeth/real_catalog` | preserve snapshots + ledgers |
 | Public browser UI | `lib/hiraeth_web/live`, `lib/hiraeth_web/public_catalog.ex` | LiveView only |
 | Design system and tokens | `assets/css/tokens.css`, `assets/css/hiraeth.css`, `design/index.html` | single token source; spec reads the live CSS; Hiraeth is light-only |
+| Public read model | `lib/hiraeth/catalog/public_work*.ex`, `lib/hiraeth/catalog/public_works.ex` | one derived row per public work; one encoded book payload + filter/search columns |
+| Static page delivery | `lib/hiraeth_web/controllers/catalog_page_controller.ex`, `lib/hiraeth_web/page_cache.ex` | home/book/collection/contributor are controller-rendered; browse/search stay LiveView |
+| Service roles | `lib/hiraeth/service_role.ex`, `HIRAETH_SERVICE_ROLE` | `web` = endpoint only, `worker` = Oban only, `all` = local/test |
 | Browser capture checks | `scripts/qa/design_screenshots.mjs`, `scripts/qa/live_screenshots.mjs` | Playwright, on demand; not part of `mix gate` |
 | Cover selection and backfill | `lib/hiraeth/covers/policy.ex`, `lib/hiraeth/oban/cover_backfill_worker.ex` | one print-first cover per work; boot backfill fills missing cache |
 | Public JSON API | `lib/hiraeth_web/api`, `docs/api/v1.md` | read-only `/api/v1`, schema-tested |
@@ -87,7 +91,12 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `Hiraeth.Ingestion.ManifestValidator` | manifest gate | `lib/hiraeth/ingestion/manifest_validator.ex` | validates provider manifests before ingestion accepts them |
 | `Hiraeth.Covers` | domain facade | `lib/hiraeth/covers.ex` | cover cache safety + provenance |
 | `Hiraeth.Covers.Policy` | read policy | `lib/hiraeth/covers/policy.ex` | picks the one public cover per work: newest print, non-print fallback |
+| `Hiraeth.Catalog.PublicWorkProjection` | projector | `lib/hiraeth/catalog/public_work_projection.ex` | rebuilds `catalog_public_works` atomically and records a revision |
+| `Hiraeth.Catalog.PublicWorks` | read facade | `lib/hiraeth/catalog/public_works.ex` | filters, sorts, searches, and pages the derived table |
+| `HiraethWeb.CatalogPageController` | controller | `lib/hiraeth_web/controllers/catalog_page_controller.ex` | server-rendered catalogue pages and ETag/304 handling |
+| `HiraethWeb.PageCache` | ETS cache | `lib/hiraeth_web/page_cache.ex` | caches static page bodies keyed by path/query |
 | `Hiraeth.Oban.CoverBackfillWorker` | Oban worker | `lib/hiraeth/oban/cover_backfill_worker.ex` | boot-time cache fill for assets with no cached original |
+| `Hiraeth.Oban.PublicProjectionWorker` | Oban worker | `lib/hiraeth/oban/public_projection_worker.ex` | rebuilds the public read model after imports/cover changes |
 | `HiraethWeb.CatalogText` | text boundary | `lib/hiraeth_web/catalog_text.ex` | strips publisher markup/shortcodes; placeholder-name guard for contributor display |
 | `HiraethWeb` public LiveViews | browser surfaces | `lib/hiraeth_web/live` | Hiraeth home, browse, book, publishers, press, collections, contributors, search |
 | `Hiraeth.Oban.ProviderIngestionWorker` | Oban worker | `lib/hiraeth/oban/provider_ingestion_worker.ex` | per-provider fetch/normalize/apply pipeline |
@@ -161,6 +170,7 @@ cd sidecar && uv run ruff check . && uv run pyright && uv audit
 - `mix test.fast` excludes `slow`, `full_catalog`, `integration`, `performance`, `browser`, `public_catalog_full`. `mix test.full` is the complete suite; bare `mix test` runs the same default set.
 - Verification is local-only (`mix gate`, `mix ci`, `make verify`): GitHub Actions workflows were removed in August 2026 and `test/hiraeth/dev_environment_ci_contract_test.exs` pins their absence. Frontend correctness is covered by the LiveView/route logic tests in `test/hiraeth_web/live` and `test/hiraeth_web`; `scripts/qa/design_screenshots.mjs` is an on-demand Playwright contract check across nine widths, not a `mix gate` lane.
 - The Hiraeth spec at `design/index.html` reads computed values from `assets/css/tokens.css`; do not duplicate token values in templates or the spec. `design/**` is tracked but excluded from GitHub language statistics via `.gitattributes` (`linguist-documentation`); `.gitattributes` cannot untrack files, so use `.gitignore` plus `git rm --cached` if a file should actually leave Git.
+- `HIRAETH_SERVICE_ROLE=worker` runs Oban without the endpoint; set it only after the worker service exists. `HIRAETH_PUBLIC_READ_MODEL=on` requires a completed projection rebuild. `mix hiraeth.public_projection.rebuild` is the manual recovery command; the worker is the normal owner.
 - Cover coverage self-heals: `HIRAETH_COVER_BACKFILL_ON_BOOT` (default true in prod) enqueues `CoverBackfillWorker` at boot, scoped to assets with no cached original and independent of `HIRAETH_SCHEDULED_INGEST`. Display selection is read-time `Covers.Policy`; a reissue with a newer print cover replaces the old cover without refetching unchanged assets.
 - README screenshots are versioned (`docs/screenshots/hiraeth-*.png`) and paired with `docs/screenshots/routes.json`. The live capture script writes both; the versioned names intentionally avoid GitHub's raw-image cache.
 - devenv is dormant local-dev groundwork: local dev runs the nix-profile toolchain on bare PATH plus a standalone postgres via `scripts/dev/ensure_postgres.sh` (127.0.0.1:54320); CI lanes do not invoke devenv.

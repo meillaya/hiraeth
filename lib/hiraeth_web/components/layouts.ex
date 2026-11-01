@@ -45,24 +45,18 @@ defmodule HiraethWeb.Layouts do
 
           <div class="sb-tools">
             <.link navigate={~p"/search"} class="sb-tool">Search</.link>
-            <button
-              type="button"
-              class="sb-tool sb-tool--menu"
-              phx-click={JS.toggle_attribute({"hidden", "hidden"}, to: "#mobile-nav")}
-              aria-controls="mobile-nav"
-            >
-              Menu
-            </button>
+            <details class="sb-menu">
+              <summary class="sb-tool sb-tool--menu">Menu</summary>
+              <div class="sb-mobile" id="mobile-nav">
+                <nav aria-label="Mobile">
+                  <.link navigate={~p"/browse"}>Books</.link>
+                  <.link navigate={~p"/publishers"}>Publishers</.link>
+                  <.link navigate={~p"/series"}>Collections</.link>
+                  <.link navigate={~p"/search"}>Search</.link>
+                </nav>
+              </div>
+            </details>
           </div>
-        </div>
-
-        <div class="sb-mobile" id="mobile-nav" hidden>
-          <nav aria-label="Mobile">
-            <.link navigate={~p"/browse"}>Books</.link>
-            <.link navigate={~p"/publishers"}>Publishers</.link>
-            <.link navigate={~p"/series"}>Collections</.link>
-            <.link navigate={~p"/search"}>Search</.link>
-          </nav>
         </div>
       </header>
 

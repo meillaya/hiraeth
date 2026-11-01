@@ -3,6 +3,7 @@ defmodule Hiraeth.Covers do
 
   use Ash.Domain
 
+  alias Hiraeth.Catalog.PublicWorkProjection
   alias Hiraeth.Covers.{CachePruner, CoverAsset, CoverAssignment, Store}
   alias Hiraeth.RealCatalog.SourcePolicy
 
@@ -309,6 +310,7 @@ defmodule Hiraeth.Covers do
     |> Map.update!(:assets, &Enum.reverse/1)
     |> Map.update!(:failures, &Enum.reverse/1)
     |> tap(fn _summary -> CachePruner.prune!(cache_root: cache_root) end)
+    |> tap(fn _summary -> PublicWorkProjection.enqueue_safe("cover_cache") end)
   end
 
   @doc """

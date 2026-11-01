@@ -59,6 +59,7 @@ defmodule Hiraeth.RealCatalog.Importer do
     Edition,
     Identifier,
     Imprint,
+    PublicWorkProjection,
     Publisher,
     Series,
     SeriesMembership,
@@ -103,7 +104,9 @@ defmodule Hiraeth.RealCatalog.Importer do
         prune_stale? = Path.expand(dir) == Path.expand(Dataset.default_dir())
 
         Enum.each(datasets, &import_dataset!(&1, prune_stale?, batch_size))
-        {:ok, summary()}
+        result = {:ok, summary()}
+        PublicWorkProjection.enqueue_safe("importer")
+        result
       end
     after
       Process.delete(@import_cache_key)
@@ -133,8 +136,12 @@ defmodule Hiraeth.RealCatalog.Importer do
         timeout: transaction_timeout
       )
       |> case do
-        {:ok, summary} -> {:ok, summary}
-        {:error, reason} -> {:error, reason}
+        {:ok, summary} ->
+          PublicWorkProjection.enqueue_safe("importer")
+          {:ok, summary}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     rescue
       e ->

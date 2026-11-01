@@ -73,7 +73,7 @@ config :phoenix, :json_library, Jason
 
 config :hiraeth, Oban,
   repo: Hiraeth.Repo,
-  queues: [ingestion: 4, covers: 4, audit: 2],
+  queues: [ingestion: 4, covers: 4, audit: 2, projection: 2],
   lifeline: [rescue_after: {1, :hour}],
   plugins: [
     Oban.Plugins.Pruner,
@@ -89,6 +89,12 @@ config :hiraeth, :scrapling_sidecar, base_url: "http://localhost:8000", token: n
 
 config :hiraeth, Hiraeth.Covers.Store, adapter: Hiraeth.Covers.Store.Local
 config :hiraeth, :cover_cache_max_bytes, 1_073_741_824
+
+# Legacy is the safe default until the projection worker has populated the
+# derived table. Deployments set HIRAETH_PUBLIC_READ_MODEL=on in runtime.exs.
+config :hiraeth, :public_read_model, :legacy
+config :hiraeth, :service_role, :all
+config :hiraeth, :public_projection_on_boot, true
 
 config :hiraeth,
        :source_snapshot_retention_root,

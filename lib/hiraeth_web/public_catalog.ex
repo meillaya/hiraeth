@@ -7,6 +7,7 @@ defmodule HiraethWeb.PublicCatalog do
   """
 
   alias Hiraeth.Catalog.PublicProjection
+  alias Hiraeth.Catalog.PublicWorks
   alias Hiraeth.Covers
   alias Hiraeth.Covers.Policy
   alias Hiraeth.Covers.Store
@@ -33,6 +34,15 @@ defmodule HiraethWeb.PublicCatalog do
   @spec books() :: [PublicProjection.Book.t()]
   def books do
     book_page(nil, 1).entries
+  end
+
+  @doc false
+  @spec snapshot_books() :: [PublicProjection.Book.t()]
+  def snapshot_books do
+    edition_rows("", [])
+    |> Enum.map(&edition_projection_from_row/1)
+    |> Enum.group_by(& &1.work_id)
+    |> Enum.map(fn {_work_id, editions} -> book_projection(editions) end)
   end
 
   @spec search_books(book_query()) :: [PublicProjection.Book.t()]
@@ -82,6 +92,14 @@ defmodule HiraethWeb.PublicCatalog do
   @spec book_page(book_query(), page_param(), pos_integer()) ::
           PublicProjection.Page.t(PublicProjection.Book.t())
   def book_page(query, page, page_size \\ @page_size) do
+    if read_model?() do
+      PublicWorks.book_page(query, page, page_size)
+    else
+      legacy_book_page(query, page, page_size)
+    end
+  end
+
+  defp legacy_book_page(query, page, page_size) do
     filters = normalize_book_filters(query)
     requested_page = page |> parse_page() |> max(1) |> min(@max_page)
     requested_offset = (requested_page - 1) * page_size
@@ -118,6 +136,14 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec book(String.t()) :: PublicProjection.Book.t() | nil
   def book(slug) do
+    if read_model?() do
+      PublicWorks.get(slug)
+    else
+      legacy_book(slug)
+    end
+  end
+
+  defp legacy_book(slug) do
     case work_id_for_slug(slug) do
       nil ->
         nil
@@ -692,15 +718,47 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec publishers() :: [PublicProjection.Publisher.t()]
   def publishers do
-    cached({:publishers}, fn ->
-      publisher_summary_rows()
-      |> Enum.map(&publisher_summary_from_row/1)
+    if read_model?() do
+      PublicWorks.publisher_summaries()
+      |> Enum.map(&publisher_summary_projection/1)
       |> Enum.sort_by(&String.downcase(&1.name))
-    end)
+    else
+      cached({:publishers}, fn ->
+        publisher_summary_rows()
+        |> Enum.map(&publisher_summary_from_row/1)
+        |> Enum.sort_by(&String.downcase(&1.name))
+      end)
+    end
+  end
+
+  defp publisher_summary_projection(summary) do
+    cover_sample =
+      case summary.cover_sample do
+        %{cover: cover, title: title} when not is_nil(cover) ->
+          PublicProjection.cover_sample!(%{title: title, cover: cover})
+
+        _ ->
+          nil
+      end
+
+    PublicProjection.publisher!(%{
+      id: uuid_text(summary.id),
+      name: summary.name,
+      slug: summary.slug,
+      description: summary[:description],
+      editions: [],
+      editions_count: summary.editions_count,
+      cover_sample: cover_sample,
+      groupings: empty_publisher_groupings()
+    })
   end
 
   @spec publisher(String.t()) :: PublicProjection.Publisher.t() | nil
   def publisher(slug) do
+    if read_model?(), do: publisher_from_read_model(slug), else: legacy_publisher(slug)
+  end
+
+  defp legacy_publisher(slug) do
     cached({:publisher, slug}, fn ->
       case publisher_summary_for_slug(slug) do
         nil ->
@@ -719,12 +777,45 @@ defmodule HiraethWeb.PublicCatalog do
     end)
   end
 
+  defp publisher_from_read_model(slug) do
+    case PublicWorks.publisher_summary(slug) do
+      nil ->
+        nil
+
+      summary ->
+        books = PublicWorks.books_for_publisher(slug)
+        cover_sample = books |> Enum.find(& &1.cover) |> cover_sample_for_book()
+
+        PublicProjection.publisher!(%{
+          id: uuid_text(summary.id),
+          name: summary.name,
+          slug: summary.slug,
+          description: summary.description,
+          editions: books,
+          editions_count: length(books),
+          cover_sample: cover_sample,
+          groupings: publisher_groupings(books)
+        })
+    end
+  end
+
+  defp cover_sample_for_book(nil), do: nil
+
+  defp cover_sample_for_book(%{cover: cover, title: title}) when not is_nil(cover),
+    do: PublicProjection.cover_sample!(%{title: title, cover: cover})
+
+  defp cover_sample_for_book(_book), do: nil
+
   defp publisher_summary_for_slug(slug) do
     if public_catalog_cache?() do
       Enum.find(publishers(), &(&1.slug == slug))
     else
       publisher_summary_by_slug(slug)
     end
+  end
+
+  defp read_model? do
+    Application.get_env(:hiraeth, :public_read_model, :legacy) == :on
   end
 
   @spec clear_cache() :: :ok
@@ -838,14 +929,30 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec series() :: [PublicProjection.Series.t()]
   def series do
-    series_summary_rows()
-    |> Enum.map(&series_summary_from_row/1)
-    |> Enum.sort_by(&String.downcase(&1.title))
+    if read_model?() do
+      PublicWorks.series_list()
+      |> Enum.map(&series_projection_from_read_model(&1, :index))
+      |> Enum.sort_by(&String.downcase(&1.title))
+    else
+      series_summary_rows()
+      |> Enum.map(&series_summary_from_row/1)
+      |> Enum.sort_by(&String.downcase(&1.title))
+    end
   end
 
   @spec series_with_preview_editions() :: [PublicProjection.Series.t()]
   @spec series_with_preview_editions(pos_integer()) :: [PublicProjection.Series.t()]
   def series_with_preview_editions(limit \\ 4) do
+    if read_model?() do
+      PublicWorks.series_list()
+      |> Enum.map(&series_projection_from_read_model(&1, {:preview, limit}))
+      |> Enum.sort_by(&String.downcase(&1.title))
+    else
+      legacy_series_with_preview_editions(limit)
+    end
+  end
+
+  defp legacy_series_with_preview_editions(limit) do
     series = series()
     preview_work_ids_by_slug = series_preview_work_ids_by_slug(limit)
 
@@ -871,6 +978,17 @@ defmodule HiraethWeb.PublicCatalog do
 
   @spec series_by_slug(String.t()) :: PublicProjection.Series.t() | nil
   def series_by_slug(slug) do
+    if read_model?() do
+      case PublicWorks.series(slug) do
+        nil -> nil
+        summary -> series_projection_from_read_model(summary, :detail)
+      end
+    else
+      legacy_series_by_slug(slug)
+    end
+  end
+
+  defp legacy_series_by_slug(slug) do
     case series_summary_by_slug(slug) do
       nil ->
         nil
@@ -1294,6 +1412,31 @@ defmodule HiraethWeb.PublicCatalog do
       roles: Enum.sort(roles || []),
       books: [],
       books_count: books_count
+    })
+  end
+
+  defp series_projection_from_read_model(summary, mode) do
+    books = summary.books
+
+    {editions, preview_editions} =
+      case mode do
+        {:preview, limit} -> {[], Enum.take(books, limit)}
+        :detail -> {books, []}
+        :index -> {[], Enum.take(books, 4)}
+      end
+
+    PublicProjection.series!(%{
+      id: uuid_text(summary.id),
+      title: summary.title,
+      name: summary.title,
+      slug: summary.slug,
+      publisher: summary.publisher,
+      publisher_slug: summary.publisher_slug,
+      editions_count: length(books),
+      unknown_order?: summary.unknown_order?,
+      editions: editions,
+      memberships: [],
+      preview_editions: preview_editions
     })
   end
 

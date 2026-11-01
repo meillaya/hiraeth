@@ -26,6 +26,7 @@ config :hiraeth, HiraethWeb.Endpoint,
 config :logger, level: :warning
 
 config :hiraeth, public_catalog_cache: false
+config :hiraeth, page_cache: false
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
