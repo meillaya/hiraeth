@@ -1418,19 +1418,22 @@ defmodule HiraethWeb.PublicCatalog do
         :index -> {[], Enum.take(books, 4)}
       end
 
-    PublicProjection.series!(%{
-      id: uuid_text(summary.id),
-      title: summary.title,
-      name: summary.title,
-      slug: summary.slug,
-      publisher: summary.publisher,
-      publisher_slug: summary.publisher_slug,
-      editions_count: length(books),
-      unknown_order?: summary.unknown_order?,
-      editions: editions,
-      memberships: [],
-      preview_editions: preview_editions
-    })
+    series =
+      PublicProjection.series!(%{
+        id: uuid_text(summary.id),
+        title: summary.title,
+        name: summary.title,
+        slug: summary.slug,
+        publisher: summary.publisher,
+        publisher_slug: summary.publisher_slug,
+        editions_count: length(books),
+        unknown_order?: summary.unknown_order?,
+        editions: [],
+        memberships: [],
+        preview_editions: preview_editions
+      })
+
+    if mode == :detail, do: %{series | editions: editions}, else: series
   end
 
   defp series_summary_rows do
