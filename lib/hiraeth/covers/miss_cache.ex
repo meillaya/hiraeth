@@ -1,11 +1,11 @@
 defmodule Hiraeth.Covers.MissCache do
   @moduledoc """
-  Short-lived memory of cover objects the durable store reported missing.
+  Short-lived memory of cover objects the store cannot serve.
 
   A cold replica asks the object store for a cover it does not have on disk.
-  When the object is absent the round trip costs about a second, and the same
-  request repeats on every page view that references the cover. Remembering the
-  miss keeps the proxy path fast.
+  When the object is absent, or present but too large to proxy, the round trip
+  costs hundreds of milliseconds and the same request repeats on every page view
+  that references the cover. Remembering the outcome keeps the proxy path fast.
 
   An entry expires on its own and a successful `Hiraeth.Covers.Store.put/3`
   clears it, so a later upload is visible without a restart.
@@ -44,7 +44,7 @@ defmodule Hiraeth.Covers.MissCache do
   def known_missing?(_key), do: false
 
   @doc """
-  Remembers that the store has no object under this key.
+  Remembers that this key cannot be served from the store right now.
   """
   @spec remember_missing(String.t()) :: :ok
   def remember_missing(key) when is_binary(key) do

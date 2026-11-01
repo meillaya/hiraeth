@@ -13,7 +13,7 @@ defmodule HiraethWeb.CoverController do
   require Logger
 
   alias Hiraeth.Covers
-  alias Hiraeth.Covers.{CachePruner, CoverAsset, Store}
+  alias Hiraeth.Covers.{CachePruner, CoverAsset, MissCache, Store}
 
   @cache_root "priv/static/covers/cache"
   @allowed_content_types ~w(image/jpeg image/png image/webp image/gif image/avif)
@@ -126,14 +126,26 @@ defmodule HiraethWeb.CoverController do
     key = Covers.object_key(path)
 
     with true <- is_binary(key),
-         {:ok, body, stored_type} <- Store.get(key),
-         true <- byte_size(body) <= @max_body_bytes,
+         {:ok, body, stored_type} <- Store.get(key) do
+      store_object(path, key, body, stored_type)
+    else
+      # Store.get/1 already remembers an object the store does not hold.
+      _missing_or_error -> :not_found
+    end
+  end
+
+  defp store_object(path, key, body, stored_type) do
+    with true <- byte_size(body) <= @max_body_bytes,
          type when type in @allowed_content_types <- normalize_content_type(stored_type, path),
          :ok <- write_local(path, body) do
       Task.start(fn -> CachePruner.prune!() end)
       {:ok, body, type}
     else
-      _missing_or_error -> :not_found
+      _unservable ->
+        # The object exists but cannot be served (oversized or unsupported), so
+        # fetching it again on the next page view only downloads it once more.
+        MissCache.remember_missing(key)
+        :not_found
     end
   end
 
