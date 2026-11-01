@@ -45,13 +45,26 @@ defmodule HiraethWeb.Layouts do
 
           <div class="sb-tools">
             <.link navigate={~p"/search"} class="sb-tool">Search</.link>
+            <button
+              class="sb-tool sb-tool--shelf"
+              type="button"
+              data-shelf-open
+              aria-haspopup="dialog"
+              aria-controls="shelf-dialog"
+            >
+              Shelf <span data-shelf-count>0</span>
+            </button>
             <details class="sb-menu">
-              <summary class="sb-tool sb-tool--menu">Menu</summary>
+              <summary class="sb-tool sb-tool--menu">
+                <span>Menu</span>
+                <span class="sb-menu__indicator" aria-hidden="true"></span>
+              </summary>
               <div class="sb-mobile" id="mobile-nav">
                 <nav aria-label="Mobile">
                   <.link navigate={~p"/browse"}>Books</.link>
                   <.link navigate={~p"/publishers"}>Publishers</.link>
                   <.link navigate={~p"/series"}>Collections</.link>
+                  <.link navigate={~p"/shelf"}>Shelf</.link>
                   <.link navigate={~p"/search"}>Search</.link>
                 </nav>
               </div>
@@ -74,20 +87,46 @@ defmodule HiraethWeb.Layouts do
             <.link navigate={~p"/browse"}>Books</.link>
             <.link navigate={~p"/publishers"}>Publishers</.link>
             <.link navigate={~p"/series"}>Collections</.link>
+            <.link navigate={~p"/shelf"}>Shelf</.link>
             <.link navigate={~p"/search"}>Search</.link>
           </nav>
 
-          <p class="sb-footer__counts">{colophon_counts(assigns)}</p>
+          <p :if={colophon_counts(assigns) != ""} class="sb-footer__counts">
+            {colophon_counts(assigns)}
+          </p>
         </div>
 
         <div class="sb-footer__base">
           <span>Hiraeth, {DateTime.utc_now().year}</span>
-          <span>{colophon_volumes(@catalog_count)}</span>
+          <span>An index of independent literary presses</span>
         </div>
       </footer>
     </div>
 
+    <.shelf_dialog />
+
+    <p id="shelf-live" class="visually-hidden" role="status" aria-live="polite"></p>
+
     <.flash_group flash={@flash} />
+    """
+  end
+
+  defp shelf_dialog(assigns) do
+    ~H"""
+    <dialog
+      class="sb-dialog sb-dialog--shelf"
+      id="shelf-dialog"
+      aria-labelledby="shelf-dialog-title"
+      data-shelf-dialog
+    >
+      <div class="sb-dialog__head">
+        <h2 class="sb-dialog__title" id="shelf-dialog-title">Your shelf</h2>
+        <button class="sb-dialog__close" type="button" data-shelf-close>Close</button>
+      </div>
+      <div class="sb-shelf-list" id="shelf-list" data-shelf-list></div>
+      <a class="sb-shelf-page-link" href={~p"/shelf"}>Open the shelf page →</a>
+      <p class="sb-dialog__hint">Saved in this browser.</p>
+    </dialog>
     """
   end
 
@@ -101,13 +140,10 @@ defmodule HiraethWeb.Layouts do
       |> Enum.reject(&is_nil/1)
 
     case parts do
-      [] -> "Independent literary presses"
+      [] -> ""
       parts -> Enum.join(parts, " / ")
     end
   end
-
-  defp colophon_volumes(nil), do: "An index of independent literary presses"
-  defp colophon_volumes(count), do: "#{format_count(count)} volumes indexed"
 
   defp format_count(count) when is_integer(count) do
     count

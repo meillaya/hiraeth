@@ -24,6 +24,6 @@ Responsive acceptance:
 node scripts/qa/design_screenshots.mjs http://127.0.0.1:4000 artifacts/qa/design
 ```
 
-The script captures every public surface at 390, 560, 760, 834, 900, 1040,
-1180, 1280, and 1440 px and fails on horizontal overflow, sheet inset drift, or
-header-mode drift.
+The script captures every public surface (including `/shelf`) at 320, 390, 560,
+760, 834, 900, 1040, 1180, 1280, and 1440 px and fails on horizontal overflow,
+sheet inset drift, or header-mode drift.

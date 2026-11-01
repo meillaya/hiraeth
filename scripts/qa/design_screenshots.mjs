@@ -16,9 +16,10 @@ if (!base) {
   process.exit(2);
 }
 
-const widths = [390, 560, 760, 834, 900, 1040, 1180, 1280, 1440];
+const widths = [320, 390, 560, 760, 834, 900, 1040, 1180, 1280, 1440];
 const pages = [
   ["home", "/"],
+  ["shelf", "/shelf"],
   ["browse", "/browse"],
   ["publishers", "/publishers"],
   ["series", "/series"],

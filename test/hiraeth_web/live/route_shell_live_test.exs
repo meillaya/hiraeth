@@ -89,6 +89,7 @@ defmodule HiraethWeb.RouteShellLiveTest do
     assert_static_single_main(conn, "/contributors/david-bowles", "#contributor-detail-shell")
     assert_static_single_main(conn, "/series", "#series-shell")
     assert_static_single_main(conn, "/books/deep-vellum-immigrant", "#book-detail-shell")
+    assert_static_single_main(conn, "/shelf", "#shelf-shell")
 
     {:ok, _view, html} = live(conn, ~p"/search")
     assert_single_main_html(html, "#search-shell")

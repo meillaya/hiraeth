@@ -22,6 +22,7 @@ if (!base) {
 const widths = [390, 1440];
 const routes = [
   ["home", "/"],
+  ["shelf", "/shelf"],
   ["browse", "/browse"],
   ["publishers", "/publishers"],
   ["series", "/series"],

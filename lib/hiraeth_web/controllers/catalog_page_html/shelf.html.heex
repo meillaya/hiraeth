@@ -1,0 +1,75 @@
+<HiraethWeb.Layouts.app
+  flash={%{}}
+  current_scope={%{}}
+  catalog_count={@catalog_count}
+  press_count={@press_count}
+  series_count={@series_count}
+>
+  <div id="shelf-shell" data-shelf-page>
+    <header class="sb-pagehead sb-shelf-head">
+      <p class="sb-kicker">Your books <span>/</span> saved in this browser</p>
+      <div class="sb-pagehead__row">
+        <h1 id="shelf-title">Shelf</h1>
+        <p class="sb-pagehead__intro">
+          Books you have saved from the catalogue. Keep a reading list here, or export it as a plain-text file.
+        </p>
+      </div>
+      <div class="sb-shelf-tools">
+        <p>
+          <strong data-shelf-total>0</strong>
+          <span data-shelf-total-label>books</span> saved
+        </p>
+        <button class="sb-button" id="export-shelf" type="button" data-shelf-export hidden>
+          Export reading list <span aria-hidden="true">↓</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="sb-shelf-page" aria-label="Reading list">
+      <div class="sb-listbar" id="shelf-listbar" hidden>
+        <h2>Reading list</h2>
+        <p>Newest saved first</p>
+      </div>
+
+      <div id="shelf-page-list" hidden></div>
+
+      <div class="sb-empty sb-empty--shelf" id="shelf-page-empty" data-shelf-empty>
+        <p class="sb-kicker">Nothing saved yet</p>
+        <h2>A shelf waiting to be filled.</h2>
+        <p>
+          Save any record with “Save to shelf” and it will keep here, in this browser, ready to export as a reading list.
+        </p>
+
+        <div :if={@starters != []} class="sb-start">
+          <div class="sb-start__head">
+            <p class="sb-kicker">A place to start</p>
+            <a class="sb-link" href={~p"/browse"}>
+              All {format_count(@catalog_count)} books →
+            </a>
+          </div>
+          <div class="sb-start__grid" id="shelf-start-grid">
+            <a :for={book <- @starters} class="sb-book" href={~p"/books/#{book.slug}"}>
+              <span class="sb-cover-well">
+                <HiraethWeb.CatalogComponents.catalog_cover book={book} variant={:card} />
+              </span>
+              <span class="sb-book__meta">
+                <span class="sb-book__title">{book.title}</span>
+                <span :if={author_line(book)} class="sb-book__author">{author_line(book)}</span>
+              </span>
+              <span class="sb-book__foot">
+                <span>{book.publisher || "Unknown press"}</span>
+                <span :if={book_year(book) != ""}>{book_year(book)}</span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <noscript>
+        <p class="sb-shelf-noscript">
+          The shelf is stored in this browser and needs JavaScript to read it. The starter shelf above is available without it.
+        </p>
+      </noscript>
+    </section>
+  </div>
+</HiraethWeb.Layouts.app>

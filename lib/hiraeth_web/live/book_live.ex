@@ -16,6 +16,7 @@ defmodule HiraethWeb.BookLive do
     {:noreply,
      socket
      |> assign(:book, book)
+     |> assign(:related, PublicCatalog.more_from_publisher(book, 4))
      |> assign(:page_title, if(book, do: book.title, else: "Book not found"))}
   end
 
@@ -23,7 +24,7 @@ defmodule HiraethWeb.BookLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_scope={%{}}>
-      <Components.detail book={@book} />
+      <Components.detail book={@book} related={@related} />
     </Layouts.app>
     """
   end

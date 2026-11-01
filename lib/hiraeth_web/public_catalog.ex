@@ -107,6 +107,24 @@ defmodule HiraethWeb.PublicCatalog do
   @spec book(String.t()) :: PublicProjection.Book.t() | nil
   def book(slug), do: PublicWorks.get(slug)
 
+  @doc """
+  Returns up to `limit` other public works from the same press as `book`.
+
+  Used by the book-page more-from tray. Returns `[]` when the record has no
+  press or no other public volume.
+  """
+  @spec more_from_publisher(PublicProjection.Book.t() | nil) :: [PublicProjection.Book.t()]
+  @spec more_from_publisher(PublicProjection.Book.t() | nil, pos_integer()) ::
+          [PublicProjection.Book.t()]
+  def more_from_publisher(book, limit \\ 4)
+
+  def more_from_publisher(%PublicProjection.Book{publisher_slug: slug, slug: current}, limit)
+      when is_binary(slug) and slug != "" do
+    PublicWorks.more_from_publisher(slug, current, limit)
+  end
+
+  def more_from_publisher(_book, _limit), do: []
+
   defp books_for_work_ids([]), do: []
 
   defp books_for_work_ids(work_ids) do

@@ -21,9 +21,9 @@
       from the running site.
     </p>
     <p class="spec-meta">
-      <span><strong>Version</strong> 4.0 · Hiraeth</span>
+      <span><strong>Version</strong> 4.1 · Hiraeth</span>
       <span><strong>Source</strong> design/home.html</span>
-      <span><strong>Prototypes</strong> <a href="home.html">home</a> · <a href="browse.html">books</a> · <a href="book.html">book</a> · <a href="publishers.html">publishers</a> · <a href="press.html">press</a> · <a href="series.html">collections</a></span>
+      <span><strong>Prototypes</strong> <a href="home.html">home</a> · <a href="browse.html">books</a> · <a href="book.html">book</a> · <a href="publishers.html">publishers</a> · <a href="press.html">press</a> · <a href="series.html">collections</a> · <a href="shelf.html">shelf</a></span>
     </p>
     <div class="spec-viewport" aria-live="polite">
       <span>Viewport <strong id="spec-width">—</strong></span>
@@ -195,17 +195,17 @@
               <a href="#components">Publishers</a>
               <a href="#components">Collections</a>
             </nav>
-            <div class="sb-tools"><span class="sb-tool">Search</span></div>
+            <div class="sb-tools"><span class="sb-tool">Search</span><span class="sb-tool">Shelf 0</span></div>
           </div>
         </header>
         <div style="padding: 18px var(--sb-gutter); color: var(--sb-muted); font-size: 10px;">Header height follows its 19px vertical padding; rules are 1px var(--sb-line).</div>
         <footer class="sb-footer">
           <div class="sb-footer__in">
             <a class="sb-footer__brand" href="#components">Hiraeth<span class="sb-brand__dot">.</span></a>
-            <nav class="sb-footer__nav"><a href="#components">Books</a><a href="#components">Publishers</a><a href="#components">Collections</a></nav>
+            <nav class="sb-footer__nav"><a href="#components">Books</a><a href="#components">Publishers</a><a href="#components">Collections</a><a href="#components">Shelf</a></nav>
             <p class="sb-footer__counts">7,582 books / 19 presses / 8 collections</p>
           </div>
-          <div class="sb-footer__base"><span>Hiraeth, 2026</span><span>7,582 volumes indexed</span></div>
+          <div class="sb-footer__base"><span>Hiraeth, 2026</span><span>An index of independent literary presses</span></div>
         </footer>
       </div>
     </div>
@@ -290,7 +290,7 @@
             <h1>Garden</h1>
             <p class="sb-record__byline">Hiroko Oyamada</p>
             <p class="sb-description">Crabs scurrying over a landfill. Huge tadpoles writhing in a pond. A gecko stuck to the window. Nature mysteriously creeps in and overruns the realm of humans in this collection of stories.</p>
-            <div class="sb-record__actions"><span class="sb-button">Publisher page <span>→</span></span><span class="sb-link">More from this press →</span></div>
+            <div class="sb-record__actions"><span class="sb-button" aria-pressed="true">Saved</span><span class="sb-link">Publisher page ↗</span></div>
             <dl class="sb-facts">
               <div class="sb-fact"><dt>Publisher</dt><dd>Archipelago Books</dd></div>
               <div class="sb-fact"><dt>Publication</dt><dd>2026-04-14</dd></div>
@@ -300,6 +300,51 @@
             <section class="sb-editions"><h2>Editions</h2><div class="sb-edition sb-edition--head"><span>Format</span><span>ISBN-13</span><span>Publication</span></div><div class="sb-edition"><span>Paperback</span><span>9781962770651</span><span>2026-04-14</span></div><div class="sb-edition"><span>Ebook</span><span>9781962770668</span><span>2026-04-14</span></div></section>
           </div>
         </article>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead" id="more-from">Book-page more-from tray</h3>
+    <p class="spec-note">
+      The foot of every record closes with a tray of the same press's other
+      volumes. It is a bounded reading suggestion, not a second catalogue: at
+      most four records, never the record being viewed, and a single link to the
+      press dossier for the complete list. When the press has no other public
+      record the tray is omitted rather than filled with unrelated titles.
+    </p>
+
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <section class="sb-shelf sb-more" aria-labelledby="spec-more-title">
+          <div class="sb-shelf__head">
+            <div>
+              <h2 id="spec-more-title">More from Dalkey Archive</h2>
+              <p>Selected volumes</p>
+            </div>
+            <a class="sb-link" href="#components">All records →</a>
+          </div>
+          <div class="sb-shelf__grid">
+            <a class="sb-book" href="#components">
+              <span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Dalkey Archive</span><span class="sb-fallback__title">The Stars</span><span class="sb-fallback__author">Carlos Maleno</span></span></span>
+              <span class="sb-book__meta"><span class="sb-book__title">The Stars</span><span class="sb-book__author">Carlos Maleno</span></span>
+              <span class="sb-book__foot"><span>Dalkey Archive</span><span>2027</span></span>
+            </a>
+            <a class="sb-book" href="#components">
+              <span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Dalkey Archive</span><span class="sb-fallback__title">My Paris</span><span class="sb-fallback__author">Gail Scott</span></span></span>
+              <span class="sb-book__meta"><span class="sb-book__title">My Paris</span><span class="sb-book__author">Gail Scott</span></span>
+              <span class="sb-book__foot"><span>Dalkey Archive</span><span>2027</span></span>
+            </a>
+            <a class="sb-book" href="#components">
+              <span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Dalkey Archive</span><span class="sb-fallback__title">The Terrible</span><span class="sb-fallback__author">Michael Bible</span></span></span>
+              <span class="sb-book__meta"><span class="sb-book__title">The Terrible</span><span class="sb-book__author">Michael Bible</span></span>
+              <span class="sb-book__foot"><span>Dalkey Archive</span><span>2027</span></span>
+            </a>
+            <a class="sb-book" href="#components">
+              <span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Dalkey Archive</span><span class="sb-fallback__title">B/Moonclocks</span><span class="sb-fallback__author">Arno Schmidt</span></span></span>
+              <span class="sb-book__meta"><span class="sb-book__title">B/Moonclocks</span><span class="sb-book__author">Arno Schmidt</span></span>
+              <span class="sb-book__foot"><span>Dalkey Archive</span><span>2027</span></span>
+            </a>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -318,6 +363,170 @@
     </div>
   </section>
 
+  <section class="spec-section" id="shelf">
+    <h2>Local shelf</h2>
+    <p class="spec-note">
+      The shelf is a browser-local reading list: no account, no server write,
+      and no third-party storage. It is available from the header on every
+      public page, from a <em>Save to shelf</em> control on each record, and from
+      the <code>/shelf</code> page. The list stores the metadata shown at the
+      moment of saving, so it can render without a catalogue request.
+    </p>
+
+    <div class="spec-grid spec-grid--3">
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">01 · Capture</p>
+        <p class="spec-card-title" style="margin-top: 8px;">One record, one toggle</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">The record action is a toggle button. The pressed state is both visible (“Saved”) and announced.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">02 · Review</p>
+        <p class="spec-card-title" style="margin-top: 8px;">Dialog and page</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">The header opens a compact dialog; the shelf page carries the numbered reading list, remove actions, and plain-text export.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">03 · Privacy</p>
+        <p class="spec-card-title" style="margin-top: 8px;">This browser only</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">Nothing is uploaded. The control copy always says “Saved in this browser.”</p>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Storage contract</h3>
+    <table class="spec-table" aria-label="Shelf storage contract">
+      <thead><tr><th>Field</th><th>Type</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td><code>slug</code></td><td class="spec-value">string</td><td>Required. Public book slug, ≤180 characters; the deduplication key.</td></tr>
+        <tr><td><code>title</code></td><td class="spec-value">string</td><td>Required. Plain text, ≤300 characters; rendered as text, never HTML.</td></tr>
+        <tr><td><code>author</code></td><td class="spec-value">string</td><td>Optional display names, ≤300 characters.</td></tr>
+        <tr><td><code>publisher</code></td><td class="spec-value">string</td><td>Optional press name, ≤300 characters.</td></tr>
+        <tr><td><code>publisherSlug</code></td><td class="spec-value">string</td><td>Optional; only used to build a same-origin press link.</td></tr>
+        <tr><td><code>year</code></td><td class="spec-value">string</td><td>Optional; four digits, or empty.</td></tr>
+        <tr><td><code>cover</code></td><td class="spec-value">string</td><td>Optional. Same-origin path under <code>/covers/cache/</code> only; anything else becomes a typographic fallback.</td></tr>
+        <tr><td><code>formats</code></td><td class="spec-value">string[]</td><td>Optional; at most six labels of ≤40 characters.</td></tr>
+        <tr><td><code>isbn</code></td><td class="spec-value">string</td><td>Optional; ≤40 characters, exported only.</td></tr>
+        <tr><td><code>savedAt</code></td><td class="spec-value">ISO string</td><td>Optional client timestamp; never used for ordering.</td></tr>
+      </tbody>
+    </table>
+    <p class="spec-note">
+      Canonical key: <code>hiraeth-shelf-v1</code>. Value: a JSON array in
+      newest-saved-first order, capped at 200 records. A corrupt value, a
+      missing or malformed slug, or an unsafe cover URL is discarded on read;
+      the page must still render. If <code>localStorage</code> is unavailable,
+      the shelf stays in memory for the page session and the UI reports no
+      failure.
+    </p>
+
+    <h3 class="spec-subhead">Controls and states</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <div class="spec-save-row" style="padding-top: 20px; padding-bottom: 20px;">
+          <span class="sb-button">Save to shelf</span>
+          <span class="sb-button" aria-pressed="true">Saved</span>
+          <span class="sb-link">Open the shelf page →</span>
+        </div>
+        <div class="spec-shelf-demo">
+          <dialog open class="sb-dialog sb-dialog--shelf spec-shelf-dialog" aria-labelledby="spec-shelf-dialog-title">
+            <div class="sb-dialog__head">
+              <h2 class="sb-dialog__title" id="spec-shelf-dialog-title">Your shelf</h2>
+              <button class="sb-dialog__close" type="button">Close</button>
+            </div>
+            <div class="sb-shelf-empty">
+              <p>Nothing saved yet. Open a record and choose Save to shelf.</p>
+              <a href="#components">Browse the catalogue →</a>
+            </div>
+            <a class="sb-shelf-page-link" href="#components">Open the shelf page →</a>
+            <p class="sb-dialog__hint">Saved in this browser.</p>
+          </dialog>
+
+          <div class="sb-shelf-page">
+            <div class="sb-listbar"><h2>Reading list</h2><p>Newest saved first</p></div>
+            <article class="sb-shelf-row">
+              <span class="sb-shelf-row__no">01</span>
+              <span class="sb-shelf-row__cover"><span class="sb-fallback"><span class="sb-fallback__press">Archipelago Books</span><span class="sb-fallback__title">Garden</span><span class="sb-fallback__author">Hiroko Oyamada</span></span></span>
+              <div class="sb-shelf-row__body">
+                <h3><a href="#components">Garden</a></h3>
+                <p class="sb-shelf-row__author">Hiroko Oyamada</p>
+                <p class="sb-shelf-row__meta"><a href="#components">Archipelago Books</a><span aria-hidden="true">/</span><span>2026</span><span aria-hidden="true">/</span><span>Paperback, Ebook</span></p>
+              </div>
+              <div class="sb-shelf-row__actions">
+                <a class="sb-link" href="#components">Open record →</a>
+                <button type="button">Remove</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Empty shelf and starter shelf</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <div class="sb-shelf-page">
+          <div class="sb-empty sb-empty--shelf">
+            <p class="sb-kicker">Nothing saved yet</p>
+            <h2>A shelf waiting to be filled.</h2>
+            <p>Save any record with “Save to shelf” and it will keep here, in this browser, ready to export as a reading list.</p>
+            <div class="sb-start">
+              <div class="sb-start__head"><p class="sb-kicker">A place to start</p><a class="sb-link" href="#components">All books →</a></div>
+              <div class="sb-start__grid">
+                <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Archipelago Books</span><span class="sb-fallback__title">Garden</span><span class="sb-fallback__author">Hiroko Oyamada</span></span></span><span class="sb-book__meta"><span class="sb-book__title">Garden</span><span class="sb-book__author">Hiroko Oyamada</span></span><span class="sb-book__foot"><span>Archipelago Books</span><span>2026</span></span></a>
+                <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">New Directions</span><span class="sb-fallback__title">The Complete Stories</span><span class="sb-fallback__author">Ingeborg Bachmann</span></span></span><span class="sb-book__meta"><span class="sb-book__title">The Complete Stories</span><span class="sb-book__author">Ingeborg Bachmann</span></span><span class="sb-book__foot"><span>New Directions</span><span>2026</span></span></a>
+                <a class="sb-book" href="#components"><span class="sb-cover-well"><span class="sb-fallback"><span class="sb-fallback__press">Seagull Books</span><span class="sb-fallback__title">Fear Reverence Terror</span><span class="sb-fallback__author">Carlo Ginzburg</span></span></span><span class="sb-book__meta"><span class="sb-book__title">Fear Reverence Terror</span><span class="sb-book__author">Carlo Ginzburg</span></span><span class="sb-book__foot"><span>Seagull Books</span><span>2026</span></span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Behaviour and failure</h3>
+    <table class="spec-table" aria-label="Shelf behaviour contract">
+      <thead><tr><th>Event</th><th>Required result</th></tr></thead>
+      <tbody>
+        <tr><td>Save pressed</td><td>Record is prepended, persisted, the button reads “Saved” with <code>aria-pressed="true"</code>, and the count updates.</td></tr>
+        <tr><td>Saved pressed again</td><td>Record is removed, persisted, and the button returns to “Save to shelf”.</td></tr>
+        <tr><td>Header Shelf opened</td><td>The dialog renders the current list and calls <code>showModal()</code>; focus moves into the dialog.</td></tr>
+        <tr><td>Close, Escape, or backdrop</td><td>The dialog closes; focus returns to the opener; body scrolling is restored.</td></tr>
+        <tr><td>Remove in dialog or page</td><td>The row disappears immediately and the count updates; the shelf remains open.</td></tr>
+        <tr><td>Export</td><td>A plain-text reading list downloads. Nothing is sent to the server.</td></tr>
+        <tr><td>Another tab writes</td><td>The <code>storage</code> event re-renders the count, dialog, and page.</td></tr>
+        <tr><td>Corrupt or unavailable storage</td><td>Invalid records are ignored; unavailable storage falls back to session memory. No console-breaking error or blank page.</td></tr>
+        <tr><td>JavaScript disabled</td><td>The dialog is inert and the shelf page keeps its server-rendered empty state and starter shelf.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="spec-subhead">Accessibility</h3>
+    <div class="spec-grid spec-grid--2">
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Toggle.</strong> The save control is a real <code>&lt;button type="button"&gt;</code> with <code>aria-pressed</code>; its accessible name includes the book title and starts with the visible “Save to shelf” / “Saved” text, so it satisfies label-in-name.</span></li>
+          <li><span class="spec-no">02</span><span><strong>Dialog.</strong> Native <code>&lt;dialog&gt;</code> with <code>aria-labelledby</code>, a visible Close control, Escape support, and focus return.</span></li>
+          <li><span class="spec-no">03</span><span><strong>Announcements.</strong> A polite live region reports save and remove actions; the header count is not a live region on load.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Targets.</strong> Save, Close, Remove, header, menu, and footer controls are at least <code>--sb-target-min</code> (44px) tall on touch bands.</span></li>
+        </ul>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Headings.</strong> Shelf page: h1 “Shelf”, h2 “Reading list”, h3 per row. Empty state: h2 “A shelf waiting to be filled.”</span></li>
+          <li><span class="spec-no">02</span><span><strong>Images.</strong> Saved covers use “Cover for {title}” alt text; missing covers render the labelled typographic fallback.</span></li>
+          <li><span class="spec-no">03</span><span><strong>No invented data.</strong> The shelf stores only what the record displayed; it never fills missing authors, dates, or covers.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Motion.</strong> Reduced motion removes transition and smooth scroll; no layout animation is introduced.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Verification</h3>
+    <ul class="spec-check">
+      <li>Save two records, reload, and confirm the header count, dialog, and shelf page agree in newest-first order.</li>
+      <li>Remove a record from the dialog and from the shelf page; both persist and update the count.</li>
+      <li>Open the shelf with the keyboard, press Escape, and confirm focus returns to the Shelf control.</li>
+      <li>Inject corrupt JSON, an unknown slug, and an external cover URL; the page renders without script errors and drops the invalid values.</li>
+      <li>Export the shelf and confirm the file lists title, author, press, year, ISBN when present, and the absolute book URL.</li>
+      <li>Assert the more-from tray is bounded at four records, excludes the current record, and only contains the same press.</li>
+      <li>Capture <code>/shelf</code> and a book at 320, 390, 760, 1040, and 1440 px; assert no horizontal overflow and 44px targets on touch bands.</li>
+    </ul>
+  </section>
+
   <section class="spec-section" id="interaction">
     <h2>Interaction and accessibility</h2>
     <div class="spec-grid spec-grid--2">
@@ -327,7 +536,10 @@
           <li><span class="spec-no">02</span><span><strong>Hover.</strong> Colour and 1px border changes only; no lift, scale, or shadow. Transition 140ms ease.</span></li>
           <li><span class="spec-no">03</span><span><strong>Motion.</strong> <code>prefers-reduced-motion</code> removes smooth scroll and transitions.</span></li>
           <li><span class="spec-no">04</span><span><strong>Contrast.</strong> Ink on paper ≥ 15:1; muted on paper ≥ 5.4:1; green-ink on green ≥ 7:1.</span></li>
-          <li><span class="spec-no">05</span><span><strong>Targets.</strong> Minimum 30px tall for page controls; 44px recommended in mobile filter rows.</span></li>
+          <li><span class="spec-no">05</span><span><strong>Targets.</strong> Minimum 30px tall for page controls; header tools, menu rows, shelf controls, and footer links use <code>--sb-target-min</code> (44px) at ≤1040px.</span></li>
+          <li><span class="spec-no">06</span><span><strong>Disclosure.</strong> The Menu panel is anchored to the header, not the viewport. Rows are 44px; Escape and any link click close it; the footer navigation stays visible below 900px.</span></li>
+          <li><span class="spec-no">07</span><span><strong>Captions.</strong> Hero and press captions wrap the title; the author is never clipped or ellipsised. Title and author align to the cover's left edge.</span></li>
+          <li><span class="spec-no">08</span><span><strong>Micro-type.</strong> Functional labels never fall below <code>--sb-text-micro</code> (10px); secondary labels set 10–11px with tracking reduced to compensate. Only decorative fallback text inside tiny cover thumbnails is exempt.</span></li>
         </ul>
       </div>
       <div class="spec-frame spec-frame--paper">
@@ -349,10 +561,13 @@
       <tbody>
         <tr><td>Tokens</td><td class="spec-value">assets/css/tokens.css</td><td>Single source; names are stable API.</td></tr>
         <tr><td>Components</td><td class="spec-value">assets/css/hiraeth.css</td><td>Ports the prototype rules and adds catalogue-only states.</td></tr>
-        <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header, mobile menu, colophon footer, flash.</td></tr>
+        <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header disclosure, shelf control and dialog, colophon footer, flash.</td></tr>
         <tr><td>Home</td><td class="spec-value">lib/hiraeth_web/live/home_live.ex</td><td>Featured forthcoming hero, ledger, four random picks, presses.</td></tr>
         <tr><td>Books</td><td class="spec-value">lib/hiraeth_web/live/browse_live/*</td><td>Filter tray, covers/index views, pager.</td></tr>
-        <tr><td>Book</td><td class="spec-value">lib/hiraeth_web/live/book_live/*</td><td>Record, facts, praise, reviews, editions, subjects.</td></tr>
+        <tr><td>Book</td><td class="spec-value">lib/hiraeth_web/live/book_live/*</td><td>Record, facts, praise, reviews, editions, subjects, save control, more-from tray.</td></tr>
+        <tr><td>More-from query</td><td class="spec-value">lib/hiraeth/catalog/public_works.ex, lib/hiraeth_web/public_catalog.ex</td><td>Bounded, same-press, current-record-excluded suggestion read.</td></tr>
+        <tr><td>Local shelf</td><td class="spec-value">assets/js/shelf.js, lib/hiraeth_web/controllers/catalog_page_html/shelf.html.heex</td><td>localStorage capture, dialog, shelf page, export, cross-tab sync.</td></tr>
+        <tr><td>Header behaviour</td><td class="spec-value">assets/js/chrome.js</td><td>Header-anchored Menu, Escape and link-click close, 44px rows.</td></tr>
         <tr><td>Publishers / collections / contributors</td><td class="spec-value">lib/hiraeth_web/live/{publishers,series,contributors}_live*</td><td>Pagehead, index rows, profile headers, book grids.</td></tr>
         <tr><td>Search</td><td class="spec-value">lib/hiraeth_web/live/search_live/*</td><td>Search field, results grid, empty state.</td></tr>
         <tr><td>Cover component</td><td class="spec-value">lib/hiraeth_web/components/catalog_components.ex</td><td>Same-origin cover or labelled typographic fallback.</td></tr>
@@ -361,18 +576,22 @@
 
     <h3 class="spec-subhead">Verification gate</h3>
     <ul class="spec-check">
-      <li>Capture <code>/</code>, <code>/browse</code>, a book, publishers, a press, collections, a collection, contributors, and search at 390, 560, 760, 834, 900, 1040, 1180, 1280, and 1440 CSS px.</li>
+      <li>Capture <code>/</code>, <code>/browse</code>, a book, <code>/shelf</code>, publishers, a press, collections, a collection, contributors, and search at 390, 560, 760, 834, 900, 1040, 1180, 1280, and 1440 CSS px, plus 320px overflow coverage.</li>
       <li>Assert the sheet inset is 6 / 8 / 18px by band and never exceeds 1640px total width.</li>
       <li>Assert the gutter equals the clamp value at every captured width (within 0.5px).</li>
       <li>Assert hero h1 uses the short/medium/long/xlong tier for its title length and never overflows the copy column.</li>
+      <li>Assert the hero caption wraps a long title and never clips the author.</li>
       <li>Assert shelf and browse grids are 4 / 3 / 2 columns at the specified bands, with no horizontal scroll.</li>
+      <li>Assert the Menu panel is anchored to the header at 390–1040px, every row is ≥44px, Escape and link clicks close it, and the footer navigation remains present.</li>
+      <li>Assert no functional label renders below 10px and only decorative cover-fallback microtext remains smaller.</li>
       <li>Assert every interactive element has a visible focus ring and no hover transform or shadow.</li>
       <li>Assert no remote font, script, stylesheet, or image URL appears in the rendered page.</li>
+      <li>Assert the local shelf survives reload, the dialog traps focus and returns it, and corrupt storage cannot blank the page.</li>
     </ul>
   </section>
 
   <footer class="spec-footer">
-    <span>Hiraeth · design system 4.0 · tokens read from assets/css/tokens.css</span>
+    <span>Hiraeth · design system 4.1 · tokens read from assets/css/tokens.css</span>
     <span><a href="home.html">Open the homepage prototype →</a></span>
   </footer>
 </main>
@@ -414,7 +633,9 @@
 
   const typeTokens = [
     ["--sb-serif", "Display, prose, titles"],
-    ["--sb-sans", "Labels, controls, captions, numbers"]
+    ["--sb-sans", "Labels, controls, captions, numbers"],
+    ["--sb-text-micro", "Functional micro-type floor"],
+    ["--sb-text-micro-lg", "Secondary label size"]
   ];
   const typeHost = document.getElementById("token-type");
   typeTokens.forEach(([name, role]) => {
@@ -431,6 +652,7 @@
     ["--sb-sheet-radius", "Sheet corner radius"],
     ["--sb-tray-radius", "Tray and panel radius"],
     ["--sb-cover-radius", "Cover image radius"],
+    ["--sb-target-min", "Touch target floor"],
     ["--sb-transition", "Standard interaction transition"],
     ["--sb-ease", "Motion curve"]
   ];
@@ -445,8 +667,10 @@
   const tokenBlock = document.getElementById("token-block");
   const allTokens = ["--sb-sage", "--sb-tray", "--sb-paper", "--sb-ink", "--sb-muted",
     "--sb-green", "--sb-green-hover", "--sb-green-ink", "--sb-line", "--sb-line-dark",
-    "--sb-serif", "--sb-sans", "--sb-sheet-max", "--sb-sheet-inset", "--sb-gutter",
-    "--sb-sheet-radius", "--sb-tray-radius", "--sb-cover-radius", "--sb-transition"];
+    "--sb-serif", "--sb-sans", "--sb-text-micro", "--sb-text-micro-lg",
+    "--sb-sheet-max", "--sb-sheet-inset", "--sb-gutter",
+    "--sb-sheet-radius", "--sb-tray-radius", "--sb-cover-radius", "--sb-target-min",
+    "--sb-transition"];
   tokenBlock.textContent = ":root {\n" +
     allTokens.map((name) => "  " + name + ": " + value(name) + ";").join("\n") +
     "\n}";
@@ -486,7 +710,7 @@
     ["Browse grid", (w) => (w <= 760 ? "2" : w <= 1280 ? "3" : "4")],
     ["Press list", (w) => (w <= 900 ? "1" : "2")],
     ["Record columns", (w) => (w <= 900 ? "1" : "2")],
-    ["Footer", (w) => (w <= 760 ? "Stacked" : w <= 900 ? "Brand + counts" : "3 columns")]
+    ["Footer", (w) => (w <= 900 ? "Stacked + nav" : "3 columns")]
   ];
 
   const body = document.getElementById("responsive-body");

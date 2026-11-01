@@ -25,6 +25,8 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/hiraeth"
 import topbar from "../vendor/topbar"
+import {initChrome} from "./chrome"
+import {initShelf} from "./shelf"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
@@ -46,6 +48,11 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
+
+// Site chrome and the browser-local shelf. Both use document-level listeners so
+// they keep working across LiveView patches.
+initChrome()
+initShelf()
 
 // The lines below enable quality of life phoenix_live_reload
 // development features:

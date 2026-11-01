@@ -44,10 +44,32 @@ defmodule HiraethWeb.CatalogPageController do
         )
 
       book ->
+        related = PublicCatalog.more_from_publisher(book, 4)
+
         cached_page(conn, {:book, slug}, 300, fn ->
-          render_page(:book, page_title: book.title, book: book, catalog_count: nil)
+          render_page(:book,
+            page_title: book.title,
+            book: book,
+            related: related,
+            catalog_count: nil
+          )
         end)
     end
+  end
+
+  def shelf(conn, _params) do
+    starters = PublicCatalog.home_selection(3).recent
+    publishers = PublicCatalog.publishers()
+
+    cached_page(conn, {:shelf}, 60, fn ->
+      render_page(:shelf,
+        page_title: "Shelf",
+        starters: starters,
+        catalog_count: PublicCatalog.book_count(),
+        press_count: length(publishers),
+        series_count: length(PublicCatalog.series())
+      )
+    end)
   end
 
   def publishers(conn, _params) do

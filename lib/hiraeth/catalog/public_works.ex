@@ -92,6 +92,40 @@ defmodule Hiraeth.Catalog.PublicWorks do
     |> Enum.map(&decode!/1)
   end
 
+  @doc """
+  Returns a bounded same-press suggestion set, excluding the current record.
+
+  This is the book-page "more from" read: it never crosses presses, never
+  includes the viewed work, and decodes at most `limit` payloads. Covered works
+  sort first so the tray stays visual without fabricating anything.
+  """
+  @spec more_from_publisher(String.t()) :: [PublicProjection.Book.t()]
+  @spec more_from_publisher(String.t(), String.t() | nil) :: [PublicProjection.Book.t()]
+  @spec more_from_publisher(String.t(), String.t() | nil, pos_integer()) ::
+          [PublicProjection.Book.t()]
+  def more_from_publisher(slug, exclude_slug \\ nil, limit \\ 4) when is_binary(slug) do
+    limit = limit |> max(1) |> min(12)
+
+    query = from(work in PublicWork, where: work.publisher_slug == ^slug and work.is_book)
+
+    query =
+      if is_binary(exclude_slug) and exclude_slug != "" do
+        where(query, [work], work.slug != ^exclude_slug)
+      else
+        query
+      end
+
+    query
+    |> order_by([work],
+      desc: work.has_cover,
+      desc_nulls_last: work.newest_sort,
+      asc: work.title_sort
+    )
+    |> limit(^limit)
+    |> Repo.all()
+    |> Enum.map(&decode!/1)
+  end
+
   @spec publisher_summaries() :: [map()]
   def publisher_summaries do
     samples = cover_samples_by_publisher()

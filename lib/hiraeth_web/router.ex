@@ -76,6 +76,7 @@ defmodule HiraethWeb.Router do
     get "/sitemap.xml", SitemapController, :sitemap
     get "/robots.txt", SitemapController, :robots
     get "/", CatalogPageController, :home
+    get "/shelf", CatalogPageController, :shelf
     live "/browse", BrowseLive, :index
     live "/search", SearchLive, :index
     get "/contributors", CatalogPageController, :contributors

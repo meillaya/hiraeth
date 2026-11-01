@@ -5,6 +5,7 @@ defmodule HiraethWeb.BookLive.Components do
   alias HiraethWeb.CatalogText
 
   attr :book, :map, default: nil
+  attr :related, :list, default: []
 
   def detail(assigns) do
     ~H"""
@@ -63,23 +64,36 @@ defmodule HiraethWeb.BookLive.Components do
             </section>
 
             <div class="sb-record__actions">
+              <button
+                id="book-save-shelf"
+                class="sb-button"
+                type="button"
+                data-save
+                data-save-slug={@book.slug}
+                data-save-title={@book.title}
+                data-save-author={role_names(@book[:authors])}
+                data-save-publisher={@book.publisher}
+                data-save-publisher-slug={@book.publisher_slug}
+                data-save-year={published_year(@book)}
+                data-save-formats={format_summary(@book[:formats])}
+                data-save-isbn={identifier_line(@book)}
+                aria-pressed="false"
+              >
+                <span data-save-label>Save to shelf</span>
+              </button>
               <.link
                 :if={@book[:storefront_url]}
                 id="book-storefront-cta"
                 href={@book.storefront_url}
-                class="sb-button"
+                class="sb-link"
                 target="_blank"
                 rel="noopener"
               >
-                Publisher page <span>→</span>
+                Publisher page <span aria-hidden="true">↗</span>
               </.link>
-              <.link
-                :if={@book[:publisher_slug]}
-                navigate={~p"/browse?publisher=#{@book.publisher_slug}"}
-                class="sb-link"
-              >
-                More from this press →
-              </.link>
+              <a :if={@related != []} class="sb-link" href="#more-from-press">
+                More from this press <span aria-hidden="true">↓</span>
+              </a>
             </div>
 
             <dl class="sb-facts">
@@ -190,6 +204,44 @@ defmodule HiraethWeb.BookLive.Components do
             </section>
           </div>
         </article>
+
+        <section
+          :if={@related != [] and @book[:publisher_slug]}
+          id="more-from-press"
+          class="sb-shelf sb-more"
+          aria-labelledby="related-title"
+        >
+          <div class="sb-shelf__head">
+            <div>
+              <h2 id="related-title">More from {@book.publisher || "this press"}</h2>
+              <p>Selected volumes</p>
+            </div>
+            <.link navigate={~p"/publishers/#{@book.publisher_slug}"} class="sb-link">
+              All records →
+            </.link>
+          </div>
+          <div class="sb-shelf__grid">
+            <.link
+              :for={related <- @related}
+              navigate={~p"/books/#{related.slug}"}
+              class="sb-book"
+            >
+              <span class="sb-cover-well">
+                <CatalogComponents.catalog_cover book={related} variant={:card} />
+              </span>
+              <span class="sb-book__meta">
+                <span class="sb-book__title">{related.title}</span>
+                <span :if={role_names(related[:authors])} class="sb-book__author">
+                  {role_names(related.authors)}
+                </span>
+              </span>
+              <span class="sb-book__foot">
+                <span>{related.publisher || @book.publisher || "Unknown press"}</span>
+                <span :if={published_year(related) != ""}>{published_year(related)}</span>
+              </span>
+            </.link>
+          </div>
+        </section>
       <% else %>
         <div id="book-not-found" class="sb-empty">
           <h2>No book matches.</h2>
@@ -275,6 +327,9 @@ defmodule HiraethWeb.BookLive.Components do
 
   defp published_date(%{published_on: %Date{} = date}), do: Calendar.strftime(date, "%Y-%m-%d")
   defp published_date(_book), do: "Not listed"
+
+  defp published_year(%{published_on: %Date{} = date}), do: to_string(date.year)
+  defp published_year(_book), do: ""
 
   defp identifier_line(%{identifiers: identifiers}) when is_list(identifiers),
     do: identifiers |> Enum.reject(&is_nil/1) |> Enum.join(", ") |> blank_to_nil()

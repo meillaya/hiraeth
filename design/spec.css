@@ -457,6 +457,35 @@
   height: 140px;
 }
 
+.spec-shelf-demo {
+  display: grid;
+  gap: 18px;
+}
+
+.spec-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  padding: 0 var(--sb-gutter);
+}
+
+.spec-shelf-dialog {
+  position: static;
+  width: 100%;
+  max-height: none;
+  margin: 0;
+}
+
+.spec-shelf-dialog::backdrop {
+  display: none;
+}
+
+.spec-embed .sb-more {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .spec-embed .sb-presses {
   padding: 22px var(--sb-gutter);
 }

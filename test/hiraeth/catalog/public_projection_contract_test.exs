@@ -182,4 +182,22 @@ defmodule Hiraeth.Catalog.PublicProjectionContractTest do
 
     assert titles == Enum.sort_by(titles, &String.downcase/1)
   end
+
+  test "more_from_publisher is bounded, same-press, and excludes the current work" do
+    publisher = Enum.find(PublicCatalog.publishers(), &(&1.editions_count > 1))
+    assert publisher, "the committed corpus must contain a press with multiple public works"
+
+    book = PublicCatalog.book_page(%{"publisher" => publisher.slug}, 1, 1).entries |> hd()
+    related = PublicCatalog.more_from_publisher(book, 4)
+
+    assert length(related) in 1..4
+    assert Enum.all?(related, &match?(%PublicProjection.Book{}, &1))
+    assert Enum.all?(related, &(&1.publisher_slug == book.publisher_slug))
+    refute Enum.any?(related, &(&1.work_id == book.work_id))
+    refute Enum.any?(related, &(&1.slug == book.slug))
+
+    assert PublicCatalog.more_from_publisher(book, 2) |> length() <= 2
+    assert PublicCatalog.more_from_publisher(nil) == []
+    assert PublicCatalog.more_from_publisher(%{book | publisher_slug: nil}) == []
+  end
 end

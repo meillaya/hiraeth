@@ -53,6 +53,14 @@
   --sb-weight-medium: 500;
   --sb-weight-semibold: 600;
 
+  /* Functional micro-type floor. Only decorative cover-fallback microtext
+     inside tiny thumbnails may go below this. */
+  --sb-text-micro: 10px;
+  --sb-text-micro-lg: 11px;
+
+  /* Interaction floor for header, shelf, and footer controls on touch bands. */
+  --sb-target-min: 44px;
+
   /* Layout */
   --sb-sheet-max: 1640px;
   --sb-sheet-inset: 18px;
