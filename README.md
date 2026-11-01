@@ -2,7 +2,7 @@
 
 Hiraeth is a Phoenix LiveView and Ash catalog for browsing curated independent publisher books with provenance-aware imports, source provenance, local cover caching, and an autonomous ingestion pipeline.
 
-It is browser-first: the primary surface is the LiveView catalog. It also serves a versioned, read-only JSON API at `/api/v1` from the same typed projections. Public routes include `/browse`, `/search`, `/publishers`, `/series`, `/contributors`, contributor role filters such as `/contributors?role=translator`, and book detail pages.
+It is browser-first: the catalogue is served from a materialized public read model, with server-rendered record pages and LiveView for browse/search. It also serves a versioned, read-only JSON API at `/api/v1` from the same typed projections. Public routes include `/browse`, `/search`, `/publishers`, `/series`, `/contributors`, contributor role filters such as `/contributors?role=translator`, and book detail pages.
 
 ## Live deployment
 
@@ -27,6 +27,22 @@ FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 | Contributors | Search |
 | --- | --- |
 | [![Contributors page](docs/screenshots/hiraeth-contributors.png)](https://web-production-a31e0.up.railway.app/contributors) | [![Search page](docs/screenshots/hiraeth-search.png)](https://web-production-a31e0.up.railway.app/search?q=the) |
+
+## Public read model and worker roles
+
+The browser and API read `catalog_public_works`, a derived table built by `Hiraeth.Catalog.PublicWorkProjection`. Rebuild it after a full import or when recovering a stale projection:
+
+```sh
+mix hiraeth.public_projection.rebuild --json
+```
+
+Production runs with `HIRAETH_PUBLIC_READ_MODEL=on`. The read model is normally refreshed by `Hiraeth.Oban.PublicProjectionWorker` after imports and cover changes. To split background work from HTTP:
+
+- web service: `HIRAETH_SERVICE_ROLE=web`, `PHX_SERVER=true`
+- worker service: `HIRAETH_SERVICE_ROLE=worker`, `PHX_SERVER=false`, no public domain
+- local/test: `HIRAETH_SERVICE_ROLE=all`
+
+The worker is the only process that should run Oban and the boot cover backfill. `/ops` is a BasicAuth-protected read-only health page when `HIRAETH_OPS_USERNAME` and `HIRAETH_OPS_PASSWORD` are set.
 
 ## What is in the app
 
