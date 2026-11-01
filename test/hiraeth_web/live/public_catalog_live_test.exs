@@ -617,9 +617,9 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     refute has_element?(publisher, "#publisher-context")
     assert has_element?(publisher, "#publisher-editions", "Rich Metadata Novel")
 
-    {series, _html} = page(conn, "/series/#{fixture.series_slug}")
-    assert page_has?(series, "#series-context", "Metadata Series")
-    assert page_has?(series, "#series-editions", "Rich Metadata Novel")
+    {:ok, series, _html} = live(conn, ~p"/series/#{fixture.series_slug}")
+    assert has_element?(series, "#series-context", "Metadata Series")
+    assert has_element?(series, "#series-editions", "Rich Metadata Novel")
   end
 
   test "series detail groups multiple formats under one sourced book", %{conn: conn} do
@@ -662,10 +662,11 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     assert [%{title: "Rich Metadata Novel", formats: formats}] = series_projection.editions
     assert Enum.map(formats, & &1.format_label) |> Enum.sort() == ["Ebook", "Paperback"]
 
-    {series, _html} = page(conn, "/series/#{fixture.series_slug}")
-    document = LazyHTML.from_fragment(series)
+    {:ok, series, _html} = live(conn, ~p"/series/#{fixture.series_slug}")
+    html = render(series)
+    document = LazyHTML.from_fragment(html)
 
-    assert page_has?(series, "#series-editions", "Paperback, Ebook")
+    assert has_element?(series, "#series-editions", "Paperback, Ebook")
 
     assert document
            |> LazyHTML.query("#series-editions h4")

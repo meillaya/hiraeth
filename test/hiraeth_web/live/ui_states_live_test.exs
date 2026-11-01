@@ -94,9 +94,9 @@ defmodule HiraethWeb.UiStatesLiveTest do
       admin
     )
 
-    {series_view, _html} = page(conn, "/series/#{series.slug}")
-    refute page_has?(series_view, "#series-unknown-order")
-    assert page_has?(series_view, "#series-editions", "Loose Leaf Noon")
+    {:ok, series_view, _html} = live(conn, ~p"/series/#{series.slug}")
+    refute has_element?(series_view, "#series-unknown-order")
+    assert has_element?(series_view, "#series-editions", "Loose Leaf Noon")
   end
 
   defp create!(resource, attrs, actor) do
