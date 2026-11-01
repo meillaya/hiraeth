@@ -43,7 +43,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 |------|----------|-------|
 | Catalog business rules | `lib/hiraeth/catalog`, `lib/hiraeth/*.ex` | Ash domains/actions first |
 | Ingestion/provenance | `lib/hiraeth/ingestion`, `lib/hiraeth/sources`, `lib/hiraeth/real_catalog` | preserve snapshots + ledgers |
-| Public browser UI | `lib/hiraeth_web/live`, `lib/hiraeth_web/public_catalog.ex` | LiveView only |
+| Public browser UI | `lib/hiraeth_web/live`, `lib/hiraeth_web/controllers/catalog_page_controller.ex`, `lib/hiraeth_web/public_catalog.ex` | static pages + LiveView browse/search |
 | Design system and tokens | `assets/css/tokens.css`, `assets/css/hiraeth.css`, `design/index.html` | single token source; spec reads the live CSS; Hiraeth is light-only |
 | Public read model | `lib/hiraeth/catalog/public_work*.ex`, `lib/hiraeth/catalog/public_works.ex` | one derived row per public work; one encoded book payload + filter/search columns |
 | Static page delivery | `lib/hiraeth_web/controllers/catalog_page_controller.ex`, `lib/hiraeth_web/page_cache.ex` | home/book/collection/contributor are controller-rendered; browse/search stay LiveView |
@@ -105,7 +105,7 @@ artifacts/qa             # QA evidence outputs (make verify, provenance audits)
 | `app.main` | FastAPI app | `sidecar/app/main.py` | sidecar routers + CORS/security posture |
 
 ## CONVENTIONS
-- LiveView owns browser UI. No React, no Vite SPA, no separate frontend app in v1.
+- LiveView owns interactive browser UI (browse/search); record, collection, contributor, and home pages are controller-rendered from the read model. No React, no Vite SPA, no separate frontend app in v1.
 - Use `agy` for substantial page/component design exploration before implementation.
 - Use TDD for domain behavior, ingestion, normalization, provenance, cover handling, and UI flows.
 - Ash resources/actions/policies are the domain source of truth; do not move business rules into controllers/templates.
