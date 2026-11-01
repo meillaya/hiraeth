@@ -73,11 +73,14 @@ reported so the next run can retry.
 - The `HiraethWeb.CoverController` refill path checks the database policy,
   fetches from R2, writes the local file atomically, and returns the same
   headers. A local hit never touches R2.
-- An object the durable store reports missing is remembered for 60 seconds in
+- An object the durable store reports missing, or holds but the proxy cannot
+  serve (over the 10 MB body cap), is remembered for 60 seconds in
   `Hiraeth.Covers.MissCache`, and the response is a `404` with
   `cache-control: public, max-age=60`. Without that, a cold replica pays a
   store round trip for the same absent cover on every page view. A later
-  `put`, `delete`, or cache expiry clears the memory.
+  `put`, `delete`, or cache expiry clears the memory. A publisher original over
+  the cap with no thumbnail or variants shows the typographic grid fallback as a
+  broken image until `mix hiraeth.covers.sync --all --missing` renders them.
 - Cards, shelves, and book heroes render a `<picture>` element with WebP and
   JPEG `srcset` entries at 200/400/800px. The 400px JPEG remains the fallback
   and the legacy thumbnail URL stays available for old payloads.

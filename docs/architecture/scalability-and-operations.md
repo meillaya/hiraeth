@@ -45,6 +45,10 @@ call only, without HTTP or JSON encoding.
 | `book(slug)` | 7.8 ms | |
 | `edition(slug)` | 7.7 ms | |
 
+These are local loopback calls. The directory rows were re-measured after the
+1 November read-path change and the deployed latency told a different story than
+the function timer; see "Directory payload transfer" below.
+
 Three observations follow from the numbers.
 
 The in-process cache is doing most of the work on repeat traffic: the book page
@@ -60,6 +64,91 @@ is the first query to watch if the corpus grows.
 Every list query does a windowed count over the same join. At 7,582 works the
 cost is tens of milliseconds; at ten times the corpus it is the first read path
 that needs a materialized count or a denormalized sort table.
+
+## Directory payload transfer
+
+Measured 1 November 2026 against the deployed service (Railway,
+`web-production-a31e0.up.railway.app`, Postgres over the private network). The
+trigger was `browse?publisher=archipelago-books` at 1.34 s while `/search` and
+`/api/v1/books` answered in 65 ms on the same node.
+
+Root cause: `catalog_public_works` stores one encoded book payload per work —
+7,565 rows, 118 MB, 16 kB on average. The press directory needed one cover
+sample per press and the collection directory needed members grouped per
+collection, and both got there by pulling **every matching row with every
+column** and reducing in Elixir. `/browse` calls both, which is why it, `/`,
+`/publishers`, and `/publishers/:slug` all paid for the same two queries.
+
+| Directory query | Rows | Payload on the wire |
+|---|---|---|
+| Publisher cover samples, before | 1,688 | 27 MB |
+| Series preview books, before | 1,184 | 19 MB |
+| Publisher cover samples, after | 17 | 305 kB |
+| Series previews, after | 32 | 586 kB |
+
+Both queries now choose the winning rows in SQL — `DISTINCT ON (publisher_slug)`
+for cover samples and `row_number() OVER (PARTITION BY series_slug)` for
+previews — and fetch payloads only for the ids that won. A directory render moved
+46 MB → 891 kB, about 52 times less data. That ratio is the whole story: the same
+queries take 45 ms and 31 ms on loopback, and 1.0 s and 0.3 s across a network.
+
+Deployed effect, warm, three runs per route, `gzip`:
+
+| Route | Before | After |
+|---|---|---|
+| `/` | 1.51 s | 0.05 s |
+| `/browse` | 1.27 s | 0.10 s |
+| `/browse?publisher=archipelago-books` | 1.34–1.48 s | 0.08 s |
+| `/publishers` | 1.26 s | 0.055 s |
+| `/publishers/archipelago-books` | 1.32 s | 0.18 s |
+| `/series` | 0.33 s | 0.078 s |
+| `/search` | 0.068 s | 0.08 s |
+| `/api/v1/books?page=1` | 0.064 s | 0.075 s |
+
+Fresh-node effect in-process, same corpus, five runs: `publishers()` 38.3 → 5.3 ms,
+`series()` 67.0 → 4.2 ms, `series_with_preview_editions()` 65.1 → 3.8 ms, with
+`publisher_options()` at 1.1 ms and `series_options()` at 0.5 ms.
+
+Three rules follow.
+
+1. Measure the wire, not only the function. The in-process timings were 20–40 ms
+   and looked healthy while the deployed page took 1.3 s, because tens of
+   megabytes crossed a WAN. Any directory query whose row count scales with the
+   corpus is a transfer problem even when its timer looks acceptable.
+2. Rank and cap in SQL. `DISTINCT ON` and window functions keep the payload fetch
+   proportional to what the page renders, not to what the corpus holds. Counting
+   is its own cheap query: `PublicWorks.count/1` exists so a header counter
+   cannot accidentally fetch and decode a page of books.
+3. A filter tray needs labels, not projections. `publisher_options/0` and
+   `series_options/0` return labels and counts; the decoded directory projection
+   stays on the pages that show covers.
+
+### Cover delivery lessons
+
+The 1.1 s 404 in the same waterfall was a separate gap, and none of it was
+query planning.
+
+- Responsive variants rendered by `CoverVariantBackfillWorker` were written to
+  disk and never uploaded, so a cold replica asked R2 for files that never
+  arrived. `cache_public_covers!/1` now uploads variant paths in every branch,
+  not just the ones that also write an original.
+- A store miss, or an object the proxy refuses to serve, is remembered for 60
+  seconds by `Hiraeth.Covers.MissCache`; the response is a `404` with
+  `cache-control: public, max-age=60`. Repeats dropped from 0.6–1.1 s to 60 ms.
+- Content-hashed variants are served `immutable` for a year by both `Plug.Static`
+  and the proxy, instead of revalidating daily.
+- One asset is still unservable: a 34.7 MB Archipelago Books original with no
+  thumbnail or variants recorded, over the proxy's 10 MB cap, so the grid falls
+  back to the original URL and the image is broken. Only that one original in
+  the cache is over the cap. The remedy is a data repair
+  (`mix hiraeth.covers.sync --all --missing` on the worker), not a code change;
+  until then the cost is one slow request per 60 s per node instead of one per
+  page view.
+
+The regression guard is `test/hiraeth_web/public_catalog_performance_test.exs`
+(query budgets plus a case asserting collection counts come from SQL while the
+detail view still carries every book) together with the directory-read
+convention in `lib/hiraeth_web/AGENTS.md`.
 
 ## Which resource fails first
 
@@ -196,17 +285,24 @@ name. It does not today.
    set `HIRAETH_COVER_STORE=s3` with the R2 variables, and the local cache is
    capped by `HIRAETH_COVER_CACHE_MAX_BYTES`. The worker refills originals and
    renders variants from R2 on a cold start.
-3. Add a rate limit and a response cache header to `/api/v1`. The API is
+3. Done: directory and filter reads are bounded. Cover samples, collection
+   previews, and the filter trays select keys in SQL and fetch only the payloads
+   they render, and the press and collection directories sit in the public
+   catalog TTL cache. Any new directory read must follow the same shape; see
+   "Directory payload transfer" above.
+4. Add a rate limit and a response cache header to `/api/v1`. The API is
    read-only and cacheable by content type; a 30-second `Cache-Control` matches
    the existing read model TTL.
-4. Run migrations as a release step before the new image serves traffic.
-5. Attach a telemetry reporter and set `measurements: :default` on the poller.
+5. Run migrations as a release step before the new image serves traffic.
+6. Attach a telemetry reporter and set `measurements: :default` on the poller.
    Without an export, none of the declared Phoenix, VM, or ingestion metrics are
    observable.
-6. Chunk ingestion by phase, apply per-record quarantine on validation findings,
+7. Chunk ingestion by phase, apply per-record quarantine on validation findings,
    and compare changes against applied state rather than the previous candidate.
-7. Guard dead-render database work with `connected?/1` on the catalog LiveViews.
-8. Add `EXPLAIN (ANALYZE, BUFFERS)` tests for the five public list queries, with
+8. Guard dead-render database work with `connected?/1` on the catalog LiveViews.
+   The duplicate page query in `BrowseLive.mount/3` is gone, but the first HTML
+   still runs `handle_params/3` and its page query.
+9. Add `EXPLAIN (ANALYZE, BUFFERS)` tests for the five public list queries, with
    a budget on both elapsed time and planned rows.
 
 ## Rejected directions
