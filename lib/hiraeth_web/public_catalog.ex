@@ -779,16 +779,19 @@ defmodule HiraethWeb.PublicCatalog do
         books = PublicWorks.books_for_publisher(slug)
         cover_sample = books |> Enum.find(& &1.cover) |> cover_sample_for_book()
 
-        PublicProjection.publisher!(%{
-          id: uuid_text(summary.id),
-          name: summary.name,
-          slug: summary.slug,
-          description: summary.description,
-          editions: books,
-          editions_count: length(books),
-          cover_sample: cover_sample,
-          groupings: publisher_groupings(books)
-        })
+        publisher =
+          PublicProjection.publisher!(%{
+            id: uuid_text(summary.id),
+            name: summary.name,
+            slug: summary.slug,
+            description: summary.description,
+            editions: [],
+            editions_count: length(books),
+            cover_sample: cover_sample,
+            groupings: publisher_groupings(books)
+          })
+
+        %{publisher | editions: books}
     end
   end
 

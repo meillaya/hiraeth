@@ -65,20 +65,7 @@ defmodule HiraethWeb.CatalogPageController do
     end)
   end
 
-  def series_show(conn, %{"slug" => slug}) do
-    try do
-      series_show_page(conn, slug)
-    rescue
-      exception ->
-        require Logger
-
-        Logger.error(
-          "series page failed: " <> Exception.format(:error, exception, __STACKTRACE__)
-        )
-
-        reraise exception, __STACKTRACE__
-    end
-  end
+  def series_show(conn, %{"slug" => slug}), do: series_show_page(conn, slug)
 
   defp series_show_page(conn, slug) do
     case PublicCatalog.series_by_slug(slug) do
