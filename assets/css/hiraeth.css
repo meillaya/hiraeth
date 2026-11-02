@@ -4492,6 +4492,10 @@ ol {
   border-top: 0;
 }
 
+.sb-edition--head {
+  border-bottom: 1px solid var(--sb-line);
+}
+
 .sb-toolbar {
   padding: 2px 0 10px;
   border-top: 0;
