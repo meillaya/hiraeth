@@ -1778,6 +1778,24 @@ ol {
   font-size: 18px;
 }
 
+.sb-search__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 24px 20px;
+}
+
+.sb-search__foot .sb-dialog__hint {
+  padding: 0;
+}
+
+.sb-search__foot .sb-link {
+  flex: none;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 .sb-shelf-list {
   padding: 2px 10px 8px;
 }
@@ -2523,6 +2541,11 @@ ol {
   }
 
   .sb-dialog__hint {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .sb-search__foot {
     padding-left: 16px;
     padding-right: 16px;
   }

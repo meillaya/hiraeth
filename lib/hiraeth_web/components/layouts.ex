@@ -44,7 +44,15 @@ defmodule HiraethWeb.Layouts do
           </nav>
 
           <div class="sb-tools">
-            <.link navigate={~p"/search"} class="sb-tool">Search</.link>
+            <a
+              class="sb-tool"
+              href={~p"/search"}
+              data-search-open
+              aria-haspopup="dialog"
+              aria-controls="search-window"
+            >
+              Search
+            </a>
             <button
               class="sb-tool sb-tool--shelf"
               type="button"
@@ -103,11 +111,60 @@ defmodule HiraethWeb.Layouts do
       </footer>
     </div>
 
+    <.search_dialog />
+
     <.shelf_dialog />
 
     <p id="shelf-live" class="visually-hidden" role="status" aria-live="polite"></p>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  defp search_dialog(assigns) do
+    ~H"""
+    <dialog
+      class="sb-dialog sb-dialog--search"
+      id="search-window"
+      aria-labelledby="search-window-title"
+      data-search-dialog
+    >
+      <div class="sb-dialog__head">
+        <h2 class="sb-dialog__title" id="search-window-title">Search the catalogue</h2>
+        <button class="sb-dialog__close" type="button" data-search-close>Close</button>
+      </div>
+      <form
+        class="sb-searchform"
+        id="search-window-form"
+        role="search"
+        action={~p"/search"}
+        method="get"
+        data-search-form
+      >
+        <label class="visually-hidden" for="search-window-input">
+          Search by title, author, press, or collection
+        </label>
+        <input
+          id="search-window-input"
+          type="search"
+          name="q"
+          placeholder="Title, author, press"
+          autocomplete="off"
+          data-search-input
+        />
+      </form>
+      <div
+        class="sb-results"
+        id="search-window-results"
+        aria-live="polite"
+        data-search-results
+      >
+      </div>
+      <div class="sb-search__foot">
+        <p class="sb-dialog__hint">Search by title, author, press, or collection.</p>
+        <a class="sb-link" href={~p"/search"} data-search-all>All books →</a>
+      </div>
+    </dialog>
     """
   end
 

@@ -21,7 +21,7 @@
       from the running site.
     </p>
     <p class="spec-meta">
-      <span><strong>Version</strong> 4.1 · Hiraeth</span>
+      <span><strong>Version</strong> 4.2 · Hiraeth</span>
       <span><strong>Source</strong> design/home.html</span>
       <span><strong>Prototypes</strong> <a href="home.html">home</a> · <a href="browse.html">books</a> · <a href="book.html">book</a> · <a href="publishers.html">publishers</a> · <a href="press.html">press</a> · <a href="series.html">collections</a> · <a href="shelf.html">shelf</a></span>
     </p>
@@ -527,6 +527,153 @@
     </ul>
   </section>
 
+  <section class="spec-section" id="search">
+    <h2>Global search</h2>
+    <p class="spec-note">
+      Search is a window, not a page. The header control on every public page
+      opens a floating, rounded dialog over the current sheet; the full
+      <code>/search</code> page remains the canonical, server-rendered result
+      surface. The window is progressive enhancement: without JavaScript the
+      header control is a plain link to <code>/search</code>, and the dialog
+      markup stays inert.
+    </p>
+
+    <div class="spec-grid spec-grid--3">
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">01 · Trigger</p>
+        <p class="spec-card-title" style="margin-top: 8px;">From any page</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">The header “Search” control opens the window and moves focus into the field. Escape and the backdrop close it.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">02 · Results</p>
+        <p class="spec-card-title" style="margin-top: 8px;">Grouped, bounded</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">Books, presses, and collections render in that order, capped at 6 / 3 / 3. An empty query shows the five most recently added books.</p>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <p class="spec-kicker">03 · Handoff</p>
+        <p class="spec-card-title" style="margin-top: 8px;">The page still wins</p>
+        <p class="spec-note-inline" style="margin-top: 6px;">Submitting the form opens <code>/search?q=…</code>. The window never writes and never replaces the full search page.</p>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Open window</h3>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <div class="spec-search-demo">
+          <dialog open class="sb-dialog spec-search-dialog" aria-labelledby="spec-search-window-title">
+            <div class="sb-dialog__head">
+              <h2 class="sb-dialog__title" id="spec-search-window-title">Search the catalogue</h2>
+              <button class="sb-dialog__close" type="button">Close</button>
+            </div>
+            <form class="sb-searchform" role="search" action="#search" method="get">
+              <label class="visually-hidden" for="spec-search-input">Search by title, author, press, or collection</label>
+              <input id="spec-search-input" type="search" name="q" placeholder="Title, author, press" autocomplete="off">
+            </form>
+            <div class="sb-results" aria-live="polite">
+              <div class="sb-result-group"><p>Books</p>
+                <a class="sb-result" href="#search">
+                  <span class="sb-result__thumb"><span class="sb-fallback"><span class="sb-fallback__title">Garden</span></span></span>
+                  <span><b>Garden</b><span>Hiroko Oyamada · New Directions</span></span>
+                </a>
+                <a class="sb-result" href="#search">
+                  <span class="sb-result__thumb"><span class="sb-fallback"><span class="sb-fallback__title">The Employees</span></span></span>
+                  <span><b>The Employees</b><span>Olga Ravn · New Directions</span></span>
+                </a>
+              </div>
+              <div class="sb-result-group"><p>Presses</p>
+                <a class="sb-result sb-result--simple" href="#search"><span><b>New Directions</b><span>Press · 1,204 volumes</span></span></a>
+              </div>
+              <div class="sb-result-group"><p>Collections</p>
+                <a class="sb-result sb-result--simple" href="#search"><span><b>Dalkey Archive Essentials</b><span>Collection · Dalkey Archive</span></span></a>
+              </div>
+            </div>
+            <div class="sb-search__foot">
+              <p class="sb-dialog__hint">Search by title, author, press, or collection.</p>
+              <a class="sb-link" href="#search">All results →</a>
+            </div>
+          </dialog>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Data contract</h3>
+    <table class="spec-table" aria-label="Search window data contract">
+      <thead><tr><th>Source</th><th>Fields read</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td><code>/api/v1/books?q=…&amp;page_size=6</code></td><td class="spec-value">slug, title, author, publisher, cover.thumbnail_url</td><td>Book rows; empty query uses <code>sort=recently_added&amp;page_size=5</code>.</td></tr>
+        <tr><td><code>/api/v1/publishers?page_size=100</code></td><td class="spec-value">slug, name, editions_count</td><td>Press rows, filtered client-side by name.</td></tr>
+        <tr><td><code>/api/v1/series?page_size=100</code></td><td class="spec-value">slug, title, publisher</td><td>Collection rows, filtered client-side by title and press.</td></tr>
+        <tr><td><code>/search?q=…</code></td><td class="spec-value">server-rendered page</td><td>Form submit target and no-JavaScript fallback.</td></tr>
+      </tbody>
+    </table>
+    <p class="spec-note">
+      Every request is same-origin and read-only. Result strings are inserted as
+      text, never HTML. A cover renders only from a path under
+      <code>/covers/cache/</code>; anything else becomes the typographic fallback.
+    </p>
+
+    <h3 class="spec-subhead">Behaviour and failure</h3>
+    <table class="spec-table" aria-label="Search window behaviour contract">
+      <thead><tr><th>Event</th><th>Required result</th></tr></thead>
+      <tbody>
+        <tr><td>Header Search activated (JavaScript)</td><td>The dialog calls <code>showModal()</code>, the input is cleared and focused, and the five most recently added books render.</td></tr>
+        <tr><td>Header Search activated (no JavaScript)</td><td>The control is a link and navigates to <code>/search</code>; the dialog is never opened.</td></tr>
+        <tr><td>Typing</td><td>Input is debounced 180ms; one books request is in flight; a superseded request is aborted and its response never renders.</td></tr>
+        <tr><td>Matches</td><td>Groups render in order: Books (≤6), Presses (≤3), Collections (≤3).</td></tr>
+        <tr><td>No matches</td><td>“No books, presses, or collections match “…”.” with the query as text; the dialog remains open.</td></tr>
+        <tr><td>Enter or form submit</td><td>The browser navigates to <code>/search?q=…</code>; the window closes with the page.</td></tr>
+        <tr><td>Close, Escape, or backdrop</td><td>The dialog closes, body scrolling is restored, and focus returns to the header control.</td></tr>
+        <tr><td><code>/api/v1</code> failure</td><td>An inline failure message and a link to <code>/search</code> render; the dialog stays open and usable. No unhandled rejection or blank state.</td></tr>
+        <tr><td>Shelf opened while search is open</td><td>The search window closes before the shelf dialog opens; only one modal is active.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="spec-subhead">Accessibility</h3>
+    <div class="spec-grid spec-grid--2">
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Dialog.</strong> Native <code>&lt;dialog&gt;</code> with <code>aria-labelledby</code> on the title and <code>aria-controls</code> on the header control; <code>showModal()</code> supplies the focus trap and inert background.</span></li>
+          <li><span class="spec-no">02</span><span><strong>Focus.</strong> Opening moves focus to the search field; closing or pressing Escape returns it to the control that opened the window.</span></li>
+          <li><span class="spec-no">03</span><span><strong>Label.</strong> The field has a visually hidden label; the placeholder is never the only label.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Announcements.</strong> The results container is <code>aria-live="polite"</code>; group labels are visible text, and result links carry the book, press, or collection name.</span></li>
+        </ul>
+      </div>
+      <div class="spec-frame spec-frame--paper">
+        <ul class="spec-list">
+          <li><span class="spec-no">01</span><span><strong>Targets.</strong> Close and all header controls are at least <code>--sb-target-min</code> (44px) tall on touch bands; result rows are at least 49px tall.</span></li>
+          <li><span class="spec-no">02</span><span><strong>Images.</strong> Cover thumbnails use “Cover for {title}” alt text; the typographic fallback is decorative and repeats no text.</span></li>
+          <li><span class="spec-no">03</span><span><strong>No remote assets.</strong> The window fetches only same-origin JSON and renders only same-origin covers; the CSP stays <code>default-src 'self'</code>.</span></li>
+          <li><span class="spec-no">04</span><span><strong>Motion.</strong> The dialog opens without a layout animation; reduced-motion preferences are respected by the shared rules.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Responsive rules</h3>
+    <table class="spec-table" aria-label="Search window responsive rules">
+      <thead><tr><th>Band</th><th>Width</th><th>Radius</th><th>Max height</th></tr></thead>
+      <tbody>
+        <tr><td>&gt; 560px</td><td class="spec-value">min(680px, 100vw − 28px)</td><td class="spec-value">26px</td><td class="spec-value">min(82vh, 760px)</td></tr>
+        <tr><td>≤ 560px</td><td class="spec-value">100vw − 12px</td><td class="spec-value">20px</td><td class="spec-value">88vh</td></tr>
+      </tbody>
+    </table>
+    <p class="spec-note">
+      The window centres on the viewport, scrolls its own results, and never
+      widens the sheet. The field keeps the serif display scale (27px desktop,
+      23px compact); results keep the 38px thumb column at every band.
+    </p>
+
+    <h3 class="spec-subhead">Verification</h3>
+    <ul class="spec-check">
+      <li>Open the window from the header on <code>/</code>, <code>/browse</code>, a book, and <code>/shelf</code>; confirm focus enters the field and the recent list renders.</li>
+      <li>Type “garden”; assert Books, Presses, and Collections render in that order, with no result row missing its name.</li>
+      <li>Press Enter; assert <code>/search?q=garden</code> loads with the same query.</li>
+      <li>Close with Escape, the Close control, and the backdrop; assert focus returns to the header control each time.</li>
+      <li>Block <code>/api/v1</code> or abort a request mid-flight; assert the dialog shows the failure message or the newest results, never a blank window.</li>
+      <li>Disable JavaScript; assert the header control navigates to <code>/search</code> and the dialog stays closed.</li>
+      <li>Capture the open window at 390, 560, 760, 1040, and 1440 px; assert no horizontal overflow, the 26/20px radius rules, and 44px targets.</li>
+    </ul>
+  </section>
+
   <section class="spec-section" id="interaction">
     <h2>Interaction and accessibility</h2>
     <div class="spec-grid spec-grid--2">
@@ -540,6 +687,7 @@
           <li><span class="spec-no">06</span><span><strong>Disclosure.</strong> The Menu panel is anchored to the header, not the viewport. Rows are 44px; Escape and any link click close it; the footer navigation stays visible below 900px.</span></li>
           <li><span class="spec-no">07</span><span><strong>Captions.</strong> Hero and press captions wrap the title; the author is never clipped or ellipsised. Title and author align to the cover's left edge.</span></li>
           <li><span class="spec-no">08</span><span><strong>Micro-type.</strong> Functional labels never fall below <code>--sb-text-micro</code> (10px); secondary labels set 10–11px with tracking reduced to compensate. Only decorative fallback text inside tiny cover thumbnails is exempt.</span></li>
+          <li><span class="spec-no">09</span><span><strong>Search window.</strong> The header control opens a native dialog; focus enters the field, Escape and the backdrop close it, focus returns to the control, and results announce politely without moving focus.</span></li>
         </ul>
       </div>
       <div class="spec-frame spec-frame--paper">
@@ -561,7 +709,7 @@
       <tbody>
         <tr><td>Tokens</td><td class="spec-value">assets/css/tokens.css</td><td>Single source; names are stable API.</td></tr>
         <tr><td>Components</td><td class="spec-value">assets/css/hiraeth.css</td><td>Ports the prototype rules and adds catalogue-only states.</td></tr>
-        <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header disclosure, shelf control and dialog, colophon footer, flash.</td></tr>
+        <tr><td>Shell</td><td class="spec-value">lib/hiraeth_web/components/layouts.ex</td><td>Sheet, header disclosure, search window, shelf control and dialog, colophon footer, flash.</td></tr>
         <tr><td>Home</td><td class="spec-value">lib/hiraeth_web/live/home_live.ex</td><td>Featured forthcoming hero, ledger, four random picks, presses.</td></tr>
         <tr><td>Books</td><td class="spec-value">lib/hiraeth_web/live/browse_live/*</td><td>Filter tray, covers/index views, pager.</td></tr>
         <tr><td>Book</td><td class="spec-value">lib/hiraeth_web/live/book_live/*</td><td>Record, facts, praise, reviews, editions, subjects, save control, more-from tray.</td></tr>
@@ -569,7 +717,8 @@
         <tr><td>Local shelf</td><td class="spec-value">assets/js/shelf.js, lib/hiraeth_web/controllers/catalog_page_html/shelf.html.heex</td><td>localStorage capture, dialog, shelf page, export, cross-tab sync.</td></tr>
         <tr><td>Header behaviour</td><td class="spec-value">assets/js/chrome.js</td><td>Header-anchored Menu, Escape and link-click close, 44px rows.</td></tr>
         <tr><td>Publishers / collections / contributors</td><td class="spec-value">lib/hiraeth_web/live/{publishers,series,contributors}_live*</td><td>Pagehead, index rows, profile headers, book grids.</td></tr>
-        <tr><td>Search</td><td class="spec-value">lib/hiraeth_web/live/search_live/*</td><td>Search field, results grid, empty state.</td></tr>
+        <tr><td>Search</td><td class="spec-value">lib/hiraeth_web/live/search_live/*</td><td>Full results page, filter field, results grid, empty state; <code>/search?q=…</code> is the window's submit target.</td></tr>
+        <tr><td>Global search</td><td class="spec-value">assets/js/search.js, lib/hiraeth_web/components/layouts.ex</td><td>Header trigger, native dialog, debounced same-origin API results, focus return, no-JavaScript link fallback.</td></tr>
         <tr><td>Cover component</td><td class="spec-value">lib/hiraeth_web/components/catalog_components.ex</td><td>Same-origin cover or labelled typographic fallback.</td></tr>
       </tbody>
     </table>
@@ -587,11 +736,13 @@
       <li>Assert every interactive element has a visible focus ring and no hover transform or shadow.</li>
       <li>Assert no remote font, script, stylesheet, or image URL appears in the rendered page.</li>
       <li>Assert the local shelf survives reload, the dialog traps focus and returns it, and corrupt storage cannot blank the page.</li>
+      <li>Assert the header opens the search window on every public page, groups books/presses/collections, focuses the field, and closes on Escape or backdrop with focus returned.</li>
+      <li>Assert a failed or superseded <code>/api/v1</code> search request leaves the window usable and never blanks it, and that the no-JavaScript control still reaches <code>/search</code>.</li>
     </ul>
   </section>
 
   <footer class="spec-footer">
-    <span>Hiraeth · design system 4.1 · tokens read from assets/css/tokens.css</span>
+    <span>Hiraeth · design system 4.2 · tokens read from assets/css/tokens.css</span>
     <span><a href="home.html">Open the homepage prototype →</a></span>
   </footer>
 </main>

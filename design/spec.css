@@ -352,18 +352,25 @@
 }
 
 .spec-check li {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: 7px;
-  padding: 6px 0;
+  position: relative;
+  padding: 6px 0 6px 23px;
   border-top: 1px solid var(--sb-line);
 }
 
 .spec-check li::before {
   content: "□";
+  position: absolute;
+  top: 6px;
+  left: 0;
   color: var(--sb-green);
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.55;
+}
+
+.spec-check code {
+  color: var(--sb-green);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
 }
 
 .spec-footer {
@@ -478,6 +485,21 @@
 }
 
 .spec-shelf-dialog::backdrop {
+  display: none;
+}
+
+.spec-search-demo {
+  padding: 22px var(--sb-gutter);
+}
+
+.spec-search-dialog {
+  position: static;
+  width: 100%;
+  max-height: none;
+  margin: 0;
+}
+
+.spec-search-dialog::backdrop {
   display: none;
 }
 
