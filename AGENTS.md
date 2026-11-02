@@ -167,7 +167,7 @@ mix hiraeth.catalog.refresh --all --dry-run --json
 mix hiraeth.public_projection.rebuild --json
 node scripts/qa/design_screenshots.mjs http://127.0.0.1:4000 [outDir]
 node scripts/qa/accessibility_screenshots.mjs http://127.0.0.1:4000 [outDir]
-node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app
+node scripts/qa/live_screenshots.mjs https://hiraeth.up.railway.app
 cd sidecar && uv run --extra dev pytest -q
 cd sidecar && uv run ruff check . && uv run pyright && uv audit
 ```
@@ -179,6 +179,7 @@ cd sidecar && uv run ruff check . && uv run pyright && uv audit
 - Verification runs locally (`mix gate`, `mix ci`, `make verify`) and in hosted GitHub Actions (`.github/workflows/ci.yml`): the gate job runs `mix gate`, the sidecar job runs pytest/ruff/pyright/audit, and the browser job runs `scripts/qa/design_screenshots.mjs` plus `scripts/qa/accessibility_screenshots.mjs` against a seeded dev server. `test/hiraeth/dev_environment_ci_contract_test.exs` pins those lanes. Browser checks stay out of `mix gate`.
 - The Hiraeth spec at `design/index.html` reads computed values from `assets/css/tokens.css`; do not duplicate token values in templates or the spec. `design/**` is tracked but excluded from GitHub language statistics via `.gitattributes` (`linguist-documentation`); `.gitattributes` cannot untrack files, so use `.gitignore` plus `git rm --cached` if a file should actually leave Git.
 - `HIRAETH_SERVICE_ROLE=worker` runs Oban without the endpoint. Railway production runs separate `web` and `worker` services; `mix hiraeth.public_projection.rebuild` is the manual recovery command and the worker is the normal owner. The legacy `HIRAETH_PUBLIC_READ_MODEL` flag is gone; `catalog_public_works` is the only public read path.
+- Changing the Railway public domain means updating `PHX_HOST` on the `web` service too: it drives the canonical endpoint URL (sitemap/robots) and the default LiveView WebSocket origin check, so a stale value returns 403 on `/live/websocket` and leaves clients stuck on "Attempting to reconnect" until the longpoll fallback kicks in.
 - Cover coverage self-heals: `HIRAETH_COVER_BACKFILL_ON_BOOT` (default true in prod) enqueues `CoverBackfillWorker` and `CoverVariantBackfillWorker` at boot, scoped to missing originals/variants and independent of `HIRAETH_SCHEDULED_INGEST`. Display selection is read-time `Covers.Policy`; a reissue with a newer print cover replaces the old cover without refetching unchanged assets. Variant filenames embed a content hash and are served `immutable`.
 - README screenshots are versioned (`docs/screenshots/hiraeth-*.png`) and paired with `docs/screenshots/routes.json`. The live capture script writes both; the versioned names intentionally avoid GitHub's raw-image cache.
 - devenv is dormant local-dev groundwork: local dev runs the nix-profile toolchain on bare PATH plus a standalone postgres via `scripts/dev/ensure_postgres.sh` (127.0.0.1:54320); CI lanes use setup-beam and a Postgres service, not devenv.

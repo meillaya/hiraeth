@@ -68,7 +68,7 @@ that needs a materialized count or a denormalized sort table.
 ## Directory payload transfer
 
 Measured 1 November 2026 against the deployed service (Railway,
-`web-production-a31e0.up.railway.app`, Postgres over the private network). The
+`hiraeth.up.railway.app`, Postgres over the private network). The
 trigger was `browse?publisher=archipelago-books` at 1.34 s while `/search` and
 `/api/v1/books` answered in 65 ms on the same node.
 

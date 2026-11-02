@@ -7,26 +7,26 @@ It is browser-first: the catalogue is served from a materialized public read mod
 ## Live deployment
 
 The running catalog is deployed on Railway at
-<https://web-production-a31e0.up.railway.app>. The Phoenix service, the private
+<https://hiraeth.up.railway.app>. The Phoenix service, the private
 FastAPI sidecar, PostgreSQL, and the R2 cover bucket are all provisioned.
 
-[![Hiraeth home page](docs/screenshots/hiraeth-home.png)](https://web-production-a31e0.up.railway.app)
+[![Hiraeth home page](docs/screenshots/hiraeth-home.png)](https://hiraeth.up.railway.app)
 
 | Browse the catalog | Book detail |
 | --- | --- |
-| [![Browse page](docs/screenshots/hiraeth-browse.png)](https://web-production-a31e0.up.railway.app/browse) | [![Book detail page](docs/screenshots/hiraeth-book.png)](https://web-production-a31e0.up.railway.app/books/deep-vellum-carcasse) |
+| [![Browse page](docs/screenshots/hiraeth-browse.png)](https://hiraeth.up.railway.app/browse) | [![Book detail page](docs/screenshots/hiraeth-book.png)](https://hiraeth.up.railway.app/books/deep-vellum-carcasse) |
 
 | Publishers | Press dossier |
 | --- | --- |
-| [![Publishers page](docs/screenshots/hiraeth-publishers.png)](https://web-production-a31e0.up.railway.app/publishers) | [![Coffee House Press page](docs/screenshots/hiraeth-press.png)](https://web-production-a31e0.up.railway.app/publishers/coffee-house-press) |
+| [![Publishers page](docs/screenshots/hiraeth-publishers.png)](https://hiraeth.up.railway.app/publishers) | [![Coffee House Press page](docs/screenshots/hiraeth-press.png)](https://hiraeth.up.railway.app/publishers/coffee-house-press) |
 
 | Collections | Collection shelf |
 | --- | --- |
-| [![Collections page](docs/screenshots/hiraeth-collections.png)](https://web-production-a31e0.up.railway.app/series) | [![Dalkey Archive Essentials collection](docs/screenshots/hiraeth-collection.png)](https://web-production-a31e0.up.railway.app/series/dalkey-archive-essentials) |
+| [![Collections page](docs/screenshots/hiraeth-collections.png)](https://hiraeth.up.railway.app/series) | [![Dalkey Archive Essentials collection](docs/screenshots/hiraeth-collection.png)](https://hiraeth.up.railway.app/series/dalkey-archive-essentials) |
 
 | Contributors | Search |
 | --- | --- |
-| [![Contributors page](docs/screenshots/hiraeth-contributors.png)](https://web-production-a31e0.up.railway.app/contributors) | [![Search page](docs/screenshots/hiraeth-search.png)](https://web-production-a31e0.up.railway.app/search?q=the) |
+| [![Contributors page](docs/screenshots/hiraeth-contributors.png)](https://hiraeth.up.railway.app/contributors) | [![Search page](docs/screenshots/hiraeth-search.png)](https://hiraeth.up.railway.app/search?q=the) |
 
 ## Public read model and worker roles
 
@@ -182,9 +182,11 @@ is hashed before and after the sandboxed command.
 
 ## Production notes
 
-The repository includes environment examples in `.env.example`. The public catalog is deployed to Railway at `https://web-production-a31e0.up.railway.app`; the staging environment is `https://web-staging-935d.up.railway.app`.
+The repository includes environment examples in `.env.example`. The public catalog is deployed to Railway at `https://hiraeth.up.railway.app`; the staging environment is `https://web-staging-935d.up.railway.app`.
 
 The Railway production environment has four services. `web` builds from the root `Dockerfile`, serves the browser UI and `/api/v1`, and healthchecks `/health`. `worker` builds from the same root `Dockerfile` with `HIRAETH_SERVICE_ROLE=worker`, `PHX_SERVER=false`, no public domain, and no healthcheck; it owns Oban, projection rebuilds, and cover/variant backfills. `sidecar` builds from `sidecar/Dockerfile`, stays on private networking, and has no public domain. `Postgres` is Railway-managed. `railway.json` and `sidecar/railway.json` pin the healthcheck and restart policy. Web sets `PHX_HOST` to the generated domain, `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SCRAPLING_SIDECAR_URL=http://sidecar.railway.internal:8000`, `HIRAETH_READY_SIDECAR_REQUIRED=1`, and `HIRAETH_SCHEDULED_INGEST=false` for the public demo. The worker gets the same database/sidecar/R2 variables plus `HIRAETH_SERVICE_ROLE=worker` and `PHX_SERVER=false`.
+
+When the Railway public domain changes, update `PHX_HOST` on the `web` service before the next deploy. The endpoint derives its canonical URL from `PHX_HOST`, and the default LiveView origin check compares the browser's `Origin` header against it. A stale value rejects the WebSocket upgrade (the browser shows "Attempting to reconnect") and keeps the old host in generated `sitemap.xml` and `robots.txt` URLs.
 
 The release image has no Mix. Migrations run inside a deployed release through the release runner:
 
@@ -201,7 +203,7 @@ MIX_ENV=dev DATABASE_URL=postgresql://... mix run priv/repo/seeds.exs
 railway tcp-proxy delete <proxy-id> --yes
 ```
 
-The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://web-production-a31e0.up.railway.app` to refresh the README images and `docs/screenshots/routes.json` after a visible change. The script captures the home, browse, book, publishers, press, collections, collection, contributors, and search surfaces at 1440×1000.
+The seed loads 9,415 source records. Re-run `node scripts/qa/live_screenshots.mjs https://hiraeth.up.railway.app` to refresh the README images and `docs/screenshots/routes.json` after a visible change. The script captures the home, browse, book, publishers, press, collections, collection, contributors, and search surfaces at 1440×1000.
 
 Covers use Cloudflare R2 as the durable store when `HIRAETH_COVER_STORE=s3`. Set `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and optionally `R2_REGION` (default `auto`). The web service keeps a bounded local cache and proxies `/covers/cache/...` misses from R2, so public URLs, the CSP, and takedown behavior stay unchanged. The worker renders WebP/JPEG variants from cached originals and uploads them to the same bucket. Run `mix hiraeth.covers.upload` once after switching an existing disk cache to R2, or to rebuild a bucket. Leave `HIRAETH_COVER_STORE=local` to run disk-only. Thumbnails and responsive variants require ImageMagick; the Docker runtime installs it, and local bare-toolchain users can run `nix profile add nixpkgs#imagemagick`. The five publisher pages that previously had no covers (Astra House, Pushkin Press, Seven Stories Press, Tilted Axis Press, Wakefield Press) are covered by `mix hiraeth.covers.sync`; see [docs/covers.md](docs/covers.md).
 
