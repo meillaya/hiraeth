@@ -15,6 +15,9 @@ defmodule Hiraeth.Covers.Store.Local do
   def get(_key), do: :missing
 
   @impl true
+  def head(_key), do: :unknown
+
+  @impl true
   def delete(_key), do: :ok
 
   @impl true

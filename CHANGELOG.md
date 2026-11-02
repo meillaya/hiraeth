@@ -45,8 +45,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Per-provider `cadence_hours` on provider manifests and `ProviderSource` (default 24h) with manifest validation and backfill.
 - Weekly scheduled cover cache refresh and provenance audit workers on the idle `:covers` and `:audit` Oban queues.
 - README pointer to the "Autonomous catalog updates" ops runbook section for what runs when, the kill-switch, and rollout order.
+- Hiraeth identity assets: the outlined wordmark replaces the text brand in the public header, footer, and admin shell; SVG and ICO favicons, an Apple touch icon, and a web app manifest are linked from every page head.
 
 ### Changed
+
+- Cover uploads reconcile with the durable store first. A HEAD compares size and ETag, so repeat cache passes and the weekly sweep skip byte-identical originals, thumbnails, and variants instead of re-uploading them.
 
 - The public read model is the only public read path. The legacy canonical-query fallback and the `HIRAETH_PUBLIC_READ_MODEL` switch are gone; imports, seeds, and cover changes refresh `catalog_public_works` through the projection worker, and tests rebuild it explicitly after direct Ash fixtures.
 - Publisher/directory and series queries are set-based on the read model (one cover-sample and one series-books query) instead of a per-row query, and the projection rebuild runs `ANALYZE` so search plans stay current.

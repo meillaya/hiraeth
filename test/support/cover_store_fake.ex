@@ -30,6 +30,19 @@ defmodule Hiraeth.TestSupport.CoverStoreFake do
   end
 
   @impl true
+  def head(key) do
+    ensure_table()
+
+    case :ets.lookup(@table, key) do
+      [{^key, body, _content_type}] ->
+        {:ok, %{size: byte_size(body), etag: "\"" <> md5_hex(body) <> "\""}}
+
+      [] ->
+        :missing
+    end
+  end
+
+  @impl true
   def delete(key) do
     ensure_table()
     :ets.delete(@table, key)
@@ -38,6 +51,8 @@ defmodule Hiraeth.TestSupport.CoverStoreFake do
 
   @impl true
   def configured?, do: true
+
+  defp md5_hex(body), do: Base.encode16(:crypto.hash(:md5, body), case: :lower)
 
   defp ensure_table do
     if :ets.whereis(@table) == :undefined do

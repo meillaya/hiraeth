@@ -153,16 +153,15 @@ ol {
 
 .sb-brand {
   justify-self: start;
-  font-family: var(--sb-serif);
-  font-size: 29px;
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
-  letter-spacing: -0.035em;
-  font-optical-sizing: auto;
 }
 
-.sb-brand__dot {
-  color: var(--sb-green);
+.sb-brand__mark {
+  display: block;
+  width: auto;
+  height: 28px;
 }
 
 .sb-nav {
@@ -1908,10 +1907,16 @@ ol {
 
 .sb-footer__brand {
   justify-self: start;
-  font-family: var(--sb-serif);
-  font-size: 23px;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
-  letter-spacing: -0.03em;
+}
+
+.sb-footer__mark {
+  display: block;
+  width: auto;
+  height: 22px;
 }
 
 .sb-footer__nav {
@@ -2060,8 +2065,8 @@ ol {
     padding-bottom: 15px;
   }
 
-  .sb-brand {
-    font-size: 27px;
+  .sb-brand__mark {
+    height: 25px;
   }
 
   .sb-tools {

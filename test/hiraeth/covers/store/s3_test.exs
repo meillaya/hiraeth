@@ -57,6 +57,27 @@ defmodule Hiraeth.Covers.Store.S3Test do
     assert Store.get("covers/cache/missing.jpg") == :missing
   end
 
+  test "head reports size and etag without downloading the body" do
+    plug = fn conn ->
+      assert conn.method == "HEAD"
+      assert conn.host == "hiraeth-covers.t3.storageapi.dev"
+      assert conn.request_path == "/covers/cache/abc.jpg"
+
+      conn
+      |> Plug.Conn.put_resp_header("content-length", "11")
+      |> Plug.Conn.put_resp_header("etag", "\"d41d8cd98f00b204e9800998ecf8427e\"")
+      |> Plug.Conn.resp(200, "")
+    end
+
+    configure_plug(plug)
+
+    assert {:ok, %{size: 11, etag: "\"d41d8cd98f00b204e9800998ecf8427e\""}} =
+             Store.head("covers/cache/abc.jpg")
+
+    configure_plug(fn conn -> Plug.Conn.resp(conn, 404, "") end)
+    assert Store.head("covers/cache/missing.jpg") == :missing
+  end
+
   defp configure_plug(plug) do
     config = Application.get_env(:hiraeth, Store)
     Application.put_env(:hiraeth, Store, Keyword.put(config, :req_options, plug: plug))

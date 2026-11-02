@@ -10,10 +10,20 @@ defmodule Hiraeth.Covers.Store do
   @type key :: String.t()
   @type result :: :ok | {:error, term()}
 
+  @type object_metadata :: %{
+          size: non_neg_integer() | nil,
+          etag: String.t() | nil
+        }
+
+  @type head_result :: {:ok, object_metadata()} | :missing | :unknown | {:error, term()}
+
   @callback put(key(), binary(), String.t()) :: result()
   @callback get(key()) :: {:ok, binary(), String.t() | nil} | :missing | {:error, term()}
+  @callback head(key()) :: head_result()
   @callback delete(key()) :: result()
   @callback configured?() :: boolean()
+
+  @optional_callbacks head: 1
 
   alias Hiraeth.Covers.MissCache
 
@@ -44,6 +54,27 @@ defmodule Hiraeth.Covers.Store do
 
       other ->
         other
+    end
+  end
+
+  @doc """
+  Returns object metadata without downloading the body.
+
+  A remembered miss answers immediately. Adapters that cannot inspect an object
+  return `:unknown`, which callers treat as a reason to upload.
+  """
+  @spec head(key()) :: head_result()
+  def head(key) do
+    if MissCache.known_missing?(key) do
+      :missing
+    else
+      adapter = impl()
+
+      if Code.ensure_loaded?(adapter) and function_exported?(adapter, :head, 1) do
+        adapter.head(key)
+      else
+        :unknown
+      end
     end
   end
 

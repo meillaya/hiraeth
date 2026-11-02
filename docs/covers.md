@@ -53,7 +53,9 @@ mix hiraeth.covers.upload
 same bounded `Covers.req_fetch!/4` source fetch as the weekly worker. It writes
 the cache file atomically, generates the thumbnail and responsive variant set,
 updates `cached_file_path` / `thumbnail_file_path` / `responsive_variants` /
-`cached_at`, and uploads every object to R2 when configured. `--variants`
+`cached_at`, and uploads each object to R2 when configured. Before a PUT the
+store is checked with a HEAD; an object whose size and ETag already match the
+local bytes is left untouched, so a repeat pass costs reads, not writes. `--variants`
 renders variants from an existing local original without fetching the publisher. It exits non-zero if an eligible cover remains uncached; use
 `--allow-missing` to report only.
 
@@ -113,7 +115,9 @@ gap:
   restart storms. Set `HIRAETH_COVER_BACKFILL_ON_BOOT=false` to disable them;
   unlike cron, they are not governed by `HIRAETH_SCHEDULED_INGEST` because they
   never ingest catalog data, only cache covers already present in the governed
-  dataset. The weekly `CoverRefreshWorker` remains the full-catalog sweep.
+  dataset. The weekly `CoverRefreshWorker` remains the full-catalog sweep. It
+  still re-reads the cache, but the HEAD/ETag check keeps unchanged covers from
+  being re-uploaded; only new or changed bytes reach R2.
 
 ## Provider refresh and covers
 

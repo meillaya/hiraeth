@@ -26,6 +26,7 @@ defmodule Mix.Tasks.Hiraeth.Covers.Upload do
         Mix.shell().info(Jason.encode!(summary))
       else
         Mix.shell().info("cover_upload_uploaded=#{summary.uploaded}")
+        Mix.shell().info("cover_upload_unchanged=#{summary.unchanged}")
         Mix.shell().info("cover_upload_failed=#{summary.failed}")
       end
     else

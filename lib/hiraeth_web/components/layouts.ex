@@ -12,6 +12,24 @@ defmodule HiraethWeb.Layouts do
   # Embed all files in layouts/* within this module.
   embed_templates "layouts/*"
 
+  attr :class, :string, default: "sb-brand__mark"
+
+  @doc """
+  The Hiraeth wordmark. The link around it carries the accessible name, so the
+  image is decorative.
+  """
+  def brand(assigns) do
+    ~H"""
+    <img
+      src={~p"/images/logo/logo-wordmark.svg"}
+      class={@class}
+      alt=""
+      width="116"
+      height="29"
+    />
+    """
+  end
+
   attr :flash, :map, required: true, doc: "the map of flash messages"
 
   attr :current_scope, :map,
@@ -34,7 +52,7 @@ defmodule HiraethWeb.Layouts do
       <header class="sb-header">
         <div class="sb-header__in">
           <.link navigate={~p"/"} class="sb-brand" aria-label="Hiraeth — home">
-            Hiraeth<span class="sb-brand__dot">.</span>
+            <.brand />
           </.link>
 
           <nav class="sb-nav" aria-label="Primary">
@@ -88,7 +106,7 @@ defmodule HiraethWeb.Layouts do
       <footer class="sb-footer">
         <div class="sb-footer__in">
           <.link navigate={~p"/"} class="sb-footer__brand" aria-label="Hiraeth — home">
-            Hiraeth<span class="sb-brand__dot">.</span>
+            <.brand class="sb-footer__mark" />
           </.link>
 
           <nav class="sb-footer__nav" aria-label="Footer">
@@ -226,7 +244,7 @@ defmodule HiraethWeb.Layouts do
     <div class="admin-shell">
       <header class="admin-bar">
         <a href={~p"/admin"} class="sb-brand" aria-label="Hiraeth admin home">
-          Hiraeth<span class="sb-brand__dot">.</span>
+          <.brand />
         </a>
         <nav class="admin-nav" aria-label="Admin">
           <a href={~p"/admin/candidates"}>Candidates</a>

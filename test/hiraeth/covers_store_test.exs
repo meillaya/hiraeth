@@ -8,6 +8,7 @@ defmodule Hiraeth.CoversStoreTest do
   alias Hiraeth.TestSupport.CoverStoreFake
 
   @original <<0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0x00, 0x00>>
+  @original_changed <<0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x00, 0x00, 0x01>>
   @thumbnail "thumbnail bytes"
 
   setup do
@@ -52,6 +53,32 @@ defmodule Hiraeth.CoversStoreTest do
 
     assert {:ok, @thumbnail, "image/jpeg"} =
              CoverStoreFake.get(Covers.object_key(thumbnail_path))
+  end
+
+  test "second upload skips objects whose bytes are already stored", %{
+    asset: asset
+  } do
+    assert %{uploaded: 2, unchanged: 0, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
+
+    assert %{uploaded: 0, unchanged: 2, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
+  end
+
+  test "re-uploads an object whose bytes changed without changing its size", %{
+    asset: asset,
+    original_path: original_path
+  } do
+    assert %{uploaded: 2, unchanged: 0, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
+
+    File.write!(original_path, @original_changed)
+
+    assert %{uploaded: 1, unchanged: 1, failed: 0} =
+             Covers.upload_cached_covers!(source_urls: [asset.source_url])
+
+    assert {:ok, @original_changed, "image/jpeg"} =
+             CoverStoreFake.get(Covers.object_key(original_path))
   end
 
   test "cache writes upload originals and thumbnails" do

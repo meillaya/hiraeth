@@ -710,11 +710,13 @@ defmodule Hiraeth.Covers do
   @doc """
   Uploads locally cached covers and thumbnails to the configured store.
 
-  Pass `source_urls:` or `provider:` to scope the upload; without options every
-  cover asset is considered.
+  Each object is compared with the durable copy first, so a cache pass only
+  uploads bytes that changed or are new. Pass `source_urls:` or `provider:` to
+  scope the upload; without options every cover asset is considered.
   """
   @spec upload_cached_covers!(keyword()) :: %{
           uploaded: non_neg_integer(),
+          unchanged: non_neg_integer(),
           failed: non_neg_integer()
         }
   def upload_cached_covers!(opts \\ []) do
@@ -726,9 +728,9 @@ defmodule Hiraeth.Covers do
       |> Ash.read!(authorize?: false)
       |> filter_source_urls(source_urls)
       |> filter_provider(provider)
-      |> Enum.reduce(%{uploaded: 0, failed: 0}, &upload_asset/2)
+      |> Enum.reduce(%{uploaded: 0, unchanged: 0, failed: 0}, &upload_asset/2)
     else
-      %{uploaded: 0, failed: 0}
+      %{uploaded: 0, unchanged: 0, failed: 0}
     end
   end
 
@@ -741,6 +743,7 @@ defmodule Hiraeth.Covers do
   defp upload_and_count(path, summary) do
     case upload_cached_path(path) do
       :ok -> %{summary | uploaded: summary.uploaded + 1}
+      :unchanged -> %{summary | unchanged: summary.unchanged + 1}
       :error -> %{summary | failed: summary.failed + 1}
       :skipped -> summary
     end
@@ -761,20 +764,70 @@ defmodule Hiraeth.Covers do
         :skipped
 
       true ->
-        content_type = MIME.from_path(path)
-
-        with {:ok, body} <- File.read(path),
-             :ok <- Store.put(key, body, content_type) do
-          :ok
-        else
-          {:error, reason} ->
-            Logger.warning("cover upload failed key=#{key}: #{inspect(reason)}")
-            :error
-        end
+        upload_if_changed(key, path)
     end
   end
 
   defp upload_cached_path(_path), do: :skipped
+
+  defp upload_if_changed(key, path) do
+    case File.read(path) do
+      {:ok, body} ->
+        if stored_object_matches?(key, body) do
+          :unchanged
+        else
+          put_cached_object(key, body, MIME.from_path(path))
+        end
+
+      {:error, reason} ->
+        Logger.warning("cover upload read failed key=#{key}: #{inspect(reason)}")
+        :error
+    end
+  end
+
+  defp stored_object_matches?(key, body) do
+    case Store.head(key) do
+      {:ok, metadata} -> same_object?(body, metadata)
+      _missing_unknown_or_error -> false
+    end
+  end
+
+  defp same_object?(body, metadata) do
+    case normalize_etag(metadata[:etag]) do
+      etag when is_binary(etag) ->
+        etag == md5_hex(body) and
+          (is_nil(metadata[:size]) or metadata[:size] == byte_size(body))
+
+      _unknown ->
+        false
+    end
+  end
+
+  defp put_cached_object(key, body, content_type) do
+    case Store.put(key, body, content_type) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("cover upload failed key=#{key}: #{inspect(reason)}")
+        :error
+    end
+  end
+
+  defp normalize_etag(etag) when is_binary(etag) do
+    normalized =
+      etag
+      |> String.trim()
+      |> String.trim_leading("W/")
+      |> String.replace("\"", "")
+      |> String.downcase()
+
+    if String.match?(normalized, ~r/\A[0-9a-f]{32}\z/), do: normalized, else: nil
+  end
+
+  defp normalize_etag(_etag), do: nil
+
+  defp md5_hex(body), do: Base.encode16(:crypto.hash(:md5, body), case: :lower)
 
   defp delete_stored_cover(path) when is_binary(path) do
     key = object_key(path)

@@ -64,6 +64,28 @@ defmodule Hiraeth.Covers.Store.S3 do
   end
 
   @impl true
+  def head(key) do
+    with {:ok, request, config} <- request() do
+      case Req.head(request,
+             url: object_url(config, key),
+             receive_timeout: @timeout
+           ) do
+        {:ok, %{status: 200} = response} ->
+          {:ok, %{size: content_length(response), etag: response_header(response, "etag")}}
+
+        {:ok, %{status: 404}} ->
+          :missing
+
+        {:ok, %{status: status}} ->
+          {:error, {:http_status, status}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  @impl true
   def delete(key) do
     with {:ok, request, config} <- request() do
       case Req.delete(request,
@@ -111,6 +133,26 @@ defmodule Hiraeth.Covers.Store.S3 do
   defp content_type(%Req.Response{} = response) do
     case Req.Response.get_header(response, "content-type") do
       [content_type | _rest] -> content_type |> String.split(";") |> List.first() |> String.trim()
+      _missing -> nil
+    end
+  end
+
+  defp content_length(%Req.Response{} = response) do
+    case response_header(response, "content-length") do
+      nil ->
+        nil
+
+      value ->
+        case Integer.parse(value) do
+          {size, ""} when size >= 0 -> size
+          _invalid -> nil
+        end
+    end
+  end
+
+  defp response_header(%Req.Response{} = response, name) do
+    case Req.Response.get_header(response, name) do
+      [value | _rest] -> value
       _missing -> nil
     end
   end

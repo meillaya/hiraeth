@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <link rel="icon" href={~p"/images/logo/favicon.svg"} type="image/svg+xml" />
+    <link rel="icon" href={~p"/favicon.ico"} sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href={~p"/images/logo/apple-touch-icon.png"} />
+    <link rel="manifest" href={~p"/images/logo/site.webmanifest"} />
+    <%!-- Browser chrome cannot read CSS variables; keep this in sync with --sb-sage. --%>
+    <meta name="theme-color" content="#dfe7de" />
     <.live_title default="Hiraeth" suffix=" · Hiraeth" phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
