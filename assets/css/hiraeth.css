@@ -4397,6 +4397,12 @@ ol {
   border-bottom: 0;
 }
 
+.sb-menu .sb-mobile {
+  border-bottom: 0;
+  border-radius: 16px;
+  background: var(--sb-tray);
+}
+
 .sb-sectionhead {
   margin-bottom: 16px;
   padding-bottom: 0;
@@ -4504,6 +4510,14 @@ ol {
 
 .sb-pressrow {
   border-top: 0;
+}
+
+.sb-presslist {
+  border-bottom: 0;
+}
+
+.sb-more {
+  border: 0;
 }
 
 .sb-pressitem {
