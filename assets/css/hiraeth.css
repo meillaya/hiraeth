@@ -123,7 +123,7 @@ ol {
 .sb-sheet {
   display: flex;
   flex-direction: column;
-  width: min(calc(100% - 36px), 1640px);
+  width: min(calc(100% - 36px), var(--sb-sheet-max));
   min-height: calc(100vh - 36px);
   margin: 18px auto;
   overflow: clip;
@@ -2000,21 +2000,6 @@ ol {
 }
 
 @media (max-width: 900px) {
-  .sb-hero {
-    grid-template-columns: 1fr;
-    gap: 34px;
-    padding-top: clamp(38px, 7vw, 60px);
-  }
-
-  .sb-hero h1 {
-    font-size: var(--sb-hero-title, clamp(86px, 15vw, 138px));
-  }
-
-  .sb-hero__cover {
-    justify-self: start;
-    width: min(78vw, 340px);
-  }
-
   .sb-pagehead__row {
     grid-template-columns: 1fr;
     gap: 22px;
@@ -2030,19 +2015,6 @@ ol {
 
   .sb-presslist {
     grid-template-columns: 1fr;
-  }
-
-  .sb-record {
-    grid-template-columns: 1fr;
-    gap: 34px;
-  }
-
-  .sb-record__cover {
-    width: min(76vw, 360px);
-  }
-
-  .sb-record h1 {
-    font-size: clamp(56px, 10vw, 100px);
   }
 
   .sb-collection {
@@ -2097,12 +2069,19 @@ ol {
   }
 
   .sb-hero {
+    grid-template-columns: 1fr;
+    gap: 34px;
     padding-top: 38px;
     padding-bottom: 38px;
   }
 
   .sb-hero h1 {
     font-size: var(--sb-hero-title, clamp(74px, 19vw, 110px));
+  }
+
+  .sb-hero__cover {
+    justify-self: center;
+    width: min(78vw, 340px);
   }
 
   .sb-hero__deck {
@@ -2193,11 +2172,18 @@ ol {
   }
 
   .sb-record {
+    grid-template-columns: 1fr;
+    gap: 34px;
     padding-top: 24px;
   }
 
   .sb-record__cover {
-    width: min(82vw, 320px);
+    justify-self: center;
+    width: min(76vw, 360px);
+  }
+
+  .sb-record h1 {
+    font-size: clamp(56px, 10vw, 100px);
   }
 
   .sb-facts {
@@ -2926,18 +2912,6 @@ ol {
     justify-self: start;
     padding-top: 4px;
   }
-
-  .sb-presshead {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: 26px;
-  }
-
-  .sb-presshead__cover img,
-  .sb-presshead__cover .sb-figcap,
-  .sb-pressmark {
-    max-width: 220px;
-  }
 }
 
 @media (max-width: 560px) {
@@ -2973,6 +2947,12 @@ ol {
     grid-column: 2 / -1;
     flex-wrap: wrap;
     gap: 12px 18px;
+  }
+
+  .sb-presshead {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 26px;
   }
 
   .sb-presshead__cover img,

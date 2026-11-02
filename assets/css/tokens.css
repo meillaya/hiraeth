@@ -62,7 +62,7 @@
   --sb-target-min: 44px;
 
   /* Layout */
-  --sb-sheet-max: 1640px;
+  --sb-sheet-max: 1440px;
   --sb-sheet-inset: 18px;
   --sb-sheet-inset-wide: 8px; /* ≤760px */
   --sb-sheet-inset-compact: 6px; /* ≤560px */

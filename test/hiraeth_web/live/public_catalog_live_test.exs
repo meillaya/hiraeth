@@ -577,7 +577,7 @@ defmodule HiraethWeb.PublicCatalogLiveTest do
     slug = "archipelago-books-bob-and-hilbert-hardcover-source-57168-9781962770651"
     {view, _html} = page(conn, "/books/#{slug}")
 
-    assert page_has?(view, "#book-format-#{slug}", "ISBN not listed")
+    assert page_has?(view, "#book-format-#{slug}", "—")
     refute page_has?(view, "#book-review-gap")
     refute page_has?(view, "#edition-provenance[data-provenance-motif=\"source-thread\"]")
     refute view =~ "Source provenance"

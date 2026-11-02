@@ -186,10 +186,10 @@ function renderDialog(items) {
   if (items.length === 0) {
     const empty = element("div", "sb-shelf-empty");
     const message = element("p");
-    message.textContent = "Nothing saved yet. Open a record and choose Save to shelf.";
+    message.textContent = "No books saved yet.";
     const browse = element("a");
     browse.href = "/browse";
-    browse.textContent = "Browse the catalogue →";
+    browse.textContent = "Browse books →";
     empty.append(message, browse);
     list.append(empty);
     return;

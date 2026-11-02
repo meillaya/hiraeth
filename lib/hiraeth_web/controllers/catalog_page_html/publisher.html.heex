@@ -18,14 +18,18 @@
         />
         <p class="sb-figcap">
           <span>{@publisher.name}</span>
-          <span>{format_count(@publisher.editions_count)} books</span>
+          <span>
+            {format_count(@publisher.editions_count)}
+            {count_label(@publisher.editions_count, "book")}
+          </span>
         </p>
       </div>
 
       <div class="sb-presshead__body">
         <p class="sb-kicker">
-          Publisher dossier
-          <span>/</span> {format_count(length(@publisher.groupings.series))} collections
+          Publisher dossier <span>/</span>
+          {format_count(length(@publisher.groupings.series))}
+          {count_label(length(@publisher.groupings.series), "collection")}
         </p>
         <h1 id="publisher-title">{@publisher.name}</h1>
         <p :if={@publisher.description} class="sb-presshead__intro">
@@ -33,12 +37,17 @@
         </p>
 
         <div class="sb-pressledger">
-          <span><strong>{format_count(@publisher.editions_count)}</strong> books</span>
           <span>
-            <strong>{format_count(length(@publisher.groupings.series))}</strong> collections
+            <strong>{format_count(@publisher.editions_count)}</strong>
+            {count_label(@publisher.editions_count, "book")}
           </span>
           <span>
-            <strong>{format_count(length(@publisher.groupings.formats))}</strong> formats
+            <strong>{format_count(length(@publisher.groupings.series))}</strong>
+            {count_label(length(@publisher.groupings.series), "collection")}
+          </span>
+          <span>
+            <strong>{format_count(length(@publisher.groupings.formats))}</strong>
+            {count_label(length(@publisher.groupings.formats), "format")}
           </span>
         </div>
 
@@ -61,7 +70,10 @@
           <p class="sb-kicker">The catalogue</p>
           <h2>Books from this press</h2>
         </div>
-        <span class="sb-link--plain">{format_count(@publisher.editions_count)} books</span>
+        <span class="sb-link--plain">
+          {format_count(@publisher.editions_count)}
+          {count_label(@publisher.editions_count, "book")}
+        </span>
       </div>
 
       <%= if @publisher.editions_count == 0 do %>

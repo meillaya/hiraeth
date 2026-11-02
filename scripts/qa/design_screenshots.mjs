@@ -90,7 +90,7 @@ for (const [name, route] of pages) {
       });
 
       const inset = width <= 560 ? 6 : width <= 760 ? 8 : 18;
-      const expectedSheet = Math.min(width - inset * 2, 1640);
+      const expectedSheet = Math.min(width - inset * 2, 1440);
 
       if (metrics.scrollWidth > metrics.innerWidth + 1) {
         failures.push({ page: name, width, problem: "horizontal overflow" });

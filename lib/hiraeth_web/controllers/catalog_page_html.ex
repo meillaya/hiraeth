@@ -11,6 +11,9 @@ defmodule HiraethWeb.CatalogPageHTML do
 
   def format_count(count), do: to_string(count)
 
+  def count_label(1, singular), do: singular
+  def count_label(_count, singular), do: singular <> "s"
+
   def author_line(book) do
     book
     |> Map.get(:authors, [])

@@ -21,7 +21,7 @@
       from the running site.
     </p>
     <p class="spec-meta">
-      <span><strong>Version</strong> 4.2 · Hiraeth</span>
+      <span><strong>Version</strong> 4.3 · Hiraeth</span>
       <span><strong>Source</strong> design/home.html</span>
       <span><strong>Prototypes</strong> <a href="home.html">home</a> · <a href="browse.html">books</a> · <a href="book.html">book</a> · <a href="publishers.html">publishers</a> · <a href="press.html">press</a> · <a href="series.html">collections</a> · <a href="shelf.html">shelf</a></span>
     </p>
@@ -143,16 +143,17 @@
     <table class="spec-table" aria-label="Layout specifications">
       <thead><tr><th>Property</th><th>Value</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td>Sheet width</td><td class="spec-value">min(100% − inset × 2, 1640px)</td><td>Inset 18px · 8px at ≤760 · 6px at ≤560</td></tr>
+        <tr><td>Sheet width</td><td class="spec-value">min(100% − inset × 2, 1440px)</td><td>Inset 18px · 8px at ≤760 · 6px at ≤560; capped for ultrawide screens</td></tr>
         <tr><td>Sheet radius</td><td class="spec-value">clamp(24px, 2.8vw, 38px)</td><td>20px at ≤560</td></tr>
         <tr><td>Page gutter</td><td class="spec-value">clamp(18px, 4.6vw, 64px)</td><td>All content blocks start and end here</td></tr>
         <tr><td>Header</td><td class="spec-value">19px gutter padding · 1fr auto 1fr grid</td><td>Nav hides at ≤1040; menu button appears</td></tr>
-        <tr><td>Hero</td><td class="spec-value">1.04fr / 0.96fr · gap clamp(36px, 7vw, 110px)</td><td>Single column at ≤900</td></tr>
-        <tr><td>Hero cover</td><td class="spec-value">min(100%, 390px)</td><td>Left aligned at ≤900, width min(78vw, 340px)</td></tr>
-        <tr><td>Ledger</td><td class="spec-value">3 equal columns · 1px rules</td><td>Edge-to-edge inside the gutter</td></tr>
+        <tr><td>Hero</td><td class="spec-value">1.04fr / 0.96fr · gap clamp(36px, 7vw, 110px)</td><td>Two columns through 761–900px; single column at ≤760 with a centred cover</td></tr>
+        <tr><td>Hero cover</td><td class="spec-value">min(100%, 390px)</td><td>Centred when stacked at ≤760 · width min(78vw, 340px)</td></tr>
+        <tr><td>Book record</td><td class="spec-value">0.78fr / 1.22fr · gap clamp(36px, 6vw, 96px)</td><td>Two columns through 761–900px; single column at ≤760 · centred cover min(76vw, 360px)</td></tr>
+        <tr><td>Press profile</td><td class="spec-value">0.62fr / 1.38fr · gap clamp(32px, 5.6vw, 84px)</td><td>Two columns through 561–900px; single column at ≤560</td></tr>
+        <tr><td>Ledger</td><td class="spec-value">3 equal columns · 1px rules</td><td>Books · collections · formats; edge-to-edge inside the gutter</td></tr>
         <tr><td>Shelf tray</td><td class="spec-value">margin clamp(10px, 2vw, 22px) · padding clamp(20px, 3vw, 32px) · radius clamp(18px, 2.2vw, 28px)</td><td>4 columns; 2 at ≤760</td></tr>
         <tr><td>Browse grid</td><td class="spec-value">4 columns · gap clamp(16px, 2.4vw, 28px)</td><td>3 at ≤1280 · 2 at ≤760</td></tr>
-        <tr><td>Book record</td><td class="spec-value">0.78fr / 1.22fr · gap clamp(36px, 6vw, 96px)</td><td>Single column at ≤900 · cover max 430px</td></tr>
         <tr><td>Press index</td><td class="spec-value">38px / 1fr / auto / 56px</td><td>No. · name · count · cover thumb</td></tr>
         <tr><td>Footer</td><td class="spec-value">1fr auto 1fr · 22px 0 19px</td><td>Nav hides at ≤900; counts wrap left at ≤760</td></tr>
       </tbody>
@@ -357,10 +358,73 @@
         </div>
         <header class="sb-presshead">
           <div class="sb-presshead__cover"><div class="sb-pressmark">D</div><p class="sb-figcap"><span>Dalkey Archive</span><span>794 books</span></p></div>
-          <div class="sb-presshead__body"><p class="sb-kicker">Publisher dossier <span>/</span> 1 collection</p><h1>Dalkey Archive</h1><p class="sb-presshead__intro">Independent publisher of literary fiction, poetry, and criticism, catalogued from official store records.</p><div class="sb-pressledger"><span><strong>794</strong> books</span><span><strong>1</strong> collections</span><span><strong>4</strong> formats</span></div></div>
+          <div class="sb-presshead__body"><p class="sb-kicker">Publisher dossier <span>/</span> 1 collection</p><h1>Dalkey Archive</h1><p class="sb-presshead__intro">Independent publisher of literary fiction, poetry, and criticism, catalogued from official store records.</p><div class="sb-pressledger"><span><strong>794</strong> books</span><span><strong>1</strong> collection</span><span><strong>4</strong> formats</span></div></div>
         </header>
       </div>
     </div>
+  </section>
+
+  <section class="spec-section" id="states">
+    <h2>Data states and copy</h2>
+    <p class="spec-note">
+      The catalogue never invents missing data and never leaves a silent blank where a
+      known field is absent. Loading, empty, and missing-value states use one vocabulary
+      across the server-rendered pages, the LiveViews, and the design prototypes.
+    </p>
+
+    <h3 class="spec-subhead">Loading labels</h3>
+    <table class="spec-table" aria-label="Loading copy">
+      <thead><tr><th>Surface</th><th>Copy</th></tr></thead>
+      <tbody>
+        <tr><td>Book record</td><td class="spec-value">Loading book…</td></tr>
+        <tr><td>Publisher profile</td><td class="spec-value">Loading publisher…</td></tr>
+        <tr><td>Publisher index</td><td class="spec-value">Loading presses…</td></tr>
+        <tr><td>Collections</td><td class="spec-value">Loading collections…</td></tr>
+        <tr><td>Shelf</td><td class="spec-value">Loading shelf…</td></tr>
+      </tbody>
+    </table>
+    <p class="spec-note">
+      The label is sentence case, uses the single-character ellipsis (…), and never
+      appears without a following loaded or empty state.
+    </p>
+
+    <h3 class="spec-subhead">Missing values</h3>
+    <table class="spec-table" aria-label="Missing-value rules">
+      <thead><tr><th>Surface</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td>Edition ISBN</td><td>Render <code>—</code> when no identifier is supplied; never “ISBN not listed”.</td></tr>
+        <tr><td>Edition publication date</td><td>Render <code>—</code> when no date is supplied; never “Date unknown”.</td></tr>
+        <tr><td>Index publication year</td><td>Render <code>—</code> when the work has no publication date; never a blank cell.</td></tr>
+        <tr><td>Book facts</td><td>Publication date and ISBN facts keep the prose fallback “Not listed”; the editions table uses the compact em dash.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="spec-subhead">Publisher ledger</h3>
+    <p class="spec-note">
+      The publisher profile ledger has exactly three counts, in this order:
+      <strong>books</strong>, <strong>collections</strong>, <strong>formats</strong>.
+      Books are distinct works attached to the press; collections are series
+      memberships; formats are the distinct format labels across those works. Labels
+      singularize at one (<em>1 collection</em>, <em>1 format</em>) and the word
+      “volumes” is never used for a publisher. The figure caption and the “Books from
+      this press” heading use the same three-way contract.
+    </p>
+    <div class="spec-embed spec-frame">
+      <div class="sb-sheet">
+        <div class="sb-presshead" style="padding-top: 20px; padding-bottom: 20px;">
+          <div class="sb-presshead__cover"><div class="sb-pressmark">D</div><p class="sb-figcap"><span>Dalkey Archive</span><span>794 books</span></p></div>
+          <div class="sb-presshead__body"><p class="sb-kicker">Publisher dossier <span>/</span> 1 collection</p><h1 style="margin-top: 6px;">Dalkey Archive</h1><div class="sb-pressledger"><span><strong>794</strong> books</span><span><strong>1</strong> collection</span><span><strong>4</strong> formats</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="spec-subhead">Asset cache</h3>
+    <p class="spec-note">
+      The design prototypes pin <code>?v=13</code> on their stylesheet and
+      data/script references, so a browser cannot reuse an older prototype
+      composition after a design revision. Production assets carry Phoenix digests
+      instead and are not versioned by hand.
+    </p>
   </section>
 
   <section class="spec-section" id="shelf">
@@ -431,8 +495,8 @@
               <button class="sb-dialog__close" type="button">Close</button>
             </div>
             <div class="sb-shelf-empty">
-              <p>Nothing saved yet. Open a record and choose Save to shelf.</p>
-              <a href="#components">Browse the catalogue →</a>
+              <p>No books saved yet.</p>
+              <a href="#components">Browse books →</a>
             </div>
             <a class="sb-shelf-page-link" href="#components">Open the shelf page →</a>
             <p class="sb-dialog__hint">Saved in this browser.</p>
@@ -463,9 +527,8 @@
       <div class="sb-sheet">
         <div class="sb-shelf-page">
           <div class="sb-empty sb-empty--shelf">
-            <p class="sb-kicker">Nothing saved yet</p>
-            <h2>A shelf waiting to be filled.</h2>
-            <p>Save any record with “Save to shelf” and it will keep here, in this browser, ready to export as a reading list.</p>
+            <h2>No books saved yet.</h2>
+            <p>Save a book and it will appear here. You can export the list as a text file.</p>
             <div class="sb-start">
               <div class="sb-start__head"><p class="sb-kicker">A place to start</p><a class="sb-link" href="#components">All books →</a></div>
               <div class="sb-start__grid">
@@ -713,6 +776,7 @@
         <tr><td>Home</td><td class="spec-value">lib/hiraeth_web/live/home_live.ex</td><td>Featured forthcoming hero, ledger, four random picks, presses.</td></tr>
         <tr><td>Books</td><td class="spec-value">lib/hiraeth_web/live/browse_live/*</td><td>Filter tray, covers/index views, pager.</td></tr>
         <tr><td>Book</td><td class="spec-value">lib/hiraeth_web/live/book_live/*</td><td>Record, facts, praise, reviews, editions, subjects, save control, more-from tray.</td></tr>
+        <tr><td>Data states</td><td class="spec-value">lib/hiraeth_web/live/book_live/components.ex, lib/hiraeth_web/controllers/catalog_page_html/*</td><td>Em-dash missing ISBN/date/year, publisher ledger labels, shelf empty copy.</td></tr>
         <tr><td>More-from query</td><td class="spec-value">lib/hiraeth/catalog/public_works.ex, lib/hiraeth_web/public_catalog.ex</td><td>Bounded, same-press, current-record-excluded suggestion read.</td></tr>
         <tr><td>Local shelf</td><td class="spec-value">assets/js/shelf.js, lib/hiraeth_web/controllers/catalog_page_html/shelf.html.heex</td><td>localStorage capture, dialog, shelf page, export, cross-tab sync.</td></tr>
         <tr><td>Header behaviour</td><td class="spec-value">assets/js/chrome.js</td><td>Header-anchored Menu, Escape and link-click close, 44px rows.</td></tr>
@@ -726,10 +790,13 @@
     <h3 class="spec-subhead">Verification gate</h3>
     <ul class="spec-check">
       <li>Capture <code>/</code>, <code>/browse</code>, a book, <code>/shelf</code>, publishers, a press, collections, a collection, contributors, and search at 390, 560, 760, 834, 900, 1040, 1180, 1280, and 1440 CSS px, plus 320px overflow coverage.</li>
-      <li>Assert the sheet inset is 6 / 8 / 18px by band and never exceeds 1640px total width.</li>
+      <li>Assert the sheet inset is 6 / 8 / 18px by band and never exceeds 1440px total width, including a 2560px capture.</li>
       <li>Assert the gutter equals the clamp value at every captured width (within 0.5px).</li>
+      <li>Assert hero and book records keep two columns at 834 and 900px, stack at 760, and centre the stacked cover; press profiles keep two columns at 561–900px and stack at 560.</li>
       <li>Assert hero h1 uses the short/medium/long/xlong tier for its title length and never overflows the copy column.</li>
       <li>Assert the hero caption wraps a long title and never clips the author.</li>
+      <li>Assert the publisher ledger reads books / collections / formats, singularizes one, and never prints “volumes” or a contradictory zero.</li>
+      <li>Assert edition ISBN and publication, and the index year, render <code>—</code> when missing; no “ISBN not listed”, “Date unknown”, or blank cell remains.</li>
       <li>Assert shelf and browse grids are 4 / 3 / 2 columns at the specified bands, with no horizontal scroll.</li>
       <li>Assert the Menu panel is anchored to the header at 390–1040px, every row is ≥44px, Escape and link clicks close it, and the footer navigation remains present.</li>
       <li>Assert no functional label renders below 10px and only decorative cover-fallback microtext remains smaller.</li>
@@ -742,7 +809,7 @@
   </section>
 
   <footer class="spec-footer">
-    <span>Hiraeth · design system 4.2 · tokens read from assets/css/tokens.css</span>
+    <span>Hiraeth · design system 4.3 · tokens read from assets/css/tokens.css</span>
     <span><a href="home.html">Open the homepage prototype →</a></span>
   </footer>
 </main>
@@ -846,21 +913,22 @@
 
   const rows = [
     ["Sheet inset", (w) => (w <= 560 ? 6 : w <= 760 ? 8 : 18) + "px"],
-    ["Sheet width", (w) => Math.round(Math.min(w - (w <= 560 ? 12 : w <= 760 ? 16 : 36), 1640)) + "px"],
+    ["Sheet width", (w) => Math.round(Math.min(w - (w <= 560 ? 12 : w <= 760 ? 16 : 36), 1440)) + "px"],
     ["Gutter", (w) => clamp(18, 0.046 * w, 64).toFixed(1) + "px"],
     ["Header nav", (w) => (w <= 1040 ? "Menu button" : "Inline")],
-    ["Hero columns", (w) => (w <= 900 ? "1" : "2")],
+    ["Hero columns", (w) => (w <= 760 ? "1" : "2")],
     ["Hero title (short)", (w) => {
       if (w <= 560) return clamp(64, 0.2 * w, 92).toFixed(1) + "px";
       if (w <= 760) return clamp(74, 0.19 * w, 110).toFixed(1) + "px";
-      if (w <= 900) return clamp(86, 0.15 * w, 138).toFixed(1) + "px";
       if (w <= 1040) return clamp(76, 0.12 * w, 140).toFixed(1) + "px";
       return clamp(80, 0.12 * w, 184).toFixed(1) + "px";
     }],
+    ["Stacked cover", (w) => (w <= 760 ? "Centred" : "Outer")],
     ["Shelf columns", (w) => (w <= 760 ? "2" : "4")],
     ["Browse grid", (w) => (w <= 760 ? "2" : w <= 1280 ? "3" : "4")],
     ["Press list", (w) => (w <= 900 ? "1" : "2")],
-    ["Record columns", (w) => (w <= 900 ? "1" : "2")],
+    ["Press profile", (w) => (w <= 560 ? "1" : "2")],
+    ["Record columns", (w) => (w <= 760 ? "1" : "2")],
     ["Footer", (w) => (w <= 900 ? "Stacked + nav" : "3 columns")]
   ];
 

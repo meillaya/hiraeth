@@ -194,7 +194,7 @@ defmodule HiraethWeb.BookLive.Components do
                 </span>
                 <span>{if format.published_on,
                   do: Calendar.strftime(format.published_on, "%Y-%m-%d"),
-                  else: "Date unknown"}</span>
+                  else: "—"}</span>
               </div>
             </section>
 
@@ -320,7 +320,7 @@ defmodule HiraethWeb.BookLive.Components do
 
   defp format_identifiers(format) do
     case format.identifiers do
-      [] -> "ISBN not listed"
+      [] -> "—"
       identifiers -> Enum.join(identifiers, ", ")
     end
   end
