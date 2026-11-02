@@ -4353,3 +4353,271 @@ ol {
   align-items: center;
   min-height: var(--sb-target-min);
 }
+
+/*
+ * Minimal line demarcation.
+ *
+ * Structure comes from the paper, spacing, and type. Hairlines are reserved for
+ * table heads and form fields; decorative section, ledger, list, shelf, dialog,
+ * footer, and cover rules are dropped so the catalogue reads as one sheet.
+ */
+
+.sb-sheet,
+.sb-dialog {
+  border: 0;
+}
+
+.sb-header,
+.sb-footer,
+.sb-footer__base {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.sb-nav a {
+  padding: 10px 0;
+  border-bottom: 0;
+}
+
+.sb-nav a[aria-current="page"] {
+  color: var(--sb-ink);
+  font-weight: 500;
+}
+
+.sb-mobile {
+  margin: 2px 8px 8px;
+  padding: 8px var(--sb-gutter) 10px;
+  border-top: 0;
+  border-radius: 16px;
+  background: var(--sb-tray);
+}
+
+.sb-mobile a {
+  padding: 9px 0;
+  border-bottom: 0;
+}
+
+.sb-sectionhead {
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.sb-ledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(28px, 5vw, 72px);
+  margin: 0;
+  padding: 0 var(--sb-gutter) clamp(30px, 3.8vw, 46px);
+  border: 0;
+}
+
+.sb-ledger a {
+  padding: 0;
+}
+
+.sb-ledger a + a {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.sb-shelf__head {
+  border-bottom: 0;
+}
+
+.sb-book__foot,
+.sb-card__foot {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sb-pagehead__meta {
+  margin-top: 18px;
+  padding-top: 0;
+  gap: 8px 24px;
+  border-top: 0;
+}
+
+.sb-filter__search {
+  padding-bottom: 10px;
+  border-bottom: 0;
+}
+
+.sb-view button {
+  padding: 6px 0;
+  border-bottom: 0;
+}
+
+.sb-view button[aria-pressed="true"] {
+  color: var(--sb-ink);
+  font-weight: 600;
+}
+
+.sb-resultsline {
+  padding: 18px var(--sb-gutter) 6px;
+  border-bottom: 0;
+}
+
+.sb-index {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sb-index__head {
+  padding: 8px 0;
+}
+
+.sb-index__row {
+  padding: 11px 0;
+  border-bottom: 0;
+}
+
+.sb-empty {
+  border-top: 0;
+}
+
+.sb-pager {
+  padding: 20px 0 42px;
+  border-top: 0;
+}
+
+.sb-fact {
+  padding: 8px 0 9px;
+  border-top: 0;
+}
+
+.sb-edition {
+  padding: 8px 0;
+  border-top: 0;
+}
+
+.sb-toolbar {
+  padding: 2px 0 10px;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.sb-pressrow {
+  border-top: 0;
+}
+
+.sb-pressitem {
+  padding: 10px 0;
+  border-bottom: 0;
+}
+
+.sb-pressnav {
+  padding-top: 22px;
+  border-top: 0;
+}
+
+.sb-pressledger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(24px, 4vw, 48px);
+  margin-top: 22px;
+  padding: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.sb-pressledger span {
+  padding: 0;
+}
+
+.sb-pressledger span + span {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.sb-pressledger strong {
+  font-size: clamp(23px, 2.1vw, 29px);
+}
+
+.sb-collection {
+  padding: 24px 0 28px;
+  border-top: 0;
+}
+
+.sb-collection:first-child {
+  padding-top: 4px;
+}
+
+.sb-collection__list a {
+  padding: 9px 0;
+  border-bottom: 0;
+}
+
+.sb-collection__list a:first-child {
+  border-top: 0;
+}
+
+.sb-dialog__head {
+  padding: 18px 22px 6px;
+  border-bottom: 0;
+}
+
+.sb-searchform {
+  padding: 4px 22px 2px;
+}
+
+.sb-searchform input {
+  padding: 5px 0 10px;
+  border-bottom: 0;
+}
+
+.sb-result,
+.sb-shelf-item,
+.sb-shelf-page-link {
+  border-top: 0;
+}
+
+.sb-shelf-tools {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sb-listbar {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.sb-shelf-row {
+  padding: 16px 0;
+  border-bottom: 0;
+}
+
+.sb-shelf-row__meta {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sb-empty--shelf,
+.sb-empty--press,
+.sb-start {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sb-start {
+  margin-top: 32px;
+}
+
+.sb-fallback {
+  border: 0;
+}
+
+.sb-hero__cover img,
+.sb-card__well img,
+.sb-cover-well img,
+.sb-record__cover img,
+.sb-presshead__cover img,
+.sb-pressitem__thumb img,
+.sb-shelf-row__cover img,
+.sb-index__thumb img,
+.sb-result__thumb img,
+.sb-shelf-item__thumb img {
+  border: 0;
+}
